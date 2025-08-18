@@ -1,4 +1,2 @@
 .env
-cognitas/core/__pycache__
-cognitas/__pycache__
-**.pyc
+*.pyc
