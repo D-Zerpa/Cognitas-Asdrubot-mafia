@@ -39,7 +39,7 @@ class ActionsCog(commands.Cog):
             "note": note.strip()
         }
         game.night_actions.append(entry)
-        save_state("players.json")
+        save_state("state.json")
 
         # Acknowledge to the user (private in-channel)
         await ctx.reply("✅ Action registered.")
@@ -62,14 +62,18 @@ class ActionsCog(commands.Cog):
     # ---------- Night controls ----------
     @commands.command()
     @commands.has_permissions(administrator=True)
-    async def start_night(self, ctx, duration: str = "12h", day_channel: discord.TextChannel = None):
+    async def start_night(self, ctx, duration: str = "12h", day_channel: discord.TextChannel = None, force: str = ""):
         """
-        Start Night with a timer; at the end, open the given Day channel.
-        Usage:
-          !start_night              -> 12h night, opens DEFAULT_DAY_CHANNEL_ID
-          !start_night 8h           -> 8h night
-          !start_night 6h #daychat  -> 6h night, open #daychat at dawn
+        Start Night with a timer; at deadline, open the provided (or default) Day channel.
+        Idempotent by default. Use trailing 'force' to restart Night even if active.
+        Examples:
+        !start_night
+        !start_night 8h
+        !start_night 6h #village
+        !start_night 6h #village force
         """
+        from ..core.timer import parse_duration_to_seconds, night_timer_worker
+        import time, asyncio
 
         if game.game_over:
             return await ctx.reply("Game is finished. Start a new game before starting a Night.")
@@ -78,44 +82,60 @@ class ActionsCog(commands.Cog):
         if seconds <= 0:
             return await ctx.reply("Provide a valid duration (e.g., `12h`, `6h`, `90m`).")
 
-        # Where to open at dawn
+        # Guard: refuse if a Night is already active, unless 'force'
+        if game.is_night_active() and force.lower() != "force":
+            when = f"<t:{game.night_deadline_epoch}:R>" if game.night_deadline_epoch else ""
+            return await ctx.reply(f"Night already active (ends {when}). Use `force` to restart.")
+
+        # If forcing, cancel existing timer
+        if force.lower() == "force" and game.night_timer_task and not game.night_timer_task.done():
+            game.night_timer_task.cancel()
+            game.night_timer_task = None
+
         open_channel_id = day_channel.id if day_channel else game.default_day_channel_id
         if not open_channel_id:
             return await ctx.reply("Please set a Day channel with `!set_day_channel` or pass one here.")
 
-        game.night_channel_id = ctx.channel.id   # optional: designate where !act is allowed
+        # Optional: restrict where !act is allowed = current channel
+        game.night_channel_id = ctx.channel.id
         game.night_deadline_epoch = int(time.time()) + seconds
         game.next_day_channel_id = open_channel_id
-        save_state("players.json")
+        save_state("state.json")
 
         await ctx.send(
             f"🌙 **Night begins.** Ends at <t:{game.night_deadline_epoch}:F> (<t:{game.night_deadline_epoch}:R>).\n"
             f"Players can register actions with `!act @Target [note]`."
         )
 
-        # Start (or restart) timer
+        # (re)start night timer
         if game.night_timer_task and not game.night_timer_task.done():
             game.night_timer_task.cancel()
         game.night_timer_task = asyncio.create_task(night_timer_worker(self.bot, ctx.guild.id))
 
+
     @commands.command()
     @commands.has_permissions(administrator=True)
     async def end_night(self, ctx):
-        """End Night now; open the Day channel and cancel the night timer."""
-        if not game.next_day_channel_id:
-            return await ctx.reply("No Day channel configured to open.")
-        day_chan = ctx.guild.get_channel(game.next_day_channel_id)
+        """End Night now; open the Day channel (idempotent)."""
+        day_chan = ctx.guild.get_channel(game.next_day_channel_id) if game.next_day_channel_id else None
         if not day_chan:
-            return await ctx.reply("Configured Day channel not found.")
+            return await ctx.reply("No Day channel configured to open.")
 
+        # Open day channel for sending if not already open
         overw = day_chan.overwrites_for(ctx.guild.default_role)
-        overw.send_messages = True
-        await day_chan.set_permissions(ctx.guild.default_role, overwrite=overw)
-        await day_chan.send("🌞 **Dawn breaks. Day is open.**")
+        already_open = (overw.send_messages is True)
+        if not already_open:
+            overw.send_messages = True
+            await day_chan.set_permissions(ctx.guild.default_role, overwrite=overw)
+            await day_chan.send("🌞 **Dawn breaks. Day is open.**")
 
         game.night_deadline_epoch = None
-        save_state("players.json")
         if game.night_timer_task and not game.night_timer_task.done():
             game.night_timer_task.cancel()
             game.night_timer_task = None
-        await ctx.send("🛑 Night ended by a moderator.")
+        save_state("state.json")
+
+        if already_open:
+            await ctx.reply("Day was already open. Night state synced.")
+        else:
+            await ctx.send("🛑 Night ended by a moderator.")

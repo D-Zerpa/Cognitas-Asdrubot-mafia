@@ -12,9 +12,13 @@ class AdminCog(commands.Cog):
     async def assign(self, ctx, member: discord.Member, role_code: str):
         """Assign a role to a player and bind THIS channel as their private channel."""
         code = role_code.upper()
-        if code not in game.roles:
-            return await ctx.reply("❌ Unknown role (check roles.json).")
         uid = str(member.id)
+        existing = game.players.get(uid)
+
+        # If already assigned same role and same channel, be idempotent
+        if existing and existing.get("role") == code and existing.get("channel_id") == ctx.channel.id:
+            return await ctx.send(f"✅ {member.mention} already has **{game.roles[code]['name']}** bound to {ctx.channel.mention}.")
+
         game.players.setdefault(uid, {})
         game.players[uid].update({
             "nick": member.display_name,
@@ -24,13 +28,14 @@ class AdminCog(commands.Cog):
             "flags": game.players[uid].get("flags", {"silenced": False, "absent": False}),
             "effects": game.players[uid].get("effects", [])
         })
-        save_state("players.json")
+        save_state("state.json")
 
         overwrites = ctx.channel.overwrites
         overwrites[member] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True)
         await ctx.channel.edit(overwrites=overwrites)
 
         await ctx.send(f"✅ Assigned **{game.roles[code]['name']}** to {member.mention} and bound to {ctx.channel.mention}.")
+
 
     @commands.command()
     @commands.has_permissions(administrator=True)
@@ -60,7 +65,7 @@ class AdminCog(commands.Cog):
         if expires_in_days is not None:
             eff["expires_day"] = game.current_day_number + int(expires_in_days)
         game.players[uid].setdefault("effects", []).append(eff)
-        save_state("players.json")
+        save_state("state.json")
         await ctx.message.add_reaction("✨")
         await ctx.send(f"🎯 Effect added to {member.mention}: `{eff}`")
 
@@ -76,7 +81,7 @@ class AdminCog(commands.Cog):
         else:
             flags = game.players[uid].setdefault("flags", {})
             flags[key] = bool(int(value))
-        save_state("players.json")
+        save_state("state.json")
         await ctx.message.add_reaction("🛠️")
         await ctx.send(f"Flag `{key}` for {member.mention} = {bool(int(value))}")
 
@@ -91,7 +96,7 @@ class AdminCog(commands.Cog):
         """
         target = channel or ctx.channel
         game.admin_log_channel_id = target.id
-        save_state("players.json")
+        save_state("state.json")
         await ctx.send(f"🧭 Admin log channel set to {target.mention}")
 
     @commands.command()
@@ -105,7 +110,7 @@ class AdminCog(commands.Cog):
         """
         target = channel or ctx.channel
         game.default_day_channel_id = target.id
-        save_state("players.json")
+        save_state("state.json")
         await ctx.send(f"🌞 Default Day channel set to {target.mention}")
 
 
@@ -152,7 +157,7 @@ class AdminCog(commands.Cog):
         # Optional: clear live votes to avoid confusion
         game.votes = {}
 
-        save_state("players.json")
+        save_state("state.json")
 
         # Post a summary/announcement here
         extra = f"\n\n**Note:** {note}" if note.strip() else ""
@@ -189,5 +194,5 @@ class AdminCog(commands.Cog):
         game.night_actions = []
         game.game_over = False  # ready for a fresh game
 
-        save_state("players.json")
+        save_state("state.json")
         await ctx.send("🧹 Game state wiped. Ready for a new setup.")
