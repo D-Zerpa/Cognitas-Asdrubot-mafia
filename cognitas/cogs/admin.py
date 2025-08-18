@@ -79,3 +79,31 @@ class AdminCog(commands.Cog):
         save_state("players.json")
         await ctx.message.add_reaction("🛠️")
         await ctx.send(f"Flag `{key}` for {member.mention} = {bool(int(value))}")
+
+    @commands.command()
+    @commands.has_permissions(administrator=True)
+    async def set_admin_channel(self, ctx, channel: discord.TextChannel = None):
+        """
+        Set the admin log channel (where Night action logs are sent).
+        Usage:
+          !set_admin_channel            -> uses current channel
+          !set_admin_channel #mod-log   -> uses the provided channel
+        """
+        target = channel or ctx.channel
+        game.admin_log_channel_id = target.id
+        save_state("players.json")
+        await ctx.send(f"🧭 Admin log channel set to {target.mention}")
+
+    @commands.command()
+    @commands.has_permissions(administrator=True)
+    async def set_day_channel(self, ctx, channel: discord.TextChannel = None):
+        """
+        Set the default Day/general channel (opened at dawn).
+        Usage:
+          !set_day_channel            -> uses current channel
+          !set_day_channel #day       -> uses the provided channel
+        """
+        target = channel or ctx.channel
+        game.default_day_channel_id = target.id
+        save_state("players.json")
+        await ctx.send(f"🌞 Default Day channel set to {target.mention}")

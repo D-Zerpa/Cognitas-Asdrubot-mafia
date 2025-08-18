@@ -10,6 +10,9 @@ class GameState:
         self.current_day_number = 1
         self.day_deadline_epoch = None
         self.day_timer_task = None    # asyncio.Task
+        self.admin_log_channel_id = None      # where admin logs go
+        self.default_day_channel_id = None    # default Day channel opened after Night
+
 
     # ---------- role & player access ----------
     def role_of(self, uid: str) -> dict:
