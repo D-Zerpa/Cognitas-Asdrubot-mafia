@@ -107,3 +107,87 @@ class AdminCog(commands.Cog):
         game.default_day_channel_id = target.id
         save_state("players.json")
         await ctx.send(f"🌞 Default Day channel set to {target.mention}")
+
+
+    @commands.command(name="show_channels")
+    @commands.has_permissions(administrator=True)
+    async def show_channels(self, ctx):
+        admin = ctx.guild.get_channel(game.admin_log_channel_id) if game.admin_log_channel_id else None
+        day   = ctx.guild.get_channel(game.default_day_channel_id) if game.default_day_channel_id else None
+        await ctx.send(
+            "Current channels:\n"
+            f"- Admin log: {admin.mention if admin else 'not set'}\n"
+            f"- Default Day: {day.mention if day else 'not set'}"
+        )
+
+    @commands.command()
+    @commands.has_permissions(administrator=True)
+    async def finish_game(self, ctx, *, note: str = ""):
+        """
+        Finish the game: cancel timers, lock Day channel, clear deadlines,
+        mark game_over=True, and announce. Does NOT delete players/states.
+        """
+        # Cancel timers if running
+        if game.day_timer_task and not game.day_timer_task.done():
+            game.day_timer_task.cancel()
+            game.day_timer_task = None
+        if game.night_timer_task and not game.night_timer_task.done():
+            game.night_timer_task.cancel()
+            game.night_timer_task = None
+
+        # Lock Day channel if set
+        if game.day_channel_id:
+            chan = ctx.guild.get_channel(game.day_channel_id)
+            if chan:
+                overw = chan.overwrites_for(ctx.guild.default_role)
+                overw.send_messages = False
+                await chan.set_permissions(ctx.guild.default_role, overwrite=overw)
+                await chan.send("🏁 **Game finished.** Channel locked.")
+
+        # Clear deadlines and mark game over
+        game.day_deadline_epoch = None
+        game.night_deadline_epoch = None
+        game.game_over = True
+
+        # Optional: clear live votes to avoid confusion
+        game.votes = {}
+
+        save_state("players.json")
+
+        # Post a summary/announcement here
+        extra = f"\n\n**Note:** {note}" if note.strip() else ""
+        await ctx.send(f"✅ Game marked as finished. State persisted.{extra}")
+
+
+    @commands.command()
+    @commands.has_permissions(administrator=True)
+    async def reset_game(self, ctx, confirm: str = ""):
+        """
+        HARD RESET: wipe players, votes, timers, logs.
+        Usage: !reset_game CONFIRM
+        """
+        if confirm != "CONFIRM":
+            return await ctx.reply("This will ERASE the current game state. Use `!reset_game CONFIRM` to proceed.")
+
+        # Cancel timers
+        if game.day_timer_task and not game.day_timer_task.done():
+            game.day_timer_task.cancel()
+            game.day_timer_task = None
+        if game.night_timer_task and not game.night_timer_task.done():
+            game.night_timer_task.cancel()
+            game.night_timer_task = None
+
+        # Wipe state
+        game.players = {}
+        game.votes = {}
+        game.day_channel_id = None
+        game.current_day_number = 1
+        game.day_deadline_epoch = None
+        game.night_channel_id = None
+        game.night_deadline_epoch = None
+        game.next_day_channel_id = None
+        game.night_actions = []
+        game.game_over = False  # ready for a fresh game
+
+        save_state("players.json")
+        await ctx.send("🧹 Game state wiped. Ready for a new setup.")

@@ -33,8 +33,9 @@ async def setup_cogs():
 async def on_ready():
     print(f"Connected as {bot.user} (id: {bot.user.id})")
     print(f"Loaded roles: {len(game.roles)}")
-    # Resume an active Day timer (if any)
-    await resume_day_timer(bot)
+    if not game.game_over:
+        await resume_day_timer(bot)
+        await resume_night_timer(bot)
 
 @bot.command()
 async def ping(ctx):

@@ -70,6 +70,10 @@ class ActionsCog(commands.Cog):
           !start_night 8h           -> 8h night
           !start_night 6h #daychat  -> 6h night, open #daychat at dawn
         """
+
+        if game.game_over:
+            return await ctx.reply("Game is finished. Start a new game before starting a Night.")
+
         seconds = parse_duration_to_seconds(duration)
         if seconds <= 0:
             return await ctx.reply("Provide a valid duration (e.g., `12h`, `6h`, `90m`).")

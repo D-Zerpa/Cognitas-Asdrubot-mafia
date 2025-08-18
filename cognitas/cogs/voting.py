@@ -11,35 +11,48 @@ class VotingCog(commands.Cog):
     # ---------- Day controls ----------
     @commands.command()
     @commands.has_permissions(administrator=True)
-    async def start_day(self, ctx, duration: str = "24h"):
+    async def start_day(self, ctx, duration: str = "24h", channel: discord.TextChannel = None):
         """
-        Start Day in THIS channel with a duration (e.g., 24h, 12h, 1h30m, 90m).
-        Resets votes, opens channel, sets deadline, schedules reminders & auto-close.
+        Start the Day phase with a duration, optionally targeting a specific channel.
+        Priority: provided channel > saved default Day channel > current channel.
+        Examples:
+        !start_day                 -> 24h, uses saved default or here
+        !start_day 12h             -> 12h, uses saved default or here
+        !start_day 8h #village     -> 8h, opens/uses #village
         """
+        from ..core.timer import parse_duration_to_seconds, day_timer_worker
+        import time, asyncio
+
+        if game.game_over:
+            return await ctx.reply("Game is finished. Start a new game before starting a Day.")
+
         seconds = parse_duration_to_seconds(duration)
         if seconds <= 0:
             return await ctx.reply("Provide a valid duration (e.g., `24h`, `1h30m`, `90m`).")
 
-        game.day_channel_id = ctx.channel.id
+        # choose target channel
+        target = channel or (ctx.guild.get_channel(game.default_day_channel_id) if game.default_day_channel_id else ctx.channel)
+        game.default_day_channel_id = target.id
+        game.day_channel_id = target.id
         game.votes = {}
         game.current_day_number += 1
         game.day_deadline_epoch = int(time.time()) + seconds
         save_state("players.json")
 
-        # open channel
-        overw = ctx.channel.overwrites_for(ctx.guild.default_role)
+        # open the target channel for sending (for @everyone)
+        overw = target.overwrites_for(ctx.guild.default_role)
         overw.send_messages = True
-        await ctx.channel.set_permissions(ctx.guild.default_role, overwrite=overw)
+        await target.set_permissions(ctx.guild.default_role, overwrite=overw)
 
-        await ctx.send(
+        await target.send(
             f"🌞 **Day {game.current_day_number} begins.** Base threshold: **{game.base_threshold()}**.\n"
             f"Ends at <t:{game.day_deadline_epoch}:F> (<t:{game.day_deadline_epoch}:R>). Use `!vote @user`."
         )
 
-        # (re)start timer
+        # (re)start day timer bound to the chosen channel
         if game.day_timer_task and not game.day_timer_task.done():
             game.day_timer_task.cancel()
-        game.day_timer_task = asyncio.create_task(day_timer_worker(self.bot, ctx.guild.id, ctx.channel.id))
+        game.day_timer_task = asyncio.create_task(day_timer_worker(self.bot, ctx.guild.id, target.id))
 
     @commands.command()
     @commands.has_permissions(administrator=True)
