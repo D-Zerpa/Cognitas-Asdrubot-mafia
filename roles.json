@@ -1,0 +1,311 @@
+{
+  "SOCRATES": {
+    "name": "Sócrates, El Interrogador",
+    "faction": "TOWN",
+    "win_condition": "Eliminar las amenazas.",
+    "quote": "«Solo sé que no sé nada.»",
+    "abilities": {
+      "night": [
+        "Método Socrático: Cada noche puedes investigar a un jugador y descubrir si es enemigo o no."
+      ],
+      "day": [
+        "Preguntas Mayéuticas: Una vez por partida, puedes forzar a un jugador a declarar públicamente si es culpable o inocente. Debe responder con la verdad. Si el moderador determina que mintió, quedará silenciado el resto del día (no puede hablar ni votar)."
+      ],
+      "passive": []
+    },
+    "defaults": {"vote_weight_base": 1}
+  },
+  "PLATON": {
+    "name": "Platón, El Guardián de la Caverna",
+    "faction": "TOWN",
+    "win_condition": "Eliminar las amenazas.",
+    "quote": "«El mito de la caverna muestra que muchos viven entre sombras, creyéndolas reales.»",
+    "abilities": {
+      "night": [
+        "Encierro: Seleccionas a un jugador. Entrará en la cueva contigo, donde podrán hablar abiertamente esa noche. Al final de la noche, puedes elegir si liberarlo o mantenerlo en la sombra. Un jugador en la sombra no estará presente el día siguiente, no podrá participar, pero tampoco ser votado. No podrás dejar a alguien en la sombra dos noches seguidas."
+      ],
+      "day": [],
+      "passive": [
+        "Desconfianza de las Sombras: Si eres asesinado, se te revelará automáticamente la identidad de tu asesino."
+      ]
+    },
+    "defaults": {"vote_weight_base": 1}
+  },
+  "ARISTOTELES": {
+    "name": "Aristóteles, El Lógico",
+    "faction": "TOWN",
+    "win_condition": "Eliminar las amenazas.",
+    "quote": "«Somos lo que hacemos día a día. La excelencia, entonces, no es un acto, sino un hábito.»",
+    "abilities": {
+      "night": [
+        "Lógica Implacable: Puedes matar a un jugador por noche."
+      ],
+      "day": [],
+      "passive": [
+        "Responsabilidad: Si matas a un inocente, morirás en deshonra (si el pueblo gana, no estarás incluido en la victoria)."
+      ]
+    },
+    "defaults": {"vote_weight_base": 1}
+  },
+  "HIPOCRATES": {
+    "name": "Hipócrates, El Sanador",
+    "faction": "TOWN",
+    "win_condition": "Eliminar las amenazas.",
+    "quote": "«Primum non nocere: lo primero es no hacer daño.»",
+    "abilities": {
+      "night": [
+        "Juramento Hipocrático: Puedes proteger a un jugador cada noche para salvarlo de un ataque."
+      ],
+      "day": [],
+      "passive": [
+        "Solemne: Si no actúas en la noche, automáticamente actuarás sobre ti mismo. No obstante, no puedes actuar sobre ti mismo dos noches seguidas."
+      ]
+    },
+    "defaults": {"vote_weight_base": 1}
+  },
+  "HERACLITO": {
+    "name": "Heráclito, El Profeta del Río",
+    "faction": "TOWN",
+    "win_condition": "Eliminar las amenazas.",
+    "quote": "«Nadie se baña dos veces en el mismo río.»",
+    "abilities": {
+      "night": [],
+      "day": [
+        "Logos: Una vez al día, puedes seleccionar a una persona muerta. Este transmitirá un mensaje al pueblo a través del moderador. No puedes elegir a la misma persona dos veces."
+      ],
+      "passive": [
+        "Panta Rhei: Una vez muerto, podrás entrar al cementerio por esa noche y, al inicio del día siguiente, podrás enviar un mensaje con la información recabada."
+      ]
+    },
+    "defaults": {"vote_weight_base": 1}
+  },
+  "DIOGENES": {
+    "name": "Diógenes, El Cínico del Barril",
+    "faction": "TOWN",
+    "win_condition": "Eliminar las amenazas.",
+    "quote": "«Apártate de mi sol.»",
+    "abilities": {
+      "night": [
+        "Espiar desde el Barril: Cada noche puedes vigilar a un jugador y ver en quién actuó."
+      ],
+      "day": [],
+      "passive": [
+        "Descaro: Si alguien intenta silenciarte, sabrás quién fue. Podrás hablar de todos modos y esa persona estará silenciada."
+      ]
+    },
+    "defaults": {"vote_weight_base": 1}
+  },
+  "EPICTETO": {
+    "name": "Epicteto, El Estoico",
+    "faction": "TOWN",
+    "win_condition": "Eliminar las amenazas.",
+    "quote": "«No nos afecta lo que nos sucede, sino lo que nos decimos acerca de lo que nos sucede.»",
+    "abilities": {
+      "night": [
+        "Guardián del Logos: Cada noche eliges a un jugador para interponerte ante ataques contra él. La primera vez que lo ataquen, ambos sobreviven. La segunda vez que saltes por alguien en la partida, mueres tú y arrastras a 1 atacante contigo (al azar si hay varios)."
+      ],
+      "day": [],
+      "passive": [
+        "Aceptación del Destino: No puedes ser bloqueado."
+      ]
+    },
+    "defaults": {"vote_weight_base": 1}
+  },
+  "ZENON": {
+    "name": "Zenón, El Maestro de las Paradojas",
+    "faction": "TOWN",
+    "win_condition": "Eliminar las amenazas.",
+    "quote": "«Si la flecha vuela, entonces está en reposo en cada instante de su trayecto.»",
+    "abilities": {
+      "night": [],
+      "day": [
+        "Incongruencia: Tu voto cuenta como dos. Hace falta un voto extra para lincharte."
+      ],
+      "passive": [
+        "Paradoja del Movimiento: No puedes ser objetivo de habilidades nocturnas dos noches seguidas. Si actúan sobre ti durante la noche, a la siguiente eres inmune."
+      ]
+    },
+    "defaults": {"vote_weight_base": 2, "lynch_bonus_once": 1}
+  },
+  "PARMENIDES": {
+    "name": "Parménides, El Guardián del Ser",
+    "faction": "TOWN",
+    "win_condition": "Eliminar las amenazas.",
+    "quote": "«El ser es, y el no-ser no es.»",
+    "abilities": {
+      "night": [
+        "Inmovilidad del Ser: Dos veces por partida puedes seleccionar a un jugador: ni él podrá usar su habilidad ni podrán usar habilidades sobre él durante esa noche."
+      ],
+      "day": [
+        "El Ser y la Verdad: Una vez por partida, la primera persona que responda a la primera pregunta que formules en el día deberá hacerlo con sinceridad. Si el moderador determina que mintió, quedará silenciado el resto del día."
+      ],
+      "passive": []
+    },
+    "defaults": {"vote_weight_base": 1}
+  },
+  "PLOTINO": {
+    "name": "Plotino, El Místico del Uno",
+    "faction": "TOWN",
+    "win_condition": "Eliminar las amenazas.",
+    "quote": "«El alma nunca está separada de lo Uno.»",
+    "abilities": {
+      "night": [
+        "Unión con lo Uno: Una vez en la partida puedes revivir a un jugador muerto."
+      ],
+      "day": [],
+      "passive": [
+        "Marca del Uno: Si eres asesinado, el asesino quedará marcado y, durante el resto de la partida, hará falta un voto menos para lincharle."
+      ]
+    },
+    "defaults": {"vote_weight_base": 1}
+  },
+  "ANAXIMANDRO": {
+    "name": "Anaximandro, El Mensajero del Ápeiron",
+    "faction": "TOWN",
+    "win_condition": "Eliminar las amenazas.",
+    "quote": "«De lo indefinido provienen todas las cosas.»",
+    "abilities": {
+      "night": [
+        "Caos primigenio: Cada noche puedes ver la cantidad total de habilidades (activas) que hayan sido usadas."
+      ],
+      "day": [
+        "Mensaje del Infinito: Puedes mandar mensajes anónimos (a través del moderador) al grupo."
+      ],
+      "passive": []
+    },
+    "defaults": {"vote_weight_base": 1}
+  },
+  "PITAGORAS": {
+    "name": "Pitágoras, El Numerólogo",
+    "faction": "TOWN",
+    "win_condition": "Eliminar las amenazas.",
+    "quote": "«Todo es número.»",
+    "abilities": {
+      "night": [],
+      "day": [
+        "Demostración Irrefutable: Una vez por partida, tu voto en un linchamiento contará como triple."
+      ],
+      "passive": [
+        "Número Perfecto: Si la cantidad de jugadores eliminados en una noche es par, al día siguiente tu voto contará como doble. Nota: No se acumulan ambas habilidades, se prioriza la mayor."
+      ]
+    },
+    "defaults": {"vote_weight_base": 1}
+  },
+  "HEGEL": {
+    "name": "Hegel, El Espíritu Absoluto",
+    "faction": "MAFIA",
+    "win_condition": "Eliminar al Pueblo o alcanzar la mayoría.",
+    "quote": "«Lo real es racional, y lo racional es real.»",
+    "abilities": {
+      "night": [
+        "Dirección Dialéctica: Decides qué jugador realizará el asesinato nocturno. Si el ejecutor muere, heredas el poder de asesinar; si esto ocurre, se anula 'Espíritu del Sistema'."
+      ],
+      "day": [],
+      "passive": [
+        "Dialéctica del Espíritu: Puedes elegir a un jugador del Pueblo; si es investigado esa noche, aparecerá como mafia. No puede usarse dos noches seguidas ni sobre la misma persona dos veces.",
+        "Espíritu del Sistema: Si eres asesinado o linchado, aparecerás como Pueblo; la primera investigación sobre ti también te mostrará como Pueblo."
+      ]
+    },
+    "defaults": { "vote_weight_base": 1 }
+  },
+  "KANT": {
+    "name": "Kant, El Ejecutor de la Razón Pura",
+    "faction": "MAFIA",
+    "win_condition": "Eliminar al Pueblo o alcanzar la mayoría.",
+    "quote": "«El cielo estrellado sobre mí y la ley moral dentro de mí.»",
+    "abilities": {
+      "night": [
+        "Imperativo Categórico: Eres el ejecutor oficial de las muertes Dogmáticas."
+      ],
+      "day": [],
+      "passive": [
+        "Si Hegel muere, heredas la inmunidad a la primera investigación."
+      ]
+    },
+    "defaults": { "vote_weight_base": 1 }
+  },
+  "COMTE": {
+    "name": "Comte, El Positivista Camaleón",
+    "faction": "MAFIA",
+    "win_condition": "Eliminar al Pueblo o alcanzar la mayoría.",
+    "quote": "«Saber para prever, prever para proveer.»",
+    "abilities": {
+      "night": [
+        "Método Científico: Puedes hacer que un aliado Dogmático aparezca como inocente ante investigación. Solo puedes usarlo una vez por aliado."
+      ],
+      "day": [],
+      "passive": [
+        "Orden y Progreso: Siempre aparecerás como inocente ante las investigaciones."
+      ]
+    },
+    "defaults": { "vote_weight_base": 1 }
+  },
+  "SPINOZA": {
+    "name": "Spinoza, El Geómetra de Dios",
+    "faction": "MAFIA",
+    "win_condition": "Eliminar al Pueblo o alcanzar la mayoría.",
+    "quote": "«Deus sive Natura.»",
+    "abilities": {
+      "night": [
+        "Ética Axiomática: Cada noche puedes bloquear a un jugador (ese jugador no podrá usar su habilidad)."
+      ],
+      "day": [
+        "Voz de la Ortodoxia: Una vez por partida, puedes silenciar a un jugador durante el día (no podrá hablar ni votar)."
+      ],
+      "passive": []
+    },
+    "defaults": { "vote_weight_base": 1 }
+  },
+  "MACHIAVELLI": {
+  "name": "Maquiavelo, El Príncipe",
+  "faction": "SOCIEDAD_SECRETA",
+  "win_condition": "Eliminar a la Mafia e imponerse ante el pueblo.",
+  "quote": "«El fin justifica los medios.»",
+  "abilities": {
+    "night": [
+      "Arte del Príncipe: Dos veces por partida, puedes reclutar a un jugador (Pueblo, Mafia o Independiente). Este se unirá a tu Sociedad.",
+      "El Ojo del Príncipe: Al reclutar a alguien, conocerás su rol y sus acciones cada noche."
+    ],
+    "day": [],
+    "passive": [
+      "Consejo en la Penumbra: Mantienes comunicación privada con tus reclutados, quienes solo pueden hablar contigo.",
+      "Virtù y Fortuna: Apareces como Pueblo en investigaciones.",
+      "Manto del Poder: Eres inmune al primer intento de asesinato nocturno."
+    ]
+  },
+  "defaults": { "vote_weight_base": 1 }
+},
+"NIETZSCHE": {
+  "name": "Nietzsche, El Profeta del Superhombre",
+  "faction": "INDEPENDENT",
+  "win_condition": "Ser el único sobreviviente.",
+  "quote": "«Dios ha muerto. Y nosotros lo hemos matado.»",
+  "abilities": {
+    "night": [
+      "Voluntad de Poder: Cada noche puedes asesinar a un jugador."
+    ],
+    "day": [],
+    "passive": [
+      "Máscara del Zaratustra: La primera investigación que se haga sobre ti aparecerá como inocente.",
+      "Eterno Retorno: Eres inmune al primer intento de asesinato nocturno."
+    ]
+  },
+  "defaults": { "vote_weight_base": 1 }
+},
+
+"DEMOCRITUS": {
+  "name": "Demócrito, El Filósofo que Ríe",
+  "faction": "INDEPENDENT",
+  "win_condition": "Ser linchado durante el día.",
+  "quote": "«La vida sin alegría es como una larga travesía sin posada.»",
+  "abilities": {
+    "night": [],
+    "day": [],
+    "passive": [
+      "Risa Atómica: No puedes ganar si mueres de noche. Solo obtienes la victoria personal si el pueblo te lincha en votación diurna.",
+      "Eco de la Risa: Si eres linchado, tu victoria es inmediata, aunque la partida continúa para los demás."
+    ]
+  },
+  "defaults": { "vote_weight_base": 1 }
+}
+}
