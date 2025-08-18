@@ -2,7 +2,7 @@ import time, asyncio, discord
 from discord.ext import commands
 from ..core.state import game
 from ..core.storage import save_state
-from ..core.timer import parse_duration_to_seconds, day_timer_worker
+from ..core.timer import parse_duration_to_seconds, start_day_timer
 
 class VotingCog(commands.Cog):
     def __init__(self, bot):
@@ -22,7 +22,7 @@ class VotingCog(commands.Cog):
         !start_day 8h #village
         !start_day 8h #village force
         """
-        from ..core.timer import parse_duration_to_seconds, day_timer_worker
+        from ..core.timer import parse_duration_to_seconds, start_day_timer
         import time, asyncio
 
         if game.game_over:
@@ -50,6 +50,7 @@ class VotingCog(commands.Cog):
         game.votes = {}                       # reset votes idempotently
         game.current_day_number += 1          # increment day on (re)start
         game.day_deadline_epoch = int(time.time()) + seconds
+        await start_day_timer(self.bot, ctx.guild.id, target.id)
         save_state("state.json")
 
         # open the target channel for sending

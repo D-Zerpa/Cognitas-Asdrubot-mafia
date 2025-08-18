@@ -72,7 +72,7 @@ class ActionsCog(commands.Cog):
         !start_night 6h #village
         !start_night 6h #village force
         """
-        from ..core.timer import parse_duration_to_seconds, night_timer_worker
+        from ..core.timer import parse_duration_to_seconds, start_night_timer
         import time, asyncio
 
         if game.game_over:
@@ -100,6 +100,7 @@ class ActionsCog(commands.Cog):
         game.night_channel_id = ctx.channel.id
         game.night_deadline_epoch = int(time.time()) + seconds
         game.next_day_channel_id = open_channel_id
+        await start_night_timer(self.bot, ctx.guild.id)
         save_state("state.json")
 
         await ctx.send(

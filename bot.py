@@ -91,8 +91,8 @@ async def on_ready():
     print(f"Connected as {bot.user} (id: {bot.user.id})")
     print(f"Loaded roles: {len(game.roles)}")
     if not game.game_over:
-        await resume_day_timer(bot)
-        await resume_night_timer(bot)
+        await resume_day_timer(bot)    # uses config checkpoints
+        await resume_night_timer(bot)  # uses config checkpoints
 
 @bot.command()
 async def ping(ctx):
