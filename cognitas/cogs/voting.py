@@ -2,7 +2,7 @@ import time, asyncio, discord
 from discord.ext import commands
 from ..core.state import game
 from ..core.storage import save_state
-from ..core.timer import parse_duration_to_seconds, start_day_timer
+from ..core.timer import parse_duration_to_seconds, start_day_timer, _day_timer_worker
 
 class VotingCog(commands.Cog):
     def __init__(self, bot):
@@ -11,49 +11,76 @@ class VotingCog(commands.Cog):
     # ---------- Day controls ----------
     @commands.command()
     @commands.has_permissions(administrator=True)
-    async def start_day(self, ctx, duration: str = "24h", channel: discord.TextChannel = None, force: str = ""):
+    async def start_day(self, ctx, *args):
         """
-        Start the Day phase with a duration. Idempotent by default.
-        Priority: provided channel > saved default Day channel > current channel.
-        Use trailing 'force' to restart Day even if active (will increment the day).
-        Examples:
+        Start the Day phase (idempotent). Accepts args in any order:
         !start_day
         !start_day 12h
+        !start_day #village
         !start_day 8h #village
+        !start_day #village 8h
         !start_day 8h #village force
+        !start_day force
+        Priority for channel: mentioned channel > saved default > current channel.
         """
+        import time
         from ..core.timer import parse_duration_to_seconds, start_day_timer
-        import time, asyncio
+        from ..core.state import game
+        from ..core.storage import save_state
 
         if game.game_over:
             return await ctx.reply("Game is finished. Start a new game before starting a Day.")
 
-        seconds = parse_duration_to_seconds(duration)
+        # --- Parse args flexibly ---
+        content_tokens = [t.strip() for t in args]  # all strings
+        mentioned_channels = ctx.message.channel_mentions
+        target_channel = mentioned_channels[0] if mentioned_channels else None
+
+        force = any(t.lower() == "force" for t in content_tokens)
+
+        # Find a duration token that's NOT a channel mention like "<#123...>"
+        duration_token = None
+        for t in content_tokens:
+            if t.lower() == "force":
+                continue
+            if t.startswith("<#") and t.endswith(">"):
+                continue
+            # if it has any digits, assume it's the duration string ("8h", "1h30m", "90m")
+            if any(ch.isdigit() for ch in t):
+                duration_token = t
+                break
+
+        duration_str = duration_token or "24h"
+        seconds = parse_duration_to_seconds(duration_str)
         if seconds <= 0:
             return await ctx.reply("Provide a valid duration (e.g., `24h`, `1h30m`, `90m`).")
 
         # Guard: refuse if a Day is already active, unless 'force'
-        if game.is_day_active() and force.lower() != "force":
+        if hasattr(game, "is_day_active") and game.is_day_active() and not force:
             chan = ctx.guild.get_channel(game.day_channel_id)
             when = f"<t:{game.day_deadline_epoch}:R>" if game.day_deadline_epoch else ""
-            return await ctx.reply(f"Day already active in {chan.mention if chan else '#?'} (ends {when}). Use `force` to restart.")
+            return await ctx.reply(f"Day already active in {chan.mention if chan else '#?'} (ends {when}). Add `force` to restart.")
 
-        # If forcing, cancel existing timer
-        if force.lower() == "force" and game.day_timer_task and not game.day_timer_task.done():
+        # If forcing, cancel existing timer (start_day_timer will also cancel, but this is explicit)
+        if force and game.day_timer_task and not game.day_timer_task.done():
             game.day_timer_task.cancel()
             game.day_timer_task = None
 
-        # choose target channel
-        target = channel or (ctx.guild.get_channel(game.default_day_channel_id) if game.default_day_channel_id else ctx.channel)
+        # Choose target channel: mention > saved default > current
+        target = (
+            target_channel
+            or (ctx.guild.get_channel(game.default_day_channel_id) if game.default_day_channel_id else None)
+            or ctx.channel
+        )
 
+        # --- Mutate state ---
         game.day_channel_id = target.id
-        game.votes = {}                       # reset votes idempotently
-        game.current_day_number += 1          # increment day on (re)start
+        game.votes = {}
+        game.current_day_number += 1
         game.day_deadline_epoch = int(time.time()) + seconds
-        await start_day_timer(self.bot, ctx.guild.id, target.id)
         save_state("state.json")
 
-        # open the target channel for sending
+        # Open the target channel for sending
         overw = target.overwrites_for(ctx.guild.default_role)
         overw.send_messages = True
         await target.set_permissions(ctx.guild.default_role, overwrite=overw)
@@ -63,10 +90,14 @@ class VotingCog(commands.Cog):
             f"Ends at <t:{game.day_deadline_epoch}:F> (<t:{game.day_deadline_epoch}:R>). Use `!vote @user`."
         )
 
-        # (re)start day timer
-        if game.day_timer_task and not game.day_timer_task.done():
-            game.day_timer_task.cancel()
-        game.day_timer_task = asyncio.create_task(day_timer_worker(self.bot, ctx.guild.id, target.id))
+        # Start the day timer (single source of truth)
+        await start_day_timer(self.bot, ctx.guild.id, target.id)
+
+                # Delete the original command for extra privacy
+        try:
+            await ctx.message.delete(delay=2)
+        except Exception:
+            pass
 
 
     @commands.command()
@@ -95,6 +126,11 @@ class VotingCog(commands.Cog):
         if already_closed:
             await ctx.reply("Day was already closed. State synced.")
 
+                # Delete the original command for extra privacy
+        try:
+            await ctx.message.delete(delay=2)
+        except Exception:
+            pass
 
     # ---------- Voting ----------
     @commands.command()
@@ -121,12 +157,19 @@ class VotingCog(commands.Cog):
             return await ctx.reply("That player is not available.")
         if game.flags_of(target).get("absent", False):
             return await ctx.reply("That player is absent today (cannot be voted).")
+        
 
         game.votes[voter] = target
         save_state("state.json")
         await ctx.message.add_reaction("🗳️")
         await ctx.send(f"Vote from <@{voter}> → <@{target}> (weight {game.vote_weight(voter)}).")
         await self._check_threshold_and_close(ctx)
+        
+                # Delete the original command for extra privacy
+        try:
+            await ctx.message.delete(delay=2)
+        except Exception:
+            pass
 
     @commands.command()
     async def unvote(self, ctx):
@@ -140,6 +183,12 @@ class VotingCog(commands.Cog):
             await self._check_threshold_and_close(ctx)
         else:
             await ctx.reply("You had no active vote.")
+            
+                # Delete the original command for extra privacy
+        try:
+            await ctx.message.delete(delay=2)
+        except Exception:
+            pass
 
     @commands.command()
     async def myvote(self, ctx):
@@ -149,6 +198,12 @@ class VotingCog(commands.Cog):
         if not tgt:
             return await ctx.reply("You have no active vote.")
         await ctx.reply(f"Your current vote is on <@{tgt}> (weight {game.vote_weight(voter)}).")
+        
+                # Delete the original command for extra privacy
+        try:
+            await ctx.message.delete(delay=2)
+        except Exception:
+            pass
 
     @commands.command(name="votes")
     async def votes_breakdown(self, ctx):
@@ -183,6 +238,12 @@ class VotingCog(commands.Cog):
 
         msg = "\n".join(lines)
         await ctx.send(msg if len(msg) < 1800 else (msg[:1700] + "\n… (truncated)"))
+        
+                # Delete the original command for extra privacy
+        try:
+            await ctx.message.delete(delay=2)
+        except Exception:
+            pass
 
     @commands.command()
     async def status(self, ctx):
@@ -205,6 +266,12 @@ class VotingCog(commands.Cog):
                 req = game.required_for_target(obj_uid)
                 lines.append(f"- <@{obj_uid}> → **{total}/{req}**")
         await ctx.send("\n".join(lines))
+        
+                # Delete the original command for extra privacy
+        try:
+            await ctx.message.delete(delay=2)
+        except Exception:
+            pass
 
     @commands.command()
     @commands.has_permissions(manage_guild=True)
@@ -213,6 +280,12 @@ class VotingCog(commands.Cog):
         game.votes = {}
         save_state("state.json")
         await ctx.send("🗑️ All votes have been cleared.")
+        
+                # Delete the original command for extra privacy
+        try:
+            await ctx.message.delete(delay=2)
+        except Exception:
+            pass
 
     # ---------- internal ----------
     async def _check_threshold_and_close(self, ctx):

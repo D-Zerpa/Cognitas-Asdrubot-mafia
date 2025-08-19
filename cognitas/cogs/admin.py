@@ -7,6 +7,47 @@ class AdminCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    @commands.command(name="purge")
+    @commands.has_permissions(manage_messages=True)
+    async def purge(self, ctx, amount: int, channel: discord.TextChannel = None):
+        """
+        Deletes a specific number of messages from a single channel.
+        Usage:
+        !purge 50                 → deletes 50 messages in the current channel
+        !purge 100 #general       → deletes 100 messages in #general
+        """
+        target_channel = channel or ctx.channel
+
+        # Safety limit to avoid accidental nukes
+        if amount <= 0 or amount > 500:
+            return await ctx.send("⚠️ Please choose an amount between **1** and **500**.")
+
+        # Check if the bot has permissions
+        if not target_channel.permissions_for(ctx.guild.me).manage_messages:
+            return await ctx.send(f"❌ I don’t have permission to manage messages in {target_channel.mention}.")
+
+        # Ask for confirmation
+        await ctx.send(
+            f"⚠️ Are you sure you want to delete **{amount}** messages in {target_channel.mention}?\n"
+            "Type `CONFIRM` to proceed or anything else to cancel."
+        )
+
+        def check(m):
+            return m.author == ctx.author and m.channel == ctx.channel
+
+        try:
+            confirm_msg = await self.bot.wait_for("message", check=check, timeout=20)
+        except:
+            return await ctx.send("❌ Timed out. Purge cancelled.")
+
+        if confirm_msg.content.strip().upper() != "CONFIRM":
+            return await ctx.send("❌ Purge cancelled.")
+
+        # Do the purge
+        deleted = await target_channel.purge(limit=amount)
+        await ctx.send(f"🧹 Deleted **{len(deleted)}** messages in {target_channel.mention}.", delete_after=5)
+    
+    
     @commands.command()
     @commands.has_permissions(administrator=True)
     async def assign(self, ctx, member: discord.Member, role_code: str):
@@ -36,6 +77,11 @@ class AdminCog(commands.Cog):
 
         await ctx.send(f"✅ Assigned **{game.roles[code]['name']}** to {member.mention} and bound to {ctx.channel.mention}.")
 
+                # Delete the original command for extra privacy
+        try:
+            await ctx.message.delete(delay=2)
+        except Exception:
+            pass
 
     @commands.command()
     @commands.has_permissions(administrator=True)
@@ -52,6 +98,14 @@ class AdminCog(commands.Cog):
             f"Channel: {channel.mention if channel else 'N/A'}"
         )
 
+        
+                # Delete the original command for extra privacy
+        try:
+            await ctx.message.delete(delay=2)
+        except Exception:
+            pass
+        
+        
     @commands.command()
     @commands.has_permissions(administrator=True)
     async def effect(self, ctx, member: discord.Member, etype: str, value: int = None, expires_in_days: int = None):
@@ -68,6 +122,12 @@ class AdminCog(commands.Cog):
         save_state("state.json")
         await ctx.message.add_reaction("✨")
         await ctx.send(f"🎯 Effect added to {member.mention}: `{eff}`")
+        
+                # Delete the original command for extra privacy
+        try:
+            await ctx.message.delete(delay=2)
+        except Exception:
+            pass
 
     @commands.command()
     @commands.has_permissions(administrator=True)
@@ -84,6 +144,12 @@ class AdminCog(commands.Cog):
         save_state("state.json")
         await ctx.message.add_reaction("🛠️")
         await ctx.send(f"Flag `{key}` for {member.mention} = {bool(int(value))}")
+        
+                # Delete the original command for extra privacy
+        try:
+            await ctx.message.delete(delay=2)
+        except Exception:
+            pass
 
     @commands.command()
     @commands.has_permissions(administrator=True)
@@ -98,6 +164,12 @@ class AdminCog(commands.Cog):
         game.admin_log_channel_id = target.id
         save_state("state.json")
         await ctx.send(f"🧭 Admin log channel set to {target.mention}")
+        
+                # Delete the original command for extra privacy
+        try:
+            await ctx.message.delete(delay=2)
+        except Exception:
+            pass
 
     @commands.command()
     @commands.has_permissions(administrator=True)
@@ -112,6 +184,12 @@ class AdminCog(commands.Cog):
         game.default_day_channel_id = target.id
         save_state("state.json")
         await ctx.send(f"🌞 Default Day channel set to {target.mention}")
+        
+                # Delete the original command for extra privacy
+        try:
+            await ctx.message.delete(delay=2)
+        except Exception:
+            pass
 
 
     @commands.command(name="show_channels")
@@ -124,6 +202,12 @@ class AdminCog(commands.Cog):
             f"- Admin log: {admin.mention if admin else 'not set'}\n"
             f"- Default Day: {day.mention if day else 'not set'}"
         )
+        
+                # Delete the original command for extra privacy
+        try:
+            await ctx.message.delete(delay=2)
+        except Exception:
+            pass
 
     @commands.command()
     @commands.has_permissions(administrator=True)
@@ -162,6 +246,12 @@ class AdminCog(commands.Cog):
         # Post a summary/announcement here
         extra = f"\n\n**Note:** {note}" if note.strip() else ""
         await ctx.send(f"✅ Game marked as finished. State persisted.{extra}")
+        
+                # Delete the original command for extra privacy
+        try:
+            await ctx.message.delete(delay=2)
+        except Exception:
+            pass
 
     @commands.command(name="apply_mark")
     @commands.has_permissions(administrator=True)
@@ -191,34 +281,45 @@ class AdminCog(commands.Cog):
             await ctx.send(f"⚖️ {member.mention} is now **marked** (–1 vote to lynch).")
         else:
             await ctx.send(f"ℹ️ {member.mention} was already marked.")
+            
+                # Delete the original command for extra privacy
+        try:
+            await ctx.message.delete(delay=2)
+        except Exception:
+            pass
 
-@commands.command(name="remove_mark")
-@commands.has_permissions(administrator=True)
-async def remove_mark(self, ctx, member: discord.Member):
-    """
-    Remove Plotino's mark from a player.
-    Usage: !remove_mark @Player
-    """
-    uid = str(member.id)
-    if uid not in game.players:
-        return await ctx.reply("Target is not a registered player.")
+    @commands.command(name="remove_mark")
+    @commands.has_permissions(administrator=True)
+    async def remove_mark(self, ctx, member: discord.Member):
+        """
+        Remove Plotino's mark from a player.
+        Usage: !remove_mark @Player
+        """
+        uid = str(member.id)
+        if uid not in game.players:
+            return await ctx.reply("Target is not a registered player.")
 
-    removed = False
-    if hasattr(game, "remove_effect"):
-        removed = game.remove_effect(uid, "plotino_mark")
-    else:
-        effs = game.players[uid].get("effects", [])
-        before = len(effs)
-        game.players[uid]["effects"] = [e for e in effs if e.get("type") != "plotino_mark"]
-        removed = len(game.players[uid]["effects"]) != before
+        removed = False
+        if hasattr(game, "remove_effect"):
+            removed = game.remove_effect(uid, "plotino_mark")
+        else:
+            effs = game.players[uid].get("effects", [])
+            before = len(effs)
+            game.players[uid]["effects"] = [e for e in effs if e.get("type") != "plotino_mark"]
+            removed = len(game.players[uid]["effects"]) != before
 
-    save_state("state.json")
+        save_state("state.json")
 
-    if removed:
-        await ctx.send(f"🧹 Mark removed from {member.mention}.")
-    else:
-        await ctx.send(f"ℹ️ {member.mention} had no mark.")
+        if removed:
+            await ctx.send(f"🧹 Mark removed from {member.mention}.")
+        else:
+            await ctx.send(f"ℹ️ {member.mention} had no mark.")
 
+                # Delete the original command for extra privacy
+        try:
+            await ctx.message.delete(delay=2)
+        except Exception:
+            pass
 
 
     @commands.command()
@@ -253,3 +354,9 @@ async def remove_mark(self, ctx, member: discord.Member):
 
         save_state("state.json")
         await ctx.send("🧹 Game state wiped. Ready for a new setup.")
+        
+                # Delete the original command for extra privacy
+        try:
+            await ctx.message.delete(delay=2)
+        except Exception:
+            pass
