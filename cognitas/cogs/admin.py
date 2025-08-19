@@ -158,6 +158,63 @@ class AdminCog(commands.Cog):
         extra = f"\n\n**Note:** {note}" if note.strip() else ""
         await ctx.send(f"✅ Game marked as finished. State persisted.{extra}")
 
+    @commands.command(name="apply_mark")
+    @commands.has_permissions(administrator=True)
+    async def apply_mark(self, ctx, member: discord.Member):
+        """
+        Apply Plotino's mark to a player: -1 votes needed to lynch them.
+        Usage: !apply_mark @Player
+        """
+        uid = str(member.id)
+        if uid not in game.players:
+            return await ctx.reply("Target is not a registered player.")
+
+        # Add a unique, persistent mark
+        added = False
+        if hasattr(game, "add_unique_effect"):
+            added = game.add_unique_effect(uid, "plotino_mark", value=0, expires_day=None)
+        else:
+            # Fallback if you didn't add helpers
+            effs = game.players[uid].setdefault("effects", [])
+            if not any(e.get("type") == "plotino_mark" for e in effs):
+                effs.append({"type": "plotino_mark", "value": 0, "expires_day": None})
+                added = True
+
+        save_state("state.json")
+
+        if added:
+            await ctx.send(f"⚖️ {member.mention} is now **marked** (–1 vote to lynch).")
+        else:
+            await ctx.send(f"ℹ️ {member.mention} was already marked.")
+
+@commands.command(name="remove_mark")
+@commands.has_permissions(administrator=True)
+async def remove_mark(self, ctx, member: discord.Member):
+    """
+    Remove Plotino's mark from a player.
+    Usage: !remove_mark @Player
+    """
+    uid = str(member.id)
+    if uid not in game.players:
+        return await ctx.reply("Target is not a registered player.")
+
+    removed = False
+    if hasattr(game, "remove_effect"):
+        removed = game.remove_effect(uid, "plotino_mark")
+    else:
+        effs = game.players[uid].get("effects", [])
+        before = len(effs)
+        game.players[uid]["effects"] = [e for e in effs if e.get("type") != "plotino_mark"]
+        removed = len(game.players[uid]["effects"]) != before
+
+    save_state("state.json")
+
+    if removed:
+        await ctx.send(f"🧹 Mark removed from {member.mention}.")
+    else:
+        await ctx.send(f"ℹ️ {member.mention} had no mark.")
+
+
 
     @commands.command()
     @commands.has_permissions(administrator=True)
