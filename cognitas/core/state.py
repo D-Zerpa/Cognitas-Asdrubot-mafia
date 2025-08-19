@@ -3,18 +3,35 @@ from math import ceil
 
 class GameState:
     def __init__(self):
-        self.players = {}             # { uid_str: {nick, role, channel_id, alive, flags, effects} }
-        self.votes = {}               # { voter_uid_str: target_uid_str }
-        self.roles = {}               # loaded from roles.json
-        self.day_channel_id = None
-        self.current_day_number = 1
-        self.day_deadline_epoch = None
-        self.day_timer_task = None    # asyncio.Task
-        self.admin_log_channel_id = None      # where admin logs go
-        self.default_day_channel_id = None    # default Day channel opened after Night
-        self.game_over = False
+        # --- Core runtime state ---
+        self.players = {}               # { uid: {nick, role, channel_id, alive, flags, effects} }
+        self.votes = {}                 # { voter_uid: target_uid }
+        self.roles = {}                 # loaded from roles.json
 
-    # ---------- role & player access ----------
+        # --- Day phase ---
+        self.day_channel_id = None      # int | None
+        self.current_day_number = 1     # int
+        self.day_deadline_epoch = None  # int | None (epoch seconds)
+        self.day_timer_task = None      # asyncio.Task | None
+
+        # --- Night phase ---
+        self.night_channel_id = None        # where !act is allowed (optional)
+        self.night_deadline_epoch = None    # epoch seconds
+        self.night_timer_task = None        # asyncio.Task | None
+        self.next_day_channel_id = None     # which channel to open at dawn
+
+        # --- Night action log (append-only) ---
+        # list of dicts: {day, ts_epoch, actor_uid, target_uid, note}
+        self.night_actions = []
+
+        # --- Server-configurable channels (set via admin cmds) ---
+        self.admin_log_channel_id = None    # where admin logs go
+        self.default_day_channel_id = None  # default Day channel
+
+        # --- Game lifecycle ---
+        self.game_over = False              # block new phases when True
+
+    # -------------- Helpers  --------------
     def role_of(self, uid: str) -> dict:
         code = self.players[uid]["role"]
         return self.roles.get(code, {})
@@ -34,7 +51,7 @@ class GameState:
     def base_threshold(self):
         return ceil(len(self.alive_ids()) / 2)
 
-    # ---------- effect math ----------
+    # ----- voting math -----
     def _expired(self, eff: dict) -> bool:
         exp = eff.get("expires_day")
         return exp is not None and exp < self.current_day_number
