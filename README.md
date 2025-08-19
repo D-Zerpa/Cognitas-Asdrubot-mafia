@@ -1,6 +1,6 @@
 # 🧠 **Cognitas** *(a.k.a. Asdrubot)*  
 
-> 🎭 A powerful **Discord bot** for running complex **Mafia / Werewolf-style games**.  
+> 🎭 A modest **Discord bot** for running **Mafia / Werewolf-style games**.  
 > Automates phases, tracks secret actions, manages voting, and keeps the game flowing.
 
 ![Banner](https://img.shields.io/badge/Discord-Mafia%20Bot-7289DA?style=for-the-badge&logo=discord&logoColor=white)
@@ -18,7 +18,6 @@
 | **roles.json** | Stores all role definitions, abilities, and factions. |
 | **state.json** | Saves the current game state for persistence across restarts. |
 | **requirements.txt** | Project dependencies. |
-| **.env** | Stores the Discord token and environment variables. |
 
 ### `cognitas/cogs/` — **Commands**
 | File | Description |
@@ -40,11 +39,11 @@
 
 ## ✨ **Features**
 
-- 🕹️ **Complete Game Automation** — Phases, players, votes, kills.
+- 🕹️ **Good Game Automation** — Phases, players, votes, kills.
 - ⏳ **Day & Night Timers** — Automatic starts, reminders & locks.
 - 🧩 **Fully Configurable Roles** — Defined in `roles.json`.
 - 🔒 **Secret Night Actions** — Private command usage.
-- 🗳️ **Weighted Voting System** — Supports buffs & debuffs (e.g. Plotino’s mark).
+- 🗳️ **Weighted Voting System** — Supports buffs & debuffs.
 - 🛠️ **Persistent State** — Bot remembers game progress after restarts.
 - 📢 **Admin Logs** — All actions logged privately.
 - 🧑‍🤝‍🧑 **Multi-Channel Support** — Role, day, admin, and voting channels.
