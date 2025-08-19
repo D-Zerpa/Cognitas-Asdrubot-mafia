@@ -2,7 +2,7 @@ import time, asyncio, discord
 from discord.ext import commands
 from ..core.state import game
 from ..core.storage import save_state
-from ..core.timer import parse_duration_to_seconds, night_timer_worker
+from ..core.timer import parse_duration_to_seconds, _night_timer_worker
 
 class ActionsCog(commands.Cog):
     def __init__(self, bot):

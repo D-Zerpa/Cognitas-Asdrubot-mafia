@@ -110,16 +110,16 @@ class GameState:
         return totals
 
     def add_unique_effect(self, uid: str, effect_type: str, *, value: int = 0, expires_day: int | None = None) -> bool:
-    """Add an effect if not already present. Returns True if added."""
-    p = self.players.get(uid)
-    if not p:
-        return False
-    effs = p.setdefault("effects", [])
-    for e in effs:
-        if e.get("type") == effect_type and (e.get("expires_day") == expires_day):
+        """Add an effect if not already present. Returns True if added."""
+        p = self.players.get(uid)
+        if not p:
             return False
-    effs.append({"type": effect_type, "value": value, "expires_day": expires_day})
-    return True
+        effs = p.setdefault("effects", [])
+        for e in effs:
+            if e.get("type") == effect_type and (e.get("expires_day") == expires_day):
+                return False
+        effs.append({"type": effect_type, "value": value, "expires_day": expires_day})
+        return True
 
     def remove_effect(self, uid: str, effect_type: str) -> bool:
         """Remove all effects of given type. Returns True if any removed."""
