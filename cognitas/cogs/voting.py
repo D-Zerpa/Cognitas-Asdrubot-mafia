@@ -76,7 +76,11 @@ class VotingCog(commands.Cog):
         # --- Mutate state ---
         game.day_channel_id = target.id
         game.votes = {}
-        game.current_day_number += 1
+        if game.current_day_number == 0:
+            game.current_day_number = 1
+        else:
+            game.current_day_number += 1
+
         game.day_deadline_epoch = int(time.time()) + seconds
         save_state("state.json")
 

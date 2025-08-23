@@ -344,7 +344,7 @@ class AdminCog(commands.Cog):
         game.players = {}
         game.votes = {}
         game.day_channel_id = None
-        game.current_day_number = 1
+        game.current_day_number = 0
         game.day_deadline_epoch = None
         game.night_channel_id = None
         game.night_deadline_epoch = None
