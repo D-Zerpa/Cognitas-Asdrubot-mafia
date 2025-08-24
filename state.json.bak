@@ -1,14 +1,14 @@
 {
   "players": {},
   "votes": {},
-  "day_channel_id": null,
+  "day_channel_id": 1408971466996846624,
   "current_day_number": 1,
   "day_deadline_epoch": null,
   "night_channel_id": null,
   "night_deadline_epoch": null,
   "next_day_channel_id": null,
   "night_actions": [],
-  "admin_log_channel_id": 1407024770066939944,
-  "default_day_channel_id": 1407412183817785537,
-  "game_over": false
+  "admin_log_channel_id": null,
+  "default_day_channel_id": null,
+  "game_over": true
 }

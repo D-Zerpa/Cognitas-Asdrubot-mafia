@@ -13,7 +13,8 @@ class GameState:
         self.current_day_number = 1     # int
         self.day_deadline_epoch = None  # int | None (epoch seconds)
         self.day_timer_task = None      # asyncio.Task | None
-
+        self.end_day_votes = set()   # uids (str) de vivos que pidieron cerrar el Día
+        
         # --- Night phase ---
         self.night_channel_id = None        # where !act is allowed (optional)
         self.night_deadline_epoch = None    # epoch seconds

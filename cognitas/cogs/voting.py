@@ -1,305 +1,90 @@
-import time, asyncio, discord
+# cognitas/cogs/voting.py
+import discord
+from discord import app_commands
 from discord.ext import commands
-from ..core.state import game
-from ..core.storage import save_state
-from ..core.timer import parse_duration_to_seconds, start_day_timer, _day_timer_worker
+from ..core import phases, votes as votes_core
 
 class VotingCog(commands.Cog):
-    def __init__(self, bot):
-        self.bot = bot
+    def __init__(self, bot): self.bot = bot
 
-    # ---------- Day controls ----------
-    @commands.command()
-    @commands.has_permissions(administrator=True)
-    async def start_day(self, ctx, *args):
-        """
-        Start the Day phase (idempotent). Accepts args in any order:
-        !start_day
-        !start_day 12h
-        !start_day #village
-        !start_day 8h #village
-        !start_day #village 8h
-        !start_day 8h #village force
-        !start_day force
-        Priority for channel: mentioned channel > saved default > current channel.
-        """
-        import time
-        from ..core.timer import parse_duration_to_seconds, start_day_timer
-        from ..core.state import game
-        from ..core.storage import save_state
+    # ------- Fases -------
+    @app_commands.command(name="start_day", description="Inicia el Día (admin)")
+    @app_commands.describe(duration="Ej: 24h, 90m, 1h30m", channel="Canal de Día", force="Reinicia si ya hay un día activo")
+    @app_commands.default_permissions(administrator=True)
+    async def start_day(self, interaction: discord.Interaction, duration: str = "24h", channel: discord.TextChannel | None = None, force: bool = False):
+        ctx = await commands.Context.from_interaction(interaction)
+        await phases.start_day(ctx, duration_str=duration, target_channel=channel, force=force)
+        await interaction.response.defer(ephemeral=True)  # ya respondimos vía ctx.reply
 
-        if game.game_over:
-            return await ctx.reply("Game is finished. Start a new game before starting a Day.")
+    @app_commands.command(name="end_day", description="Termina el Día (admin)")
+    @app_commands.default_permissions(administrator=True)
+    async def end_day(self, interaction: discord.Interaction):
+        ctx = await commands.Context.from_interaction(interaction)
+        await phases.end_day(ctx)
+        await interaction.response.defer(ephemeral=True)
 
-        # --- Parse args flexibly ---
-        content_tokens = [t.strip() for t in args]  # all strings
-        mentioned_channels = ctx.message.channel_mentions
-        target_channel = mentioned_channels[0] if mentioned_channels else None
+    @app_commands.command(name="start_night", description="Inicia la Noche (admin)")
+    @app_commands.describe(duration="Ej: 12h, 8h, 45m")
+    @app_commands.default_permissions(administrator=True)
+    async def start_night(self, interaction: discord.Interaction, duration: str = "12h"):
+        ctx = await commands.Context.from_interaction(interaction)
+        await phases.start_night(ctx, duration_str=duration)
+        await interaction.response.defer(ephemeral=True)
 
-        force = any(t.lower() == "force" for t in content_tokens)
+    @app_commands.command(name="end_night", description="Termina la Noche (admin)")
+    @app_commands.default_permissions(administrator=True)
+    async def end_night(self, interaction: discord.Interaction):
+        ctx = await commands.Context.from_interaction(interaction)
+        await phases.end_night(ctx)
+        await interaction.response.defer(ephemeral=True)
 
-        # Find a duration token that's NOT a channel mention like "<#123...>"
-        duration_token = None
-        for t in content_tokens:
-            if t.lower() == "force":
-                continue
-            if t.startswith("<#") and t.endswith(">"):
-                continue
-            # if it has any digits, assume it's the duration string ("8h", "1h30m", "90m")
-            if any(ch.isdigit() for ch in t):
-                duration_token = t
-                break
+    # ------- Votos -------
+    vote_group = app_commands.Group(name="vote", description="Votaciones")
 
-        duration_str = duration_token or "24h"
-        seconds = parse_duration_to_seconds(duration_str)
-        if seconds <= 0:
-            return await ctx.reply("Provide a valid duration (e.g., `24h`, `1h30m`, `90m`).")
+    @vote_group.command(name="cast", description="Votar a un jugador")
+    async def vote_cast(self, interaction: discord.Interaction, member: discord.Member):
+        ctx = await commands.Context.from_interaction(interaction)
+        await votes_core.vote(ctx, member)
+        await interaction.response.defer(ephemeral=True)
 
-        # Guard: refuse if a Day is already active, unless 'force'
-        if hasattr(game, "is_day_active") and game.is_day_active() and not force:
-            chan = ctx.guild.get_channel(game.day_channel_id)
-            when = f"<t:{game.day_deadline_epoch}:R>" if game.day_deadline_epoch else ""
-            return await ctx.reply(f"Day already active in {chan.mention if chan else '#?'} (ends {when}). Add `force` to restart.")
+    @vote_group.command(name="clear", description="Quitar tu voto")
+    async def vote_clear(self, interaction: discord.Interaction):
+        ctx = await commands.Context.from_interaction(interaction)
+        await votes_core.unvote(ctx)
+        await interaction.response.defer(ephemeral=True)
 
-        # If forcing, cancel existing timer (start_day_timer will also cancel, but this is explicit)
-        if force and game.day_timer_task and not game.day_timer_task.done():
-            game.day_timer_task.cancel()
-            game.day_timer_task = None
+    @vote_group.command(name="mine", description="Ver tu voto actual")
+    async def vote_mine(self, interaction: discord.Interaction):
+        ctx = await commands.Context.from_interaction(interaction)
+        await votes_core.myvote(ctx)
+        await interaction.response.defer(ephemeral=True)
 
-        # Choose target channel: mention > saved default > current
-        target = (
-            target_channel
-            or (ctx.guild.get_channel(game.default_day_channel_id) if game.default_day_channel_id else None)
-            or ctx.channel
-        )
+    @app_commands.command(name="votos", description="Resumen de votaciones en curso")
+    async def votos(self, interaction: discord.Interaction):
+        ctx = await commands.Context.from_interaction(interaction)
+        await votes_core.votes_breakdown(ctx)
+        await interaction.response.defer(ephemeral=True)
 
-        # --- Mutate state ---
-        game.day_channel_id = target.id
-        game.votes = {}
-        if game.current_day_number == 0:
-            game.current_day_number = 1
-        else:
-            game.current_day_number += 1
+    @app_commands.command(name="status", description="Estado del Día")
+    async def status(self, interaction: discord.Interaction):
+        ctx = await commands.Context.from_interaction(interaction)
+        await votes_core.status(ctx)
+        await interaction.response.defer(ephemeral=True)
 
-        game.day_deadline_epoch = int(time.time()) + seconds
-        save_state("state.json")
+    @app_commands.command(name="clearvotes", description="Limpiar todas las votaciones (admin)")
+    @app_commands.default_permissions(administrator=True)
+    async def clearvotes(self, interaction: discord.Interaction):
+        ctx = await commands.Context.from_interaction(interaction)
+        await votes_core.clearvotes(ctx)
+        await interaction.response.defer(ephemeral=True)
 
-        # Open the target channel for sending
-        overw = target.overwrites_for(ctx.guild.default_role)
-        overw.send_messages = True
-        await target.set_permissions(ctx.guild.default_role, overwrite=overw)
+    @vote_group.command(name="end_day", description="Pedir terminar el Día sin linchamiento (2/3 de vivos)")
+    async def vote_end_day(self, interaction: discord.Interaction):
+        ctx = await commands.Context.from_interaction(interaction)
+        await votes_core.request_end_day(ctx)
+        await interaction.response.defer(ephemeral=True)
 
-        await target.send(
-            f"🌞 **Day {game.current_day_number} begins.** Base threshold: **{game.base_threshold()}**.\n"
-            f"Ends at <t:{game.day_deadline_epoch}:F> (<t:{game.day_deadline_epoch}:R>). Use `!vote @user`."
-        )
-
-        # Start the day timer (single source of truth)
-        await start_day_timer(self.bot, ctx.guild.id, target.id)
-
-                # Delete the original command for extra privacy
-        try:
-            await ctx.message.delete(delay=2)
-        except Exception:
-            pass
-
-
-    @commands.command()
-    @commands.has_permissions(administrator=True)
-    async def end_day(self, ctx):
-        """End Day """
-        chan = ctx.guild.get_channel(game.day_channel_id) if game.day_channel_id else None
-        if not chan:
-            return await ctx.reply("No active Day channel set.")
-
-        # If already closed for sending, just mark deadlines and timers
-        overw = chan.overwrites_for(ctx.guild.default_role)
-        already_closed = (overw.send_messages is False)
-
-        if not already_closed:
-            overw.send_messages = False
-            await chan.set_permissions(ctx.guild.default_role, overwrite=overw)
-            await chan.send("🛑 Day ended by a moderator. Channel closed.")
-
-        game.day_deadline_epoch = None
-        if game.day_timer_task and not game.day_timer_task.done():
-            game.day_timer_task.cancel()
-            game.day_timer_task = None
-        save_state("state.json")
-
-        if already_closed:
-            await ctx.reply("Day was already closed. State synced.")
-
-                # Delete the original command for extra privacy
-        try:
-            await ctx.message.delete(delay=2)
-        except Exception:
-            pass
-
-    # ---------- Voting ----------
-    @commands.command()
-    async def vote(self, ctx, member: discord.Member):
-        """Cast a vote (strict mode: must !unvote before changing)."""
-        if game.day_channel_id != ctx.channel.id:
-            return await ctx.reply("This is not the Day voting channel.")
-        voter = str(ctx.author.id)
-        target = str(member.id)
-
-        if voter in game.votes:
-            current = game.votes[voter]
-            if current == target:
-                return await ctx.reply(f"You already voted for <@{target}>.")
-            return await ctx.reply(
-                f"You already have an active vote on <@{current}>. Use `!unvote` first to change it."
-            )
-
-        if voter not in game.players or not game.players[voter].get("alive", True):
-            return await ctx.reply("You cannot vote.")
-        if game.flags_of(voter).get("silenced", False):
-            return await ctx.reply("You are silenced.")
-        if target not in game.players or not game.players[target].get("alive", True):
-            return await ctx.reply("That player is not available.")
-        if game.flags_of(target).get("absent", False):
-            return await ctx.reply("That player is absent today (cannot be voted).")
-        
-
-        game.votes[voter] = target
-        save_state("state.json")
-        await ctx.message.add_reaction("🗳️")
-        await ctx.send(f"Vote from <@{voter}> → <@{target}> (weight {game.vote_weight(voter)}).")
-        await self._check_threshold_and_close(ctx)
-        
-                # Delete the original command for extra privacy
-        try:
-            await ctx.message.delete(delay=2)
-        except Exception:
-            pass
-
-    @commands.command()
-    async def unvote(self, ctx):
-        """Remove your vote in the Day channel."""
-        if game.day_channel_id != ctx.channel.id:
-            return await ctx.reply("This is not the Day voting channel.")
-        voter = str(ctx.author.id)
-        if game.votes.pop(voter, None) is not None:
-            save_state("state.json")
-            await ctx.message.add_reaction("✅")
-            await self._check_threshold_and_close(ctx)
-        else:
-            await ctx.reply("You had no active vote.")
-            
-                # Delete the original command for extra privacy
-        try:
-            await ctx.message.delete(delay=2)
-        except Exception:
-            pass
-
-    @commands.command()
-    async def myvote(self, ctx):
-        """Show your current vote and its weight."""
-        voter = str(ctx.author.id)
-        tgt = game.votes.get(voter)
-        if not tgt:
-            return await ctx.reply("You have no active vote.")
-        await ctx.reply(f"Your current vote is on <@{tgt}> (weight {game.vote_weight(voter)}).")
-        
-                # Delete the original command for extra privacy
-        try:
-            await ctx.message.delete(delay=2)
-        except Exception:
-            pass
-
-    @commands.command(name="votes")
-    async def votes_breakdown(self, ctx):
-        """Per-voter breakdown grouped by target, with weights (Day channel only)."""
-        if game.day_channel_id != ctx.channel.id:
-            return await ctx.reply("This is not the Day voting channel.")
-        if not game.votes:
-            return await ctx.send("No votes yet.")
-
-        grouped = {}
-        for voter_uid, target_uid in game.votes.items():
-            w = game.vote_weight(voter_uid)
-            if w <= 0:
-                continue
-            grouped.setdefault(target_uid, []).append((voter_uid, w))
-
-        lines = [f"🗓️ Day **{game.current_day_number}** | Base threshold: **{game.base_threshold()}**", ""]
-        for target_uid, entries in sorted(grouped.items(), key=lambda kv: kv[0]):
-            req = game.required_for_target(target_uid)
-            subtotal = sum(w for _, w in entries)
-            lines.append(f"🎯 Target <@{target_uid}> — **{subtotal}/{req}**")
-            for voter_uid, w in sorted(entries, key=lambda x: (-x[1], x[0])):
-                lines.append(f"  • <@{voter_uid}> (w={w})")
-            lines.append("")
-
-        totals = game.totals_per_target()
-        if totals:
-            lines.append("**Totals:**")
-            for target_uid, total in totals.items():
-                req = game.required_for_target(target_uid)
-                lines.append(f"- <@{target_uid}> → **{total}/{req}**")
-
-        msg = "\n".join(lines)
-        await ctx.send(msg if len(msg) < 1800 else (msg[:1700] + "\n… (truncated)"))
-        
-                # Delete the original command for extra privacy
-        try:
-            await ctx.message.delete(delay=2)
-        except Exception:
-            pass
-
-    @commands.command()
-    async def status(self, ctx):
-        """Quick totals view (Day channel only)."""
-        if game.day_channel_id != ctx.channel.id:
-            return await ctx.reply("This is not the Day voting channel.")
-        totals = game.totals_per_target()
-        lines = [f"🗓️ Day: **{game.current_day_number}**  |  Base threshold: **{game.base_threshold()}**"]
-        if not totals:
-            lines.append("No votes yet.")
-        else:
-            # optional: tie detection
-            if totals:
-                max_total = max(totals.values())
-                leaders = [uid for uid, t in totals.items() if t == max_total]
-                if len(leaders) > 1:
-                    tags = ", ".join(f"<@{u}>" for u in leaders)
-                    lines.append(f"⚖️ Currently tied among: {tags} ({max_total}).")
-            for obj_uid, total in totals.items():
-                req = game.required_for_target(obj_uid)
-                lines.append(f"- <@{obj_uid}> → **{total}/{req}**")
-        await ctx.send("\n".join(lines))
-        
-                # Delete the original command for extra privacy
-        try:
-            await ctx.message.delete(delay=2)
-        except Exception:
-            pass
-
-    @commands.command()
-    @commands.has_permissions(manage_guild=True)
-    async def clearvotes(self, ctx):
-        """Clear all current votes (admin only)."""
-        game.votes = {}
-        save_state("state.json")
-        await ctx.send("🗑️ All votes have been cleared.")
-        
-                # Delete the original command for extra privacy
-        try:
-            await ctx.message.delete(delay=2)
-        except Exception:
-            pass
-
-    # ---------- internal ----------
-    async def _check_threshold_and_close(self, ctx):
-        totals = game.totals_per_target()
-        for obj_uid, total in totals.items():
-            req = game.required_for_target(obj_uid)
-            if total >= req:
-                chan = ctx.guild.get_channel(game.day_channel_id)
-                overw = chan.overwrites_for(ctx.guild.default_role)
-                overw.send_messages = False
-                await chan.set_permissions(ctx.guild.default_role, overwrite=overw)
-                await chan.send(f"🗳️ Threshold reached: <@{obj_uid}> ({total}/{req}). **Channel closed.**")
-                return
+async def setup(bot: commands.Bot):
+    cog = VotingCog(bot)
+    await bot.add_cog(cog)
+    bot.tree.add_command(cog.vote_group)
