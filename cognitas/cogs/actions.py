@@ -8,15 +8,18 @@ class ActionsCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+
     # ---------- Player action registration ----------
+    """
+
     @commands.command(name="act")
     async def act_register(self, ctx, target: discord.Member, *, note: str = ""):
-        """
+        "
         Register your Night action target from your PRIVATE ROLE CHANNEL (or DM).
         Usage: !act @Target [optional note]
         - Acknowledges to the user.
         - Forwards to admin log channel with order & timestamp.
-        """
+        "
         import time
         from ..core.state import game
         from ..core.storage import save_state
@@ -52,6 +55,167 @@ class ActionsCog(commands.Cog):
         # Optional: only accept when Night is active (comment out if you allow pre-queue)
         # if not game.night_deadline_epoch:
         #     return await ctx.reply("You can only send actions during Night.")
+
+        # Log entry
+        entry = {
+            "day": game.current_day_number,
+            "ts_epoch": int(time.time()),
+            "actor_uid": actor_uid,
+            "target_uid": target_uid,
+            "note": note.strip()
+        }
+        game.night_actions.append(entry)
+        save_state("state.json")
+
+        # Acknowledge to the user (keep it brief)
+        await ctx.reply("✅ Action registered.")
+
+        # Forward to admin channel (with role names if available)
+        admin_id = game.admin_log_channel_id
+        if admin_id and ctx.guild:
+            admin_chan = ctx.guild.get_channel(admin_id)
+            if admin_chan:
+                actor_role_code = game.players[actor_uid].get("role")
+                target_role_code = game.players[target_uid].get("role")
+                actor_role_name = (game.roles.get(actor_role_code, {}).get("name") or actor_role_code or "?")
+                target_role_name = (game.roles.get(target_role_code, {}).get("name") or target_role_code or "?")
+                ts = f"<t:{entry['ts_epoch']}:T>"
+                note_part = f" — _{note.strip()}_" if note.strip() else ""
+                idx = len(game.night_actions)
+                await admin_chan.send(
+                    f"📥 **Night action #{idx}** (Day {game.current_day_number})\n"
+                    f"• Actor: <@{actor_uid}> — {actor_role_name}\n"
+                    f"• Target: <@{target_uid}> — {target_role_name}\n"
+                    f"• Time: {ts}{note_part}"
+                )
+
+        # Delete the original command for extra privacy
+        try:
+            await ctx.message.delete(delay=2)
+        except Exception:
+            pass
+
+    """
+    
+    @commands.command(name="act")
+    async def act_register(self, ctx, target: str, *, note: str = ""):
+        """
+        Register your Night action target from your PRIVATE ROLE CHANNEL (or DM).
+        Usage: !act @Target [optional note]  OR  !act PlayerName [optional note]
+        - Works with @mention or plain text names (case/accents-insensitive; supports aliases).
+        - Acknowledges to the user.
+        - Forwards to admin log channel with order & timestamp.
+        """
+        import time
+        import unicodedata
+        import re
+        from ..core.state import game
+        from ..core.storage import save_state
+        import discord
+
+        def _norm(s: str) -> str:
+            """lower + trim + remove accents/diacritics"""
+            s = (s or "").strip().casefold()
+            s = "".join(ch for ch in unicodedata.normalize("NFKD", s) if not unicodedata.combining(ch))
+            return s
+
+        def _build_index():
+            """
+            Returns:
+            - index: dict[normalized_key] = (display_name, uid_str)
+            - names_by_uid: dict[uid_str] = display_name
+            """
+            index = {}
+            names_by_uid = {}
+            for uid, pdata in game.players.items():
+                if not isinstance(uid, str):
+                    uid = str(uid)
+                display = pdata.get("name") or pdata.get("display_name") or pdata.get("username") or uid
+                names_by_uid[uid] = display
+                keys = [display, *(pdata.get("aliases") or [])]
+                for k in keys:
+                    nk = _norm(k)
+                    if nk:  # last write wins, but typically unique
+                        index[nk] = (display, uid)
+            return index, names_by_uid
+
+        async def _resolve_target_uid(target_text: str) -> tuple[str | None, str | None, list[str]]:
+            """
+            Resolve target_text to (target_display, target_uid, suggestions)
+            - Tries mention first (<@id> or <@!id>).
+            - Else resolves by normalized name/alias.
+            - If not found, returns suggestions (top up to 5).
+            """
+            # 1) Mention path
+            mention_match = re.fullmatch(r"<@!?(\d+)>", target_text.strip())
+            if mention_match:
+                uid = mention_match.group(1)
+                # validate it’s a registered player
+                if uid in game.players:
+                    display = game.players[uid].get("name") or uid
+                    return display, uid, []
+                else:
+                    return None, None, []
+
+            # 2) Name/alias path
+            index, names_by_uid = _build_index()
+            key = _norm(target_text)
+            if key in index:
+                display, uid = index[key]
+                return display, uid, []
+
+            # 3) Suggestions (simple contains/fuzzy-ish pass)
+            #   - rank by substring containment, then by prefix match
+            sugg_pool = []
+            for nk, (disp, uid) in index.items():
+                score = 0
+                if key and nk.startswith(key):
+                    score += 2
+                if key and key in nk:
+                    score += 1
+                if score > 0:
+                    sugg_pool.append((score, disp))
+            sugg_pool.sort(key=lambda x: (-x[0], x[1]))
+            suggestions = [d for _, d in sugg_pool[:5]]
+            return None, None, suggestions
+
+        actor_uid = str(ctx.author.id)
+
+        # Must be a registered, living player
+        if actor_uid not in game.players or not game.players[actor_uid].get("alive", True):
+            return await ctx.reply("You cannot act (not a registered living player).")
+
+        # Enforce privacy: only from the actor's bound role channel OR DM
+        actor_channel_id = game.players[actor_uid].get("channel_id")
+        is_dm = isinstance(ctx.channel, discord.DMChannel) or ctx.guild is None
+        is_own_role_channel = (ctx.channel.id == actor_channel_id) if not is_dm else True
+
+        # Allow admins to relay from anywhere (optional)
+        is_admin = bool(ctx.guild and ctx.author.guild_permissions.administrator)
+
+        if not (is_own_role_channel or is_admin):
+            # Try to mention the correct channel if we know it
+            if ctx.guild and actor_channel_id:
+                ch = ctx.guild.get_channel(actor_channel_id)
+                hint = f"Please use your private channel: {ch.mention}" if ch else "Please use your private role channel."
+            else:
+                hint = "Please use your private role channel or DM me."
+            return await ctx.reply(f"Night actions must be sent **from your private channel**. {hint}")
+
+        # Optional: only accept when Night is active (comment out if you allow pre-queue)
+        # if not game.night_deadline_epoch:
+        #     return await ctx.reply("You can only send actions during Night.")
+
+        # === NEW: resolve target from @mention OR name/alias ===
+        target_display, target_uid, suggestions = await _resolve_target_uid(target)
+        if not target_uid:
+            if suggestions:
+                sug = ", ".join(suggestions)
+                return await ctx.reply(f"Target not found: **{target}**. Did you mean: {sug} ?")
+            return await ctx.reply(f"Target not found: **{target}**. Use the exact player name (see `!list`).")
+
+        if target_uid not in game.players:
+            return await ctx.reply("Target is not a registered player.")
 
         # Log entry
         entry = {

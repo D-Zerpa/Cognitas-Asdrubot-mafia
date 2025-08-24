@@ -18,6 +18,8 @@ if not TOKEN:
 intents = discord.Intents.default()
 for k, v in INTENTS_KWARGS.items():
     setattr(intents, k, v)
+    
+intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
@@ -85,7 +87,8 @@ async def setup_cogs():
     await bot.add_cog(__import__("cognitas.cogs.admin", fromlist=["AdminCog"]).AdminCog(bot))
     await bot.add_cog(__import__("cognitas.cogs.voting", fromlist=["VotingCog"]).VotingCog(bot))
     await bot.add_cog(__import__("cognitas.cogs.actions", fromlist=["ActionsCog"]).ActionsCog(bot))
-
+    await bot.add_cog(__import__("cognitas.cogs.players", fromlist=["Players"]).Players(bot))
+    
 @bot.event
 async def on_ready():
     print(f"Connected as {bot.user} (id: {bot.user.id})")
