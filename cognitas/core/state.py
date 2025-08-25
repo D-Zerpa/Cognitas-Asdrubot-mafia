@@ -28,6 +28,8 @@ class GameState:
         # --- Server-configurable channels (set via admin cmds) ---
         self.admin_log_channel_id = None    # where admin logs go
         self.default_day_channel_id = None  # default Day channel
+        self.log_channel_id = None          # where the game logs go
+        self.moon_phase = "New"             # lunar phase
 
         # --- Game lifecycle ---
         self.game_over = False              # block new phases when True

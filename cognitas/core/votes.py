@@ -2,6 +2,7 @@ import math
 import discord
 from .state import game
 from .storage import save_state
+from .logs import log_event
 
 def _alive_count() -> int:
     return len(game.alive_ids())
@@ -40,6 +41,8 @@ async def vote(ctx, target_member: discord.Member):
             # opción: llamar aquí a end_day con lynch_target_id=obj_uid
             return
 
+    await log_event(ctx.bot, ctx.guild.id, "VOTE_CAST", voter_id=voter, target_id=target)
+
     try:
         await ctx.message.delete(delay=2)
     except Exception:
@@ -53,6 +56,8 @@ async def unvote(ctx):
         await ctx.reply("🧹 Your vote has been cleared.")
     else:
         await ctx.reply("You had no active vote.")
+
+    await log_event(ctx.bot, ctx.guild.id, "VOTE_CLEAR", voter_id=voter)
 
     try:
         await ctx.message.delete(delay=2)
@@ -110,6 +115,9 @@ async def clearvotes(ctx):
     game.votes = {}
     save_state("state.json")
     await ctx.send("🗑️ All votes have been cleared.")
+
+    await log_event(ctx.bot, ctx.guild.id, "VOTES_CLEARED")
+
     try:
         await ctx.message.delete(delay=2)
     except Exception:
@@ -138,6 +146,7 @@ async def request_end_day(ctx):
     needed = _two_thirds_threshold()
     current = len(game.end_day_votes)
     await ctx.reply(f"🛎️ End-day request registered ({current}/{needed}).")
+    await log_event(ctx.bot, ctx.guild.id, "END_DAY_REQUEST", voter_id=voter, tally=len(game.end_day_votes))
 
     if current >= needed:
         # cerrar canal de día sin linchamiento

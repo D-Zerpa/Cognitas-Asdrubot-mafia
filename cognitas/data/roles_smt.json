@@ -1,0 +1,13 @@
+{
+  "meta": {
+    "name": "SMT",
+    "version": "1.0",
+    "notes": "Sample SMT roles for testing moon phases and special abilities that may affect automation."
+  },
+  "roles": [
+    { "name": "Villager", "alignment": "Town", "notes": "Basic role." },
+    { "name": "Hunter", "alignment": "Town", "notes": "Can act at night." },
+    { "name": "Demon", "alignment": "Mafia", "notes": "Acts at night with the faction." },
+    { "name": "YHVH", "alignment": "Special", "notes": "Hidden vote / vote obfuscation (to be implemented in expansion logic)." }
+  ]
+}

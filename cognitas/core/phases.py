@@ -8,6 +8,8 @@ from typing import Optional
 from ..config import REMINDER_CHECKPOINTS
 from .state import game
 from .storage import save_state
+from .logs import log_event
+from .. import config as cfg
 from .reminders import (
     parse_duration_to_seconds,
     start_day_timer,
@@ -60,7 +62,7 @@ async def start_day(
 
     # Inicializar / incrementar número de Día
     if not hasattr(game, "current_day_number") or game.current_day_number is None:
-        game.current_day_number = 1
+        game.current_day_number = int(getattr(cfg, "START_AT_DAY", 1)) or 1
     else:
         game.current_day_number = max(1, int(game.current_day_number))
 
@@ -95,6 +97,10 @@ async def start_day(
 
     # Lanza recordatorios del Día
     await start_day_timer(ctx.bot, ctx.guild.id, target.id, checkpoints=REMINDER_CHECKPOINTS)
+
+    # Guardar el log
+
+    await log_event(ctx.bot, ctx.guild.id, "PHASE_START", phase="Day", deadline=game.day_deadline_epoch)
 
     # Limpia el comando del chat
     try:
@@ -146,6 +152,12 @@ async def end_day(
     game.day_timer_task = None
 
     save_state("state.json")
+
+    # Se registra el linchamiento
+
+    if lynch_target_id:
+        await log_event(ctx.bot, ctx.guild.id, "LYNCH", target_id=str(lynch_target_id))
+    await log_event(ctx.bot, ctx.guild.id, "PHASE_END", phase="Day")
 
     # Limpia el comando del chat
     try:
@@ -199,6 +211,7 @@ async def start_night(
             pass
 
     await start_night_timer(ctx.bot, ctx.guild.id, checkpoints=REMINDER_CHECKPOINTS)
+    await log_event(ctx.bot, ctx.guild.id, "PHASE_START", phase="Night", deadline=game.night_deadline_epoch)
 
     try:
         await ctx.message.delete(delay=2)
@@ -236,6 +249,8 @@ async def end_night(ctx):
             overw.send_messages = True
             await dchan.set_permissions(ctx.guild.default_role, overwrite=overw)
             await dchan.send(f"🌞 **Día {game.current_day_number} ha amanecido.**")
+
+    await log_event(ctx.bot, ctx.guild.id, "PHASE_END", phase="Night")
 
     try:
         await ctx.message.delete(delay=2)

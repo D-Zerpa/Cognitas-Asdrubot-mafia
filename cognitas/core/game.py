@@ -2,6 +2,7 @@ import discord
 from .state import game       # tu GameState existente
 from .roles import load_roles
 from .storage import save_state
+from .logs import log_event
 
 def set_channels(*, day: discord.TextChannel | None = None, admin: discord.TextChannel | None = None):
     if day is not None:
@@ -39,6 +40,8 @@ async def start(ctx, *, profile: str = "default", day_channel: discord.TextChann
         f"🟢 **Game started** with profile **{game.profile}**.\n"
         f"Day channel: {chan.mention if chan else '#?'} | Roles file loaded."
     )
+    await log_event(ctx.bot, ctx.guild.id, "GAME_START", profile=game.profile, day_channel_id=game.day_channel_id)
+
 
 def reset():
     """
@@ -56,6 +59,8 @@ async def finish(ctx, *, reason: str | None = None):
     game.game_over = True
     save_state("state.json")
     await ctx.reply(f"🏁 **Game finished.** {('Reason: ' + reason) if reason else ''}".strip())
+    await log_event(ctx.bot, ctx.guild.id, "GAME_FINISH", reason=reason or "-")
+
 
 async def who(ctx, member: discord.Member | None = None):
     """
@@ -81,6 +86,7 @@ async def assign_role(ctx, member: discord.Member, role_name: str):
     game.players[uid]["role"] = role_name
     save_state("state.json")
     await ctx.reply(f"🎭 Rol **{role_name}** asignado a <@{uid}>.")
+    await log_event(ctx.bot, ctx.guild.id, "ASSIGN", user_id=str(member.id), role=role_name)
     
     
 # al final de core/game.py (o dentro de start())
