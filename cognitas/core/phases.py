@@ -16,6 +16,20 @@ from .reminders import (
     start_night_timer,
 )
 
+def _get_channel_or_none(guild: discord.Guild, chan_id: int | None) -> discord.TextChannel | None:
+    if not chan_id:
+        return None
+    ch = guild.get_channel(chan_id)
+    return ch if isinstance(ch, (discord.TextChannel, discord.Thread)) else None
+
+def _ensure_day_channel(ctx) -> discord.TextChannel:
+    """Ensure day channel is configured and exists; raise RuntimeError if not."""
+    guild: discord.Guild = ctx.guild
+    ch = _get_channel_or_none(guild, getattr(game, "day_channel_id", None))
+    if not ch:
+        raise RuntimeError("Day channel is not configured or no longer exists. Set it with `/set_day_channel`.")
+    return ch
+
 
 async def start_day(
     ctx,
@@ -25,69 +39,79 @@ async def start_day(
     force: bool = False,
 ):
     """
-    Inicia la fase de Día:
-    - Define canal de Día (mención > default > canal actual)
-    - Calcula y guarda deadline
-    - Abre el canal para mensajes (@everyone)
-    - Lanza recordatorios configurados
-    - Resetea contador de /vote end_day (2/3)
+    Start the Day phase:
+    - Resolve Day channel (explicit > configured default) and validate it
+    - Compute & store deadline
+    - Open channel for @everyone messages
+    - Launch configured reminders
+    - Reset /vote end_day (2/3) requests
     """
-    if getattr(game, "game_over", False):
-        return await ctx.reply("La partida ya terminó. Inicia una nueva antes de comenzar un Día.")
 
+    # Validate/resolve channel
+    try:
+        day_ch = target_channel or _ensure_day_channel(ctx)
+    except RuntimeError as e:
+        return await ctx.reply(str(e))
+
+    # Game over guard
+    if getattr(game, "game_over", False):
+        return await ctx.reply("The game is already finished. Start a new one before starting a Day.")
+
+    # Parse duration
     seconds = parse_duration_to_seconds(duration_str)
     if seconds <= 0:
-        return await ctx.reply("Duración inválida. Ejemplos válidos: `24h`, `90m`, `1h30m`.")
+        return await ctx.reply("Invalid duration. Valid examples: `24h`, `90m`, `1h30m`.")
 
-    # Si hay un Día activo y no forzamos, avisa y sal
+    # If there's an active Day and not forcing, inform and exit
     if hasattr(game, "day_deadline_epoch") and game.day_deadline_epoch and not force:
         chan = ctx.guild.get_channel(getattr(game, "day_channel_id", None))
         when = f"<t:{game.day_deadline_epoch}:R>"
         return await ctx.reply(
-            f"Ya hay un Día activo en {chan.mention if chan else '#?'} (termina {when}). "
-            f"Usa `force` para reiniciarlo."
+            f"There is already an active Day in {chan.mention if chan else '#?'} (ends {when}). "
+            f"Use `force` to restart it."
         )
 
-    # Si forzamos, cancela timer anterior de Día
+    # If forcing, cancel previous Day timer (if any)
     if force and getattr(game, "day_timer_task", None) and not game.day_timer_task.done():
         game.day_timer_task.cancel()
         game.day_timer_task = None
 
-    # Elegir canal de Día
-    target = (
-        target_channel
-        or ctx.guild.get_channel(getattr(game, "day_channel_id", 0))
-        or ctx.channel
-    )
+    # Decide Day channel (explicit > configured > current)
+    target = day_ch or ctx.guild.get_channel(getattr(game, "day_channel_id", 0)) or ctx.channel
 
-    # Inicializar / incrementar número de Día
+    # Initialize / normalize Day number
     if not hasattr(game, "current_day_number") or game.current_day_number is None:
         game.current_day_number = int(getattr(cfg, "START_AT_DAY", 1)) or 1
     else:
         game.current_day_number = max(1, int(game.current_day_number))
 
-    # Guardar estado de Día
+    # Persist Day state
+    game.phase = "day"
     game.day_channel_id = target.id
     game.day_deadline_epoch = int(time.time()) + seconds
 
-    # Reset de votos y solicitudes de cierre anticipado (opcional según tu flow)
-    # Si prefieres conservar votos entre reinicios de Día forzados, comenta la siguiente línea:
+    # Reset early end-day requests (2/3)
     game.end_day_votes = set()
 
     save_state("state.json")
 
-    # Abrir canal a @everyone para enviar
-    overw = target.overwrites_for(ctx.guild.default_role)
-    overw.send_messages = True
-    await target.set_permissions(ctx.guild.default_role, overwrite=overw)
+    # Open channel to @everyone for sending
+    try:
+        overw = target.overwrites_for(ctx.guild.default_role)
+        overw.send_messages = True
+        await target.set_permissions(ctx.guild.default_role, overwrite=overw)
+    except Exception:
+        # Non-fatal: permissions might already be open
+        pass
 
+    # Announce Day start
     await target.send(
-        f"🌞 **Día {game.current_day_number} iniciado.**\n"
-        f"Finaliza: <t:{game.day_deadline_epoch}:F> (**<t:{game.day_deadline_epoch}:R>**)\n"
-        f"Usa `!vote @jugador` para votar o `!vote_end_day` para solicitar cerrar el día sin linchamiento."
+        f"🌞 **Day {game.current_day_number} has begun.**\n"
+        f"Ends: <t:{game.day_deadline_epoch}:F> (**<t:{game.day_deadline_epoch}:R>**)\n"
+        f"Use `/vote cast @player` to vote or `/vote end_day` to request ending the Day with no lynch."
     )
 
-    # Disparar hook de expansión (p.ej., fases lunares SMT)
+    # Expansion hook (e.g., SMT moon phases)
     exp = getattr(game, "expansion", None)
     if exp:
         try:
@@ -95,18 +119,19 @@ async def start_day(
         except Exception:
             pass
 
-    # Lanza recordatorios del Día
+    # Launch Day reminders
     await start_day_timer(ctx.bot, ctx.guild.id, target.id, checkpoints=REMINDER_CHECKPOINTS)
 
-    # Guardar el log
-
+    # Log event
     await log_event(ctx.bot, ctx.guild.id, "PHASE_START", phase="Day", deadline=game.day_deadline_epoch)
 
-    # Limpia el comando del chat
+    # Clean up the invoking message (if any; slash interactions may not have a message)
     try:
-        await ctx.message.delete(delay=2)
+        if getattr(ctx, "message", None):
+            await ctx.message.delete(delay=2)
     except Exception:
         pass
+
 
 
 async def end_day(
@@ -256,3 +281,51 @@ async def end_night(ctx):
         await ctx.message.delete(delay=2)
     except Exception:
         pass
+
+async def _autoclose_after(bot: discord.Client, guild_id: int, phase: str, unix_deadline: int):
+    """Wait until deadline and then notify to close if still in that phase."""
+    now = int(time.time())
+    delay = max(0, unix_deadline - now)
+    await asyncio.sleep(delay)
+    guild = bot.get_guild(guild_id)
+    if not guild:
+        return
+    current_phase = getattr(game, "phase", None)
+    if current_phase != phase:
+        return
+    ch = _get_channel_or_none(guild, getattr(game, "day_channel_id", None))
+    if ch:
+        try:
+            await ch.send(f"⏰ Deadline reached for **{phase}**. Please close the phase with `/end_{phase}`.")
+        except Exception:
+            pass
+
+async def rehydrate_timers(bot: discord.Client, guild: discord.Guild):
+    """
+    Restore awareness of ongoing Day/Night based on stored deadlines.
+    - If deadline is in the future → announce remaining time and arm a soft autoclose notice.
+    - If deadline is past → prompt admins to close manually.
+    """
+    phase = getattr(game, "phase", None)
+    if phase not in ("day", "night"):
+        return
+
+    dl = getattr(game, f"{phase}_deadline_epoch", None)
+    if not dl:
+        return
+
+    ch = _get_channel_or_none(guild, getattr(game, "day_channel_id", None))
+    if not ch:
+        return
+
+    try:
+        ts = int(dl)
+    except Exception:
+        return
+
+    now = int(time.time())
+    if ts > now:
+        await ch.send(f"🔄 Restored **{phase}**. Deadline <t:{ts}:R>.")
+        asyncio.create_task(_autoclose_after(bot, guild.id, phase, ts))
+    else:
+        await ch.send(f"⚠️ Stored deadline for **{phase}** has passed (<t:{ts}:R>). Please close with `/end_{phase}`.")

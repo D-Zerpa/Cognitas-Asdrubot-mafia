@@ -3,6 +3,7 @@ import os
 import logging
 import discord
 from discord.ext import commands
+from cognitas.core import phases
 
 # .env opcional
 try:
@@ -80,8 +81,13 @@ async def setup_hook():
 
 @bot.event
 async def on_ready():
-    user = bot.user
-    log.info("✅ Logged in as %s (%s)", getattr(user, "name", "?"), getattr(user, "id", "?"))
+    print(f"✅ Logged in as {bot.user} (id={bot.user.id})")
+    # Rehydrate timers per guild
+    for guild in bot.guilds:
+        try:
+            await phases.rehydrate_timers(bot, guild)
+        except Exception as e:
+            print(f"[rehydrate_timers] Error for guild {guild.id}: {e}")
 
 def main():
     if not TOKEN:

@@ -1,6 +1,7 @@
 # cognitas/core/players.py
 import re
 import discord
+from discord.ext import commands
 from typing import Any
 from enum import Enum
 from .state import game
@@ -22,9 +23,45 @@ def _ensure_player(uid: str, display_name: str | None = None):
             "effects": [],
         }
 
-def _is_admin(ctx: discord.ext.commands.Context) -> bool:
-    # Si ya tienes un sistema de mods/roles, reemplázalo aquí.
-    return ctx.author.guild_permissions.administrator
+def _is_admin(ctx: commands.Context) -> bool:
+    try:
+        return bool(ctx.author.guild_permissions.administrator)
+    except Exception:
+        return False
+
+def _sanitize_votes_for_uid(uid: str):
+    """Remove the player's vote and end-day request when they die."""
+    # Remove their active vote (if any)
+    if uid in game.votes:
+        del game.votes[uid]
+    # Remove their end-day request
+    try:
+        if isinstance(game.end_day_votes, set) and uid in game.end_day_votes:
+            game.end_day_votes.remove(uid)
+        elif isinstance(game.end_day_votes, (list, tuple)) and uid in game.end_day_votes:
+            # migrate older saves
+            s = set(game.end_day_votes)
+            if uid in s:
+                s.remove(uid)
+            game.end_day_votes = s
+    except AttributeError:
+        pass
+    save_state("state.json")
+
+async def kill(ctx: commands.Context, member: discord.Member):
+    """Mark a player as dead and sanitize related voting/end-day state."""
+    if not _is_admin(ctx):
+        return await ctx.reply("Admins only.")
+    uid = str(member.id)
+    if uid not in game.players:
+        return await ctx.reply("Player not registered.")
+    if game.players[uid].get("alive", True) is False:
+        return await ctx.reply("Player is already dead.")
+
+    game.players[uid]["alive"] = False
+    _sanitize_votes_for_uid(uid)
+    save_state("state.json")
+    await ctx.reply(f"☠️ Set `alive` = `False` for <@{uid}> and sanitized votes/end-day request.")
 
 
 def get_player_snapshot(user_id: str) -> dict:

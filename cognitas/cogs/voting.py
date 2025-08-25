@@ -39,17 +39,15 @@ class VotingAdminCog(commands.Cog):
         await phases.end_night(ctx)
         await interaction.response.send_message("Night Ended", ephemeral=True)
 
-    @app_commands.command(name="votes", description="Votes Breakhtrough")
+    @app_commands.command(name="votes", description="Vote breakdown (embed)")
     async def votos(self, interaction: discord.Interaction):
         ctx = await commands.Context.from_interaction(interaction)
         await votes_core.votes_breakdown(ctx)
-        await interaction.response.send_message("Showing votes", ephemeral=True)
 
-    @app_commands.command(name="status", description="Day Status")
+    @app_commands.command(name="status", description="Day status (embed)")
     async def status(self, interaction: discord.Interaction):
         ctx = await commands.Context.from_interaction(interaction)
         await votes_core.status(ctx)
-        await interaction.response.send_message("Status sent", ephemeral=True)
 
     @app_commands.command(name="clearvotes", description="Clean votes(admin)")
     @app_commands.default_permissions(administrator=True)
