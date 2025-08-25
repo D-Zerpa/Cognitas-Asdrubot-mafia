@@ -1,13 +1,169 @@
 {
   "meta": {
-    "name": "SMT",
+    "name": "Shin Megami Tensei Expansion",
     "version": "1.0",
-    "notes": "Sample SMT roles for testing moon phases and special abilities that may affect automation."
+    "notes": "Roles and abilities for SMT-themed Mafia. Flags are set for initial states where needed."
   },
   "roles": [
-    { "name": "Villager", "alignment": "Town", "notes": "Basic role." },
-    { "name": "Hunter", "alignment": "Town", "notes": "Can act at night." },
-    { "name": "Demon", "alignment": "Mafia", "notes": "Acts at night with the faction." },
-    { "name": "YHVH", "alignment": "Special", "notes": "Hidden vote / vote obfuscation (to be implemented in expansion logic)." }
+    {
+      "name": "Jonathan",
+      "alignment": "Town",
+      "notes": "Samurai Paladin of Loyalty",
+      "flags": { "dsp_catch_next": true },
+      "effects": []
+    },
+    {
+      "name": "Walter",
+      "alignment": "Town",
+      "notes": "Samurai Warrior",
+      "flags": { "dsp_catch_next": true },
+      "effects": []
+    },
+    {
+      "name": "Isabeau",
+      "alignment": "Town",
+      "notes": "Samurai Voice of Neutrality",
+      "flags": { "dsp_catch_next": true },
+      "effects": []
+    },
+    {
+      "name": "Flynn",
+      "alignment": "Town",
+      "notes": "Samurai Bearer of Destiny",
+      "flags": { "dsp_catch_next": true, "chosen_used": false, "copied_ability": null, "copied_from": null },
+      "effects": []
+    },
+
+    { "name": "Herald of Merkabah", "alignment": "Mafia", "notes": "Jonathan + Gabriel fusion", "flags": {}, "effects": [] },
+    { "name": "Herald of Lucifer", "alignment": "Mafia", "notes": "Walter + Lilith fusion", "flags": {}, "effects": [] },
+    { "name": "Herald of Masakado", "alignment": "Town", "notes": "Isabeau ascension", "flags": { "dsp_catch_next": true, "resurrection_available": true }, "effects": [] },
+
+    {
+      "name": "Satanas",
+      "alignment": "Mafia",
+      "notes": "Chaos Leader",
+      "flags": { "faction_leader": true, "appear_town_once": true },
+      "effects": []
+    },
+    {
+      "name": "Helel",
+      "alignment": "Mafia",
+      "notes": "Lightbringer",
+      "flags": { "appear_town_once": true },
+      "effects": []
+    },
+    {
+      "name": "Belial",
+      "alignment": "Mafia",
+      "notes": "The Impious",
+      "flags": {},
+      "effects": []
+    },
+    {
+      "name": "Beelzebub",
+      "alignment": "Mafia",
+      "notes": "Lord of the Flies",
+      "flags": { "infect_link": null, "banquet_first_used": false },
+      "effects": []
+    },
+    {
+      "name": "Astaroth",
+      "alignment": "Mafia",
+      "notes": "Grand Duke of Hell",
+      "flags": {},
+      "effects": []
+    },
+    {
+      "name": "Baal",
+      "alignment": "Mafia",
+      "notes": "Lord of the Skies",
+      "flags": { "stolen_ability": null },
+      "effects": []
+    },
+
+    {
+      "name": "Mastema",
+      "alignment": "Mafia",
+      "notes": "Accuser (Order)",
+      "flags": { "appear_town_once": true, "trial_target": null },
+      "effects": []
+    },
+    {
+      "name": "Miguel",
+      "alignment": "Mafia",
+      "notes": "Celestial Warrior (Order)",
+      "flags": {},
+      "effects": []
+    },
+    {
+      "name": "Rafael",
+      "alignment": "Mafia",
+      "notes": "Healer of God (Order)",
+      "flags": { "veil_used": false },
+      "effects": []
+    },
+    {
+      "name": "Uriel",
+      "alignment": "Mafia",
+      "notes": "Flame of God (Order)",
+      "flags": {},
+      "effects": []
+    },
+
+    {
+      "name": "Legion",
+      "alignment": "Town",
+      "notes": "Ensemble of Souls",
+      "flags": { "medium_level": 0 },
+      "effects": []
+    },
+    {
+      "name": "Jack Frost",
+      "alignment": "Town",
+      "notes": "Trickster of Ice",
+      "flags": { "ice_protection_used": false },
+      "effects": []
+    },
+    {
+      "name": "Jack-o'-Lantern",
+      "alignment": "Town",
+      "notes": "Flame Trickster",
+      "flags": {},
+      "effects": []
+    },
+    {
+      "name": "Oni",
+      "alignment": "Town",
+      "notes": "Red Warrior",
+      "flags": {},
+      "effects": []
+    },
+    {
+      "name": "Angel",
+      "alignment": "Town",
+      "notes": "Messenger of Light",
+      "flags": {},
+      "effects": []
+    },
+    {
+      "name": "Turbo Granny",
+      "alignment": "Town",
+      "notes": "Midnight Hag",
+      "flags": { "dodge_used": false },
+      "effects": []
+    },
+
+    {
+      "name": "YHVH",
+      "alignment": "Neutral",
+      "notes": "Lord of All",
+      "flags": {
+        "glitched_investigations": true,
+        "nightkill_immune": true,
+        "hidden_vote": true,
+        "revelation_used": false
+      },
+      "effects": []
+    }
   ]
 }
