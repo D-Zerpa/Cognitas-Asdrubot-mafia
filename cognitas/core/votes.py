@@ -181,3 +181,28 @@ async def status(ctx: commands.Context):
     embed.set_footer(text="Asdrubot v2.0 — Voting UI")
     await ctx.reply(embed=embed)
 
+
+
+async def request_end_day(ctx: commands.Context):
+    """Register a player's request to end the Day early (2/3 of alive players)."""
+    uid = str(ctx.author.id)
+    if uid not in game.players or not game.players[uid].get("alive", True):
+        return await ctx.reply("You must be a registered and alive player to request end of Day.")
+    # ensure set exists
+    end_set = getattr(game, "end_day_votes", None)
+    if not isinstance(end_set, set):
+        end_set = set()
+        game.end_day_votes = end_set
+    # add request
+    end_set.add(uid)
+    save_state("state.json")
+
+    alive = [x for x in game.players if game.players[x].get("alive", True)]
+    need = math.ceil( (2*len(alive)) / 3 ) if alive else 0
+    have = len(end_set)
+    await ctx.reply(f"🛎️ End-Day request registered ({have}/{need}).")
+
+    if need and have >= need:
+        # reached threshold → close the Day
+        from . import phases
+        await phases.end_day(ctx, closed_by_threshold=True)

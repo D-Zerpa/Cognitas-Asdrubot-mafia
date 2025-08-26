@@ -145,17 +145,13 @@ async def end_day(
     - Cierra canal para @everyone (send_messages=False)
     - Anuncia resultado (con o sin linchamiento)
     - Limpia votos y deadline
-    - NO inicia la Noche automáticamente (eso lo controla el mod)
+    - NO inicia la Night automáticamente (eso lo controla el mod)
     """
     chan = ctx.guild.get_channel(getattr(game, "day_channel_id", None))
     if not chan:
         return await ctx.reply("No hay canal de Día activo configurado.")
 
     # Cerrar canal para enviar
-    overw = chan.overwrites_for(ctx.guild.default_role)
-    overw.send_messages = False
-    await chan.set_permissions(ctx.guild.default_role, overwrite=overw)
-
     if lynch_target_id:
         await chan.send(f"⚖️ **Termina el Día.** Linchado: <@{lynch_target_id}>.")
         # Marca muerte en estado si corresponde
@@ -165,6 +161,11 @@ async def end_day(
     else:
         reason = "2/3 de solicitudes" if closed_by_threshold else "sin mayoría"
         await chan.send(f"⚖️ **Termina el Día sin linchamiento** ({reason}).")
+
+    # Lock after announcing
+    overw = chan.overwrites_for(ctx.guild.default_role)
+    overw.send_messages = False
+    await chan.set_permissions(ctx.guild.default_role, overwrite=overw)
 
     # Limpiar estado del Día
     game.votes = {}
@@ -199,8 +200,8 @@ async def start_night(
     next_day_channel: Optional[discord.TextChannel] = None,
 ):
     """
-    Inicia la fase de Noche:
-    - Define canal de Noche (por defecto, canal actual)
+    Inicia la fase de Night:
+    - Define canal de Night (por defecto, canal actual)
     - Calcula y guarda deadline
     - (Opcional) define canal del próximo Día para abrirlo al amanecer
     - Lanza recordatorios configurados
@@ -222,9 +223,9 @@ async def start_night(
     save_state("state.json")
 
     await nchan.send(
-        f"🌙 **Noche {game.current_day_number} iniciada.**\n"
+        f"🌙 **Night {game.current_day_number} iniciada.**\n"
         f"Finaliza: <t:{game.night_deadline_epoch}:F> (**<t:{game.night_deadline_epoch}:R>**)\n"
-        f"Usa `!act` para registrar tu acción nocturna (si procede)."
+        f"Use `/act` to register your night action (if applicable to your role)."
     )
 
     # Hook de expansión (p.ej., fases lunares SMT)
@@ -246,19 +247,19 @@ async def start_night(
 
 async def end_night(ctx):
     """
-    Cierra la Noche:
+    Cierra la Night:
     - Anuncia amanecer
     - Incrementa contador de Día
-    - Resetea deadline/timer de Noche
+    - Resetea deadline/timer de Night
     - (Opcional) abre canal del próximo Día si está configurado
     """
     nchan = ctx.guild.get_channel(getattr(game, "night_channel_id", None)) or ctx.channel
-    await nchan.send("🌅 **Termina la Noche.** Preparando el siguiente Día…")
+    await nchan.send("🌅 **Termina la Night.** Preparando el siguiente Día…")
 
     # Incrementar número del Día
     game.current_day_number = max(1, int(getattr(game, "current_day_number", 1))) + 1
 
-    # Limpiar deadline y timer de Noche
+    # Limpiar deadline y timer de Night
     game.night_deadline_epoch = None
     if getattr(game, "night_timer_task", None) and not game.night_timer_task.done():
         game.night_timer_task.cancel()

@@ -35,8 +35,13 @@ def load_state(path: str):
     try:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
-    except FileNotFoundError:
-        data = {}
+    except Exception:
+        # try backup
+        try:
+            with open(path + ".bak", "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception:
+            data = {}
     game.players = data.get("players", {})
     game.votes = data.get("votes", {})
     game.day_channel_id = data.get("day_channel_id", None)

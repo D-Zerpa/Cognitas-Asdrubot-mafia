@@ -54,7 +54,6 @@ class VotingAdminCog(commands.Cog):
     async def clearvotes(self, interaction: discord.Interaction):
         ctx = await commands.Context.from_interaction(interaction)
         await votes_core.clearvotes(ctx)
-        await interaction.response.send_message("Votes cleaned.", ephemeral=True)
 
 
 class VoteCog(commands.GroupCog, name="vote", description="Votes"):
@@ -65,25 +64,21 @@ class VoteCog(commands.GroupCog, name="vote", description="Votes"):
     async def cast(self, interaction: discord.Interaction, member: discord.Member):
         ctx = await commands.Context.from_interaction(interaction)
         await votes_core.vote(ctx, member)
-        await interaction.response.send_message("Vote registered.", ephemeral=True)
 
     @app_commands.command(name="clear", description="Unvote")
     async def clear(self, interaction: discord.Interaction):
         ctx = await commands.Context.from_interaction(interaction)
         await votes_core.unvote(ctx)
-        await interaction.response.send_message("Unvoted.", ephemeral=True)
 
     @app_commands.command(name="mine", description="See your current vote")
     async def mine(self, interaction: discord.Interaction):
         ctx = await commands.Context.from_interaction(interaction)
         await votes_core.myvote(ctx)
-        await interaction.response.send_message("This is your vote.", ephemeral=True)
 
     @app_commands.command(name="end_day", description="Ask for finish the day early (2/3 of alive players)")
     async def end_day(self, interaction: discord.Interaction):
         ctx = await commands.Context.from_interaction(interaction)
         await votes_core.request_end_day(ctx)
-        await interaction.response.send_message("Early finish pettition sent.", ephemeral=True)
 
 
 async def setup(bot: commands.Bot):
