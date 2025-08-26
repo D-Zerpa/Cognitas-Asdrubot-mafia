@@ -1,320 +1,170 @@
-# cognitas/cogs/players.py
-from __future__ import annotations
-
-from typing import List, Tuple, Dict
-import unicodedata
-import re
-
 import discord
+from discord import app_commands
 from discord.ext import commands
+from ..core import players as players_core
+from ..core.players import PlayerField as PF
+from ..core.players import get_player_snapshot
+from enum import Enum
 
-# Estado/almacenamiento de tu juego
-from ..core.state import game
-from ..core.storage import save_state
-
-
-# =========================
-# Helpers
-# =========================
-def _norm(s: str) -> str:
-    """Normaliza: minúsculas + trim + sin acentos/diacríticos."""
-    s = (s or "").strip().casefold()
-    s = "".join(ch for ch in unicodedata.normalize("NFKD", s) if not unicodedata.combining(ch))
-    return s
-
-
-def _ensure_defaults(uid: str) -> Dict:
-    """Garantiza campos mínimos en la ficha del jugador."""
-    pdata = game.players.setdefault(uid, {})
-    pdata.setdefault("name", uid)
-    pdata.setdefault("aliases", [])
-    pdata.setdefault("alive", True)
-    return pdata
-
-
-def _build_index() -> Tuple[dict, dict]:
-    """
-    Devuelve:
-      - index: dict[norm_key] = (display_name, uid)
-      - names_by_uid: dict[uid] = display_name
-    """
-    index, names_by_uid = {}, {}
-    for uid, pdata in game.players.items():
-        uid = str(uid)
-        pdata = _ensure_defaults(uid)
-        display = pdata.get("name") or uid
-        names_by_uid[uid] = display
-        keys = [display, *(pdata.get("aliases") or [])]
-        for k in keys:
-            nk = _norm(k)
-            if nk:
-                index[nk] = (display, uid)
-    return index, names_by_uid
-
-
-def _resolve_name_to_uid(name_or_alias: str) -> Tuple[str | None, str | None, List[str]]:
-    """Resuelve nombre/alias → (display, uid, suggestions)."""
-    index, _ = _build_index()
-    key = _norm(name_or_alias)
-    if key in index:
-        return index[key][0], index[key][1], []
-
-    # Sugerencias básicas (prefijo > contiene)
-    sugg_pool = []
-    for nk, (disp, uid) in index.items():
-        score = 0
-        if key and nk.startswith(key):
-            score += 2
-        if key and key in nk:
-            score += 1
-        if score > 0:
-            sugg_pool.append((score, disp))
-    sugg_pool.sort(key=lambda x: (-x[0], x[1]))
-    suggestions = [d for _, d in sugg_pool[:5]]
-    return None, None, suggestions
-
-
-def _chunk_text(text: str, limit: int = 1900) -> List[str]:
-    """Parte un texto largo en trozos seguros para Discord."""
-    buf, chunks = [], []
-    for line in text.splitlines():
-        if sum(len(x) + 1 for x in buf) + len(line) + 1 > limit:
-            chunks.append("\n".join(buf))
-            buf = []
-        buf.append(line)
-    if buf:
-        chunks.append("\n".join(buf))
-    return chunks
-
-
-def _uid_from_input(text: str) -> str | None:
-    """
-    Acepta: <@123>, <@!123>, '123' (ID), o un nombre/alias ya existente.
-    Devuelve UID (str) o None.
-    """
-    if not text:
-        return None
-    text = text.strip()
-
-    m = re.fullmatch(r"<@!?(\d+)>", text)
-    if m:
-        return m.group(1)
-
-    if text.isdigit():
-        return text
-
-    # nombre/alias ya registrado
-    disp, uid, _ = _resolve_name_to_uid(text)
-    return uid
-
-
-# =========================
-# Cog
-# =========================
-class Players(commands.Cog):
-    """Gestión de jugadores: listados, alias y registro."""
-
+class PlayersCog(commands.GroupCog, name="player", description="Gestionar jugadores"):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    # ---------- LIST ----------
-    @commands.command(
-        name="list",
-        help="Lista jugadores. Uso: !list [all] [aliases] [filter <texto>]"
+    @app_commands.command(name="list", description="Ver jugadores vivos y muertos")
+    async def list_cmd(self, interaction: discord.Interaction):
+        ctx = await commands.Context.from_interaction(interaction)
+        await players_core.list_players(ctx)
+
+    @app_commands.command(name="register", description="Registrar jugador (admin)")
+    @app_commands.describe(member="Jugador a registrar", name="Nombre opcional")
+    @app_commands.default_permissions(administrator=True)
+    async def register_cmd(self, interaction: discord.Interaction, member: discord.Member | None = None, name: str | None = None):
+        ctx = await commands.Context.from_interaction(interaction)
+        await players_core.register(ctx, member, name=name)
+
+    @app_commands.command(name="unregister", description="Dar de baja (admin)")
+    @app_commands.default_permissions(administrator=True)
+    async def unregister_cmd(self, interaction: discord.Interaction, member: discord.Member):
+        ctx = await commands.Context.from_interaction(interaction)
+        await players_core.unregister(ctx, member)
+
+    @app_commands.command(name="rename", description="Renombrar jugador (admin)")
+    @app_commands.default_permissions(administrator=True)
+    async def rename_cmd(self, interaction: discord.Interaction, member: discord.Member, new_name: str):
+        ctx = await commands.Context.from_interaction(interaction)
+        await players_core.rename(ctx, member, new_name=new_name)
+
+    # Subgrupo /player alias …
+    @app_commands.command(name="alias_show", description="Ver alias de un jugador")
+    async def alias_show_cmd(self, interaction: discord.Interaction, member: discord.Member):
+        ctx = await commands.Context.from_interaction(interaction)
+        await players_core.alias_show(ctx, member)
+
+    @app_commands.command(name="alias_add", description="Añadir alias (admin)")
+    @app_commands.default_permissions(administrator=True)
+    async def alias_add_cmd(self, interaction: discord.Interaction, member: discord.Member, alias: str):
+        ctx = await commands.Context.from_interaction(interaction)
+        await players_core.alias_add(ctx, member, alias=alias)
+
+    @app_commands.command(name="alias_del", description="Eliminar alias (admin)")
+    @app_commands.default_permissions(administrator=True)
+    async def alias_del_cmd(self, interaction: discord.Interaction, member: discord.Member, alias: str):
+        ctx = await commands.Context.from_interaction(interaction)
+        await players_core.alias_del(ctx, member, alias=alias)
+
+
+    @app_commands.command(name="edit", description="Edit a player's field (admin)")
+    @app_commands.describe(
+        member="Target player",
+        field="Field to edit",
+        value="New value (string; will be coerced to the field type)"
     )
-    async def list_players(self, ctx: commands.Context, *args: str):
-        """
-        Muestra nombres válidos para !act.
-        - !list -> solo vivos
-        - !list all -> incluye muertos
-        - !list aliases -> incluye alias
-        - !list all aliases
-        - !list filter <texto> -> filtra por contiene (en nombre/alias)
-        """
-        show_all = any(a.lower() == "all" for a in args)
-        show_aliases = any(a.lower() == "aliases" for a in args)
+    @app_commands.default_permissions(administrator=True)
+    async def edit_cmd(self, interaction: discord.Interaction, member: discord.Member, field: PF, value: str):
+        ctx = await commands.Context.from_interaction(interaction)
+        await players_core.set_player_field(ctx, member, field.value, value)
+        await interaction.response.defer(ephemeral=True)
 
-        # filtro opcional
-        filter_txt = ""
-        if "filter" in [a.lower() for a in args]:
-            try:
-                idx = [a.lower() for a in args].index("filter")
-                filter_txt = " ".join(args[idx + 1:]).strip()
-            except Exception:
-                filter_txt = ""
+    @app_commands.command(name="set_flag", description="Set a custom flag on a player (admin)")
+    @app_commands.default_permissions(administrator=True)
+    async def set_flag_cmd(self, interaction: discord.Interaction, member: discord.Member, key: str, value: str):
+        ctx = await commands.Context.from_interaction(interaction)
+        await players_core.set_flag(ctx, member, key, value)
+        await interaction.response.defer(ephemeral=True)
 
-        rows = []
-        fkey = _norm(filter_txt) if filter_txt else ""
-        # Ordenar por nombre para salida consistente
-        items = sorted(game.players.items(), key=lambda kv: _ensure_defaults(str(kv[0]))["name"].casefold())
-        for uid, pdata in items:
-            pdata = _ensure_defaults(str(uid))
-            name = pdata["name"]
-            alive = pdata.get("alive", True)
-            if not show_all and not alive:
-                continue
+    @app_commands.command(name="del_flag", description="Remove a custom flag from a player (admin)")
+    @app_commands.default_permissions(administrator=True)
+    async def del_flag_cmd(self, interaction: discord.Interaction, member: discord.Member, key: str):
+        ctx = await commands.Context.from_interaction(interaction)
+        await players_core.del_flag(ctx, member, key)
+        await interaction.response.defer(ephemeral=True)
 
-            aliases = pdata.get("aliases") or []
-            # aplicar filtro si corresponde
-            if fkey:
-                hay = _norm(name)
-                alns = [_norm(a) for a in aliases]
-                if fkey not in hay and all(fkey not in a for a in alns):
-                    continue
+    @app_commands.command(name="add_effect", description="Add an effect to a player (admin)")
+    @app_commands.default_permissions(administrator=True)
+    async def add_effect_cmd(self, interaction: discord.Interaction, member: discord.Member, effect: str):
+        ctx = await commands.Context.from_interaction(interaction)
+        await players_core.add_effect(ctx, member, effect)
+        await interaction.response.defer(ephemeral=True)
 
-            alias_txt = f" — aliases: {', '.join(aliases)}" if (show_aliases and aliases) else ""
-            status = "" if alive else " (dead)"
-            rows.append(f"- {name}{status}{alias_txt}")
+    @app_commands.command(name="remove_effect", description="Remove an effect from a player (admin)")
+    @app_commands.default_permissions(administrator=True)
+    async def remove_effect_cmd(self, interaction: discord.Interaction, member: discord.Member, effect: str):
+        ctx = await commands.Context.from_interaction(interaction)
+        await players_core.remove_effect(ctx, member, effect)
+        await interaction.response.defer(ephemeral=True)
 
-        if not rows:
-            return await ctx.reply("No hay jugadores que mostrar con esos filtros.")
+    # Shortcuts
+    @app_commands.command(name="kill", description="Mark a player as dead (admin)")
+    @app_commands.default_permissions(administrator=True)
+    async def kill_cmd(self, interaction: discord.Interaction, member: discord.Member):
+        ctx = await commands.Context.from_interaction(interaction)
+        await players_core.kill(ctx, member)
+        await interaction.response.defer(ephemeral=True)
 
-        header = "**Jugadores**"
-        header += " (todos)" if show_all else " (vivos)"
-        if show_aliases:
-            header += " + aliases"
-        if filter_txt:
-            header += f" — filtro: `{filter_txt}`"
-        header += ":\n"
+    @app_commands.command(name="revive", description="Mark a player as alive (admin)")
+    @app_commands.default_permissions(administrator=True)
+    async def revive_cmd(self, interaction: discord.Interaction, member: discord.Member):
+        ctx = await commands.Context.from_interaction(interaction)
+        await players_core.revive(ctx, member)
+        await interaction.response.defer(ephemeral=True)
 
-        text = header + "\n".join(rows)
-        for part in _chunk_text(text):
-            await ctx.reply(part)
+    @app_commands.command(name="view", description="View a player's full state (admin)")
+    @app_commands.default_permissions(administrator=True)
+    async def view_cmd(self, interaction: discord.Interaction, member: discord.Member):
+        data = get_player_snapshot(str(member.id))
+        if not data:
+            return await interaction.response.send_message("Player not registered.", ephemeral=True)
 
-    # ---------- ALIAS GROUP ----------
-    @commands.group(
-        name="alias",
-        invoke_without_command=True,
-        help="Gestión de alias. Usa: !alias show [Nombre] | !alias add <@mención|id|Nombre> <alias> | !alias del <@mención|id|Nombre> <alias>"
-    )
-    async def alias_group(self, ctx: commands.Context):
-        await ctx.reply("Uso: `!alias show [Nombre]`, `!alias add <@mención|id|Nombre> <alias>`, `!alias del <@mención|id|Nombre> <alias>`")
+        def fmt_bool(b: bool | None):
+            if b is None:
+                return "—"
+            return "✅ True" if b else "❌ False"
 
-    @alias_group.command(name="show", help="Muestra alias de un jugador o de todos.")
-    async def alias_show(self, ctx: commands.Context, *, name: str = ""):
-        if not name.strip():
-            # todos con alias
-            rows = []
-            # ordenar por nombre
-            items = sorted(game.players.items(), key=lambda kv: _ensure_defaults(str(kv[0]))["name"].casefold())
-            for uid, pdata in items:
-                pdata = _ensure_defaults(str(uid))
-                if pdata.get("aliases"):
-                    rows.append(f"- **{pdata['name']}**: {', '.join(pdata['aliases'])}")
-            if not rows:
-                return await ctx.reply("Nadie tiene alias configurados.")
-            text = "**Alias configurados:**\n" + "\n".join(rows)
-            for part in _chunk_text(text):
-                await ctx.reply(part)
-            return
+        def fmt_list(arr):
+            return ", ".join(f"`{x}`" for x in arr) if arr else "—"
 
-        disp, uid, sugg = _resolve_name_to_uid(name)
-        if not uid:
-            if sugg:
-                return await ctx.reply(f"No encuentro a **{name}**. ¿Quisiste decir: {', '.join(sugg)} ?")
-            return await ctx.reply(f"No encuentro a **{name}**.")
-        pdata = _ensure_defaults(uid)
-        aliases = pdata.get("aliases") or []
-        if not aliases:
-            return await ctx.reply(f"**{pdata['name']}** no tiene alias.")
-        await ctx.reply(f"**{pdata['name']}** → {', '.join(aliases)}")
+        def fmt_flags(d):
+            if not d:
+                return "—"
+            parts = [f"`{k}`: `{v}`" for k, v in d.items()]
+            # Prevent overlong field; keep first ~10
+            if len(parts) > 10:
+                parts = parts[:10] + ["…"]
+            return "\n".join(parts)
 
-    @alias_group.command(name="add", help="Añade un alias a un jugador. Uso: !alias add <@mención|id|Nombre> <alias>")
-    @commands.has_permissions(administrator=True)
-    async def alias_add(self, ctx: commands.Context, who: str, *, new_alias: str):
-        uid = _uid_from_input(who)
-        if not uid:
-            return await ctx.reply(f"No puedo resolver a **{who}**.")
+        embed = discord.Embed(
+            title=f"Player: {data['name']}",
+            description=f"User: <@{data['uid']}>",
+            color=0x3498DB if data["alive"] else 0xC0392B,
+        )
+        embed.add_field(name="Alive", value=fmt_bool(data.get("alive")), inline=True)
+        embed.add_field(name="Role", value=data.get("role") or "—", inline=True)
 
-        pdata = _ensure_defaults(uid)
-        aliases = pdata.get("aliases") or []
+        # Voting fields
+        vw_field = data.get("vote_weight_field")
+        vw_comp = data.get("vote_weight_computed")
+        vb = data.get("voting_boost")
+        hv = data.get("hidden_vote")
 
-        n_new = _norm(new_alias)
-        if not n_new:
-            return await ctx.reply("Alias inválido.")
-        for a in aliases:
-            if _norm(a) == n_new:
-                return await ctx.reply(f"El alias **{new_alias}** ya existe para **{pdata['name']}**.")
+        embed.add_field(
+            name="Voting",
+            value="\n".join([
+                f"- `vote_weight` (field): `{vw_field}`" if vw_field is not None else "- `vote_weight` (field): —",
+                f"- `vote_weight` (computed): `{vw_comp}`" if vw_comp is not None else "- `vote_weight` (computed): —",
+                f"- `voting_boost`: `{vb}`" if vb is not None else "- `voting_boost`: —",
+                f"- `hidden_vote`: {fmt_bool(hv)}",
+            ]),
+            inline=False
+        )
 
-        aliases.append(new_alias.strip())
-        pdata["aliases"] = aliases
-        save_state("state.json")
-        await ctx.reply(f"✅ Alias añadido: **{pdata['name']}** → {', '.join(aliases)}")
+        # Aliases / Effects / Flags
+        embed.add_field(name="Aliases", value=fmt_list(data.get("aliases", [])), inline=False)
+        embed.add_field(name="Effects", value=fmt_list(data.get("effects", [])), inline=False)
+        embed.add_field(name="Flags", value=fmt_flags(data.get("flags", {})), inline=False)
 
-    @alias_group.command(name="del", help="Elimina un alias de un jugador. Uso: !alias del <@mención|id|Nombre> <alias>")
-    @commands.has_permissions(administrator=True)
-    async def alias_del(self, ctx: commands.Context, who: str, *, alias_to_remove: str):
-        uid = _uid_from_input(who)
-        if not uid:
-            return await ctx.reply(f"No puedo resolver a **{who}**.")
-
-        pdata = _ensure_defaults(uid)
-        aliases = pdata.get("aliases") or []
-        if not aliases:
-            return await ctx.reply(f"**{pdata['name']}** no tiene alias configurados.")
-
-        n_del = _norm(alias_to_remove)
-        new_aliases = [a for a in aliases if _norm(a) != n_del]
-        if len(new_aliases) == len(aliases):
-            return await ctx.reply(f"No encontré el alias **{alias_to_remove}** en **{pdata['name']}**.")
-
-        pdata["aliases"] = new_aliases
-        save_state("state.json")
-        await ctx.reply(f"🗑️ Alias eliminado. **{pdata['name']}** → {', '.join(new_aliases) if new_aliases else '(sin alias)'}")
-
-    # ---------- REGISTER / UNREGISTER ----------
-    @commands.command(name="register", help="(Admin) Registra/actualiza un jugador. Uso: !register <@mención|id|Nombre> <NombreVisible>")
-    @commands.has_permissions(administrator=True)
-    async def register_player(self, ctx: commands.Context, who: str, *, display_name: str):
-        uid = _uid_from_input(who)
-        if not uid:
-            return await ctx.reply(f"No puedo resolver a **{who}**. Usa @mención, ID numérico o un nombre ya existente.")
-
-        pdata = _ensure_defaults(uid)
-        old_name = pdata.get("name")
-        pdata["name"] = display_name.strip()
-        pdata.setdefault("aliases", [])
-        pdata.setdefault("alive", True)
-
-        save_state("state.json")
-        if old_name and old_name != pdata["name"]:
-            await ctx.reply(f"✅ Actualizado: <@{uid}> — **{old_name}** → **{pdata['name']}**")
-        else:
-            await ctx.reply(f"✅ Registrado: <@{uid}> como **{pdata['name']}**")
-
-    @commands.command(name="unregister", help="(Admin) Elimina a un jugador. Uso: !unregister <@mención|id|Nombre>")
-    @commands.has_permissions(administrator=True)
-    async def unregister_player(self, ctx: commands.Context, who: str):
-        uid = _uid_from_input(who)
-        if not uid:
-            return await ctx.reply(f"No puedo resolver a **{who}**.")
-        if uid not in game.players:
-            return await ctx.reply("Ese jugador no estaba registrado.")
-        name = game.players[uid].get("name", uid)
-        del game.players[uid]
-        save_state("state.json")
-        await ctx.reply(f"🗑️ Eliminado del registro: **{name}** (<@{uid}>)")
-
-    # ---------- RENAME ----------
-    @commands.command(name="rename", help="(Admin) Renombra a un jugador. Uso: !rename <NombreActual|@mención|id> <NombreNuevo>")
-    @commands.has_permissions(administrator=True)
-    async def rename_player(self, ctx: commands.Context, who: str, *, new_name: str):
-        uid = _uid_from_input(who)
-        if not uid:
-            # Intento por nombre/alias (para mantener compatibilidad)
-            disp, uid2, sugg = _resolve_name_to_uid(who)
-            uid = uid2
-            if not uid:
-                if sugg:
-                    return await ctx.reply(f"No encuentro a **{who}**. ¿Quisiste decir: {', '.join(sugg)} ?")
-                return await ctx.reply(f"No encuentro a **{who}**.")
-
-        pdata = _ensure_defaults(uid)
-        old = pdata.get("name")
-        pdata["name"] = new_name.strip()
-        save_state("state.json")
-        await ctx.reply(f"✏️ Renombrado: **{old}** → **{pdata['name']}**")
-
+        embed.set_footer(text="Asdrubot v2.0 — Player inspector")
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 async def setup(bot: commands.Bot):
-    await bot.add_cog(Players(bot))
+    await bot.add_cog(PlayersCog(bot))
+

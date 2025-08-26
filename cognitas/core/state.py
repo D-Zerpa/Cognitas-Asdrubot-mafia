@@ -13,7 +13,8 @@ class GameState:
         self.current_day_number = 1     # int
         self.day_deadline_epoch = None  # int | None (epoch seconds)
         self.day_timer_task = None      # asyncio.Task | None
-
+        self.end_day_votes = set()   # uids (str) de vivos que pidieron cerrar el Día
+        
         # --- Night phase ---
         self.night_channel_id = None        # where !act is allowed (optional)
         self.night_deadline_epoch = None    # epoch seconds
@@ -27,6 +28,8 @@ class GameState:
         # --- Server-configurable channels (set via admin cmds) ---
         self.admin_log_channel_id = None    # where admin logs go
         self.default_day_channel_id = None  # default Day channel
+        self.log_channel_id = None          # where the game logs go
+        self.moon_phase = "New"             # lunar phase
 
         # --- Game lifecycle ---
         self.game_over = False              # block new phases when True
