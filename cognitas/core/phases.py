@@ -149,22 +149,22 @@ async def end_day(
     """
     chan = ctx.guild.get_channel(getattr(game, "day_channel_id", None))
     if not chan:
-        return await ctx.reply("No hay canal de Día activo configurado.")
+        return await ctx.reply("There is no active Day channel configured.")
 
-    # Cerrar canal para enviar
-    overw = chan.overwrites_for(ctx.guild.default_role)
-    overw.send_messages = False
-    await chan.set_permissions(ctx.guild.default_role, overwrite=overw)
-
-    if lynch_target_id:
-        await chan.send(f"⚖️ **Termina el Día.** Linchado: <@{lynch_target_id}>.")
+    # Cerrar canal para enviar    if lynch_target_id:
+        await chan.send(f"⚖️ **Day has ended.** Lynched: <@{lynch_target_id}>.")
         # Marca muerte en estado si corresponde
         uid = str(lynch_target_id)
         if uid in game.players:
             game.players[uid]["alive"] = False
     else:
-        reason = "2/3 de solicitudes" if closed_by_threshold else "sin mayoría"
-        await chan.send(f"⚖️ **Termina el Día sin linchamiento** ({reason}).")
+        reason = "2/3 requests" if closed_by_threshold else "sin mayoría"
+        await chan.send(f"⚖️ **Day has ended with no lynch** ({reason}).")
+
+    overw = chan.overwrites_for(ctx.guild.default_role)
+    overw.send_messages = False
+    await chan.set_permissions(ctx.guild.default_role, overwrite=overw)
+
 
     # Limpiar estado del Día
     game.votes = {}

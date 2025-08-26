@@ -10,7 +10,7 @@ class VotingAdminCog(commands.Cog):
 
     # Fases (comandos sueltos)
     @app_commands.command(name="start_day", description="Starts day (admin)")
-    @app_commands.describe(duration="Ej: 24h, 90m, 1h30m", channel="Canal de Día", force="Reinicia si ya hay un día activo")
+    @app_commands.describe(duration="e.g., 24h, 90m, 1h30m", channel="Day channel", force="Restart if a day is already active")
     @app_commands.default_permissions(administrator=True)
     async def start_day(self, interaction: discord.Interaction, duration: str = "24h", channel: discord.TextChannel | None = None, force: bool = False):
         ctx = await commands.Context.from_interaction(interaction)
@@ -25,7 +25,7 @@ class VotingAdminCog(commands.Cog):
         await interaction.response.send_message("Day finished", ephemeral=True)
 
     @app_commands.command(name="start_night", description="Starts night (admin)")
-    @app_commands.describe(duration="Ej: 12h, 8h, 45m")
+    @app_commands.describe(duration="e.g., 12h, 8h, 45m")
     @app_commands.default_permissions(administrator=True)
     async def start_night(self, interaction: discord.Interaction, duration: str = "12h"):
         ctx = await commands.Context.from_interaction(interaction)

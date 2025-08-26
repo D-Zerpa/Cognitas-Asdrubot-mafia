@@ -79,11 +79,22 @@ async def who(ctx, member: discord.Member | None = None):
     await ctx.reply(f"Jugadores vivos: {', '.join(f'<@{u}>' for u in vivos) if vivos else '—'}")
 
 async def assign_role(ctx, member: discord.Member, role_name: str):
-    uid = str(member.id)
+        # Validate role exists in loaded role defs
+    if role_name not in game.roles:
+        return await ctx.reply(f\"Unknown role: `{role_name}`\")
+
+uid = str(member.id)
     if uid not in game.players:
         return await ctx.reply("Jugador no registrado.")
     # validar que existe en roles_def si quieres
     game.players[uid]["role"] = role_name
+
+    # Merge role defaults (flags)
+    defaults = game.roles[role_name].get("defaults", {})
+    if defaults:
+        flags = game.players[uid].setdefault("flags", {})
+        for k, v in defaults.items():
+            flags.setdefault(k, v)
     save_state("state.json")
     await ctx.reply(f"🎭 Rol **{role_name}** asignado a <@{uid}>.")
     await log_event(ctx.bot, ctx.guild.id, "ASSIGN", user_id=str(member.id), role=role_name)
