@@ -32,7 +32,6 @@ def _atomic_write_json(path: str, data: dict, *, make_backup: bool = True):
 
 
 def load_state(path: str):
-    # Try main file; if missing/corrupt, fallback to .bak
     data = {}
     try:
         with open(path, "r", encoding="utf-8") as f:
@@ -44,40 +43,25 @@ def load_state(path: str):
         except Exception:
             data = {}
 
-    # A partir de aquí conserva tu lógica actual para hidratar 'game' desde 'data'
+    # hidrata 'game'
     game.players = data.get("players", {})
     game.votes = data.get("votes", {})
-    game.day_channel_id = data.get("day_channel_id", None)
-    game.admin_channel_id = data.get("admin_channel_id", None)
-    game.default_day_channel_id = data.get("default_day_channel_id", None)
+    game.day_channel_id = data.get("day_channel_id")
+    game.admin_channel_id = data.get("admin_channel_id")
+    game.default_day_channel_id = data.get("default_day_channel_id")
     game.game_over = data.get("game_over", False)
     game.current_day_number = data.get("current_day_number", 1)
     game.day_deadline_epoch = data.get("day_deadline_epoch")
     game.night_deadline_epoch = data.get("night_deadline_epoch")
     game.profile = data.get("profile", "default")
     game.roles_def = data.get("roles_def", {})
-    # Si quieres re-indexar roles al cargar estado:
+
+    # Re-index roles (por si el JSON viene de SMT)
     try:
-        roles_list = []
-        if isinstance(game.roles_def, dict):
-            roles_list = list(game.roles_def.get("roles") or [])
-        elif isinstance(game.roles_def, list):
-            roles_list = game.roles_def
-        idx = {}
-        for r in roles_list:
-            if not isinstance(r, dict): continue
-            keys = []
-            for k in (r.get("code"), r.get("id"), r.get("name")):
-                if isinstance(k, str) and k.strip():
-                    keys.append(k.strip().upper())
-            for a in (r.get("aliases") or []):
-                if isinstance(a, str) and a.strip():
-                    keys.append(a.strip().upper())
-            for key in keys:
-                idx[key] = r
-        game.roles = idx
+        from .game import _build_roles_index
+        game.roles = _build_roles_index(game.roles_def)
     except Exception:
-        pass
+        game.roles = {}
 
     return data
 

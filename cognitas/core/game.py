@@ -6,13 +6,16 @@ from .logs import log_event
 
 def _extract_role_defaults(role_def: dict) -> dict:
     """
-    Extract default flags for a role, robust across profile schemas:
-    - 'defaults' (preferred)
-    - 'base_flags'
-    - 'abilities': {'defaults': {...}}
+    Obtiene flags por defecto en diferentes esquemas:
+    - SMT:        role_def["flags"]
+    - Otros:      role_def["defaults"] | role_def["base_flags"] | role_def["abilities"]["defaults"]
     """
     if not isinstance(role_def, dict):
         return {}
+    # SMT
+    if isinstance(role_def.get("flags"), dict):
+        return role_def["flags"]
+    # Otros perfiles
     if isinstance(role_def.get("defaults"), dict):
         return role_def["defaults"]
     if isinstance(role_def.get("base_flags"), dict):
@@ -21,6 +24,34 @@ def _extract_role_defaults(role_def: dict) -> dict:
     if isinstance(abilities, dict) and isinstance(abilities.get("defaults"), dict):
         return abilities["defaults"]
     return {}
+
+def _build_roles_index(roles_def) -> dict:
+    """
+    Devuelve un índice robusto: KEY (upper) -> role_def
+    Acepta 'code' | 'id' | 'name' + 'aliases'. En SMT usaremos 'name'.
+    """
+    roles_list = []
+    if isinstance(roles_def, dict):
+        roles_list = list(roles_def.get("roles") or [])
+    elif isinstance(roles_def, list):
+        roles_list = roles_def
+
+    idx = {}
+    for r in roles_list:
+        if not isinstance(r, dict):
+            continue
+        keys = []
+        # SMT no trae code/id → usamos name
+        for k in (r.get("code"), r.get("id"), r.get("name")):
+            if isinstance(k, str) and k.strip():
+                keys.append(k.strip().upper())
+        for a in (r.get("aliases") or []):
+            if isinstance(a, str) and a.strip():
+                keys.append(a.strip().upper())
+        for key in keys:
+            idx[key] = r
+    return idx
+
 
 def set_channels(*, day: discord.TextChannel | None = None, admin: discord.TextChannel | None = None):
     if day is not None:
@@ -39,6 +70,7 @@ async def start(ctx, *, profile: str = "default", day_channel: discord.TextChann
     
     game.profile = profile.lower()
     game.roles_def = load_roles(game.profile)
+    game.roles = _build_roles_index(game.roles_def)
     roles_list = []
     if isinstance(game.roles_def, dict):
         roles_list = list(game.roles_def.get("roles") or [])
@@ -82,16 +114,35 @@ async def start(ctx, *, profile: str = "default", day_channel: discord.TextChann
 
 
 def reset():
-    """
-    Resetea por completo el estado de la partida (mantiene jugadores registrados).
-    """
+    """Borra el estado en memoria y en disco (state.json y .bak)."""
+    # 1) memoria
+    game.players = {}
     game.votes = {}
-    game.end_day_votes = set()
-    game.game_over = False
+    game.day_channel_id = None
+    game.admin_channel_id = None
+    game.default_day_channel_id = None
     game.current_day_number = 1
     game.day_deadline_epoch = None
     game.night_deadline_epoch = None
+    game.profile = "default"
+    game.roles_def = {}
+    game.roles = {}
+    game.game_over = False
+    # Si tienes timers, aquí cancélalos (ej. stop_reminders())
+
+    # 2) disco
+    for path in ("state.json", "state.json.bak", "status.json", "status.json.bak"):
+        try:
+            os.remove(path)
+        except FileNotFoundError:
+            pass
+        except Exception:
+            pass
+
+    # 3) persistir estado vacío
     save_state("state.json")
+    await ctx.reply("🧹 Game state fully reset.")
+    await log_event(ctx.bot, ctx.guild.id, "GAME_RESET")
 
 async def finish(ctx, *, reason: str | None = None):
     game.game_over = True
@@ -118,7 +169,7 @@ async def who(ctx, member: discord.Member | None = None):
 
 async def assign_role(ctx, member: discord.Member, role_name: str):
     """
-    Assign a role to a player and merge default flags (if defined in the role).
+    Asigna un rol a un jugador y aplica flags por defecto (SMT: 'flags').
     """
     uid = str(member.id)
     if uid not in game.players:
@@ -126,15 +177,17 @@ async def assign_role(ctx, member: discord.Member, role_name: str):
 
     key = (role_name or "").strip().upper()
     role_def = None
+
+    # 1) Intento con el índice construido al arrancar
     try:
         role_def = getattr(game, "roles", {}).get(key)
     except Exception:
         role_def = None
 
-    # Defensive fallback: scan roles_def if index was not built
+    # 2) Fallback defensivo: escanear roles_def si el índice no existe
     if not role_def:
-        rd = getattr(game, "roles_def", {})
         roles_list = []
+        rd = getattr(game, "roles_def", {})
         if isinstance(rd, dict):
             roles_list = list(rd.get("roles") or [])
         elif isinstance(rd, list):
@@ -153,9 +206,9 @@ async def assign_role(ctx, member: discord.Member, role_name: str):
 
     game.players[uid]["role"] = role_name
 
-    # Merge defaults without overwriting existing flags
+    # Merge defaults/flags SIN sobrescribir existentes
     defaults = _extract_role_defaults(role_def)
-    if isinstance(defaults, dict) and defaults:
+    if defaults:
         flags = game.players[uid].setdefault("flags", {})
         for k, v in defaults.items():
             flags.setdefault(k, v)
@@ -164,8 +217,9 @@ async def assign_role(ctx, member: discord.Member, role_name: str):
     await ctx.reply(f"🎭 Role **{role_name}** assigned to <@{uid}>.")
     await log_event(ctx.bot, ctx.guild.id, "ASSIGN", user_id=str(member.id), role=role_name)
 
+
     
-    
+
 # al final de core/game.py (o dentro de start())
 def _load_expansion_for(profile: str):
     if profile == "smt":
