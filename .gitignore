@@ -2,3 +2,4 @@
 .envlive
 *.pyc
 __pycache__/
+.vscode
