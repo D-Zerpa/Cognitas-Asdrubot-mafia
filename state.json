@@ -21,25 +21,12 @@
   },
   "votes": {},
   "day_channel_id": 1408971466996846624,
-  "current_day_number": 2,
+  "current_day_number": 1,
   "day_deadline_epoch": null,
-  "night_channel_id": 1408971466996846624,
-  "night_deadline_epoch": 1756203939,
+  "night_channel_id": null,
+  "night_deadline_epoch": null,
   "next_day_channel_id": null,
-  "night_actions": [
-    {
-      "actor": "169579154071748608",
-      "target": "1269691025916559383",
-      "note": "kill",
-      "day": 2
-    },
-    {
-      "actor": "169579154071748608",
-      "target": "1269691025916559383",
-      "note": "kill",
-      "day": 2
-    }
-  ],
+  "night_actions": [],
   "admin_log_channel_id": null,
   "default_day_channel_id": null,
   "game_over": false

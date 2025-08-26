@@ -153,16 +153,15 @@ async def end_day(
 
     # Cerrar canal para enviar
     if lynch_target_id:
-        await chan.send(f"⚖️ **Termina el Día.** Linchado: <@{lynch_target_id}>.")
-        # Marca muerte en estado si corresponde
+        await chan.send(f"⚖️ **Day has ended.** Lynched: <@{lynch_target_id}>.")
         uid = str(lynch_target_id)
         if uid in game.players:
             game.players[uid]["alive"] = False
     else:
-        reason = "2/3 de solicitudes" if closed_by_threshold else "sin mayoría"
-        await chan.send(f"⚖️ **Termina el Día sin linchamiento** ({reason}).")
+        reason = "2/3 requests" if closed_by_threshold else "no majority"
+        await chan.send(f"⚖️ **Day has ended with no lynch** ({reason}).")
 
-    # Lock after announcing
+    # Now lock channel for @everyone
     overw = chan.overwrites_for(ctx.guild.default_role)
     overw.send_messages = False
     await chan.set_permissions(ctx.guild.default_role, overwrite=overw)
@@ -183,13 +182,18 @@ async def end_day(
 
     if lynch_target_id:
         await log_event(ctx.bot, ctx.guild.id, "LYNCH", target_id=str(lynch_target_id))
-    await log_event(ctx.bot, ctx.guild.id, "PHASE_END", phase="Day")
 
     # Limpia el comando del chat
     try:
         await ctx.message.delete(delay=2)
     except Exception:
         pass
+
+    await log_event(ctx.bot, ctx.guild.id, "PHASE_END", phase="Day",
+        lynched_user_id=str(lynch_target_id) if lynch_target_id else "None",
+        closed_by="2/3" if closed_by_threshold else "manual/no-majority",)
+
+
 
 
 async def start_night(
@@ -223,8 +227,8 @@ async def start_night(
     save_state("state.json")
 
     await nchan.send(
-        f"🌙 **Night {game.current_day_number} iniciada.**\n"
-        f"Finaliza: <t:{game.night_deadline_epoch}:F> (**<t:{game.night_deadline_epoch}:R>**)\n"
+        f"🌙 **Night {game.current_day_number} has started.**\n"
+        f"Ends: <t:{game.night_deadline_epoch}:F> (**<t:{game.night_deadline_epoch}:R>**)\n"
         f"Use `/act` to register your night action (if applicable to your role)."
     )
 
@@ -254,7 +258,7 @@ async def end_night(ctx):
     - (Opcional) abre canal del próximo Día si está configurado
     """
     nchan = ctx.guild.get_channel(getattr(game, "night_channel_id", None)) or ctx.channel
-    await nchan.send("🌅 **Termina la Night.** Preparando el siguiente Día…")
+    await nchan.send("🌅 **Night has ended.** Preparing the next Day…")
 
     # Incrementar número del Día
     game.current_day_number = max(1, int(getattr(game, "current_day_number", 1))) + 1

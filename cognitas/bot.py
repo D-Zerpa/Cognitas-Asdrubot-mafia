@@ -4,6 +4,7 @@ import logging
 import discord
 from discord.ext import commands
 from cognitas.core import phases
+from cognitas.core.storage import load_state
 
 # .env opcional
 try:
@@ -78,6 +79,13 @@ async def setup_hook():
             log.info("Global slash synced (%d cmds).", len(synced))
     except Exception as e:
         log.exception("Slash sync failed: %s", e)
+
+    # Load persisted game state (including .bak fallback) BEFORE rehydrating timers
+    try:
+        load_state("state.json")
+        log.info("State loaded from state.json (or .bak).")
+    except Exception as e:
+        log.exception("Failed to load state: %s", e)
 
 @bot.event
 async def on_ready():
