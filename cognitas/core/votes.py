@@ -11,10 +11,28 @@ def _player_record(uid: str) -> dict:
     return game.players.get(uid, {})
 
 def _player_name(uid: str) -> str:
-    return _player_record(uid).get("name", uid)
+    p = game.players.get(uid) or {}
+    return p.get("alias") or p.get("name") or p.get("display_name") or uid
 
 def _is_hidden_voter(uid: str) -> bool:
     return bool(_player_record(uid).get("flags", {}).get("hidden_vote", False))
+
+import random
+
+def _glitch_name(length: int = 6) -> str:
+    """Devuelve un string glitch para votos incógnitos."""
+    # Algunas bases de símbolos “raros”
+    base_chars = "█▓▒░▞▚▛▜▟#@$%&"
+    zalgo_marks = ["̴","̵","̶","̷","̸","̹","̺","̻","̼","̽","͜","͝","͞","͟","͠","͢"]
+    # Generar un pseudo-nombre tipo 'UserXYZ' pero corrupto
+    out = []
+    for _ in range(length):
+        c = random.choice(base_chars)
+        # ~50% chance de adornarlo con 1-3 zalgo marks
+        if random.random() < 0.5:
+            c += "".join(random.choice(zalgo_marks) for _ in range(random.randint(1,3)))
+        out.append(c)
+    return "".join(out)
 
 def _alive_uids() -> list[str]:
     return [uid for uid, p in game.players.items() if p.get("alive", True)]
@@ -61,18 +79,40 @@ def _format_voter_list(voters: list[str], use_numbered_hidden: bool = True) -> s
             labels.append(_player_name(uid))
     return ", ".join(labels) if labels else "—"
 
-# ---------- Core vote operations (unchanged) ----------
+# ---------- Core vote operations  ----------
 
-async def vote(ctx: commands.Context, member: discord.Member):
-    voter = str(ctx.author.id)
-    target = str(member.id)
-    if voter not in game.players or not game.players[voter].get("alive", True):
+async def vote(ctx: commands.Context, member):
+    voter_id = str(ctx.author.id)
+    target_id = str(member.id)
+
+    # validate
+    if voter_id not in game.players or not game.players[voter_id].get("alive", True):
         return await ctx.reply("You must be a registered and alive player to vote.")
-    if target not in game.players or not game.players[target].get("alive", True):
+    if target_id not in game.players or not game.players[target_id].get("alive", True):
         return await ctx.reply("Target must be a registered and alive player.")
-    game.votes[voter] = target
+
+    # register
+    game.votes[voter_id] = target_id
     save_state("state.json")
-    await ctx.reply(f"✅ Vote registered: `{_player_name(voter)}` → `{_player_name(target)}`")
+
+    # hidden voter check
+    incognito = bool(game.players.get(voter_id, {}).get("flags", {}).get("hidden_vote", False))
+
+    if incognito:
+        fake_name = _glitch_name()
+        await ctx.reply(f"✅ Vote registered: `{fake_name}` → `{_player_name(target_id)}`)
+        await log_event(
+            ctx.bot, ctx.guild.id, "VOTE_CAST",
+            voter_id=voter_id, target_id=target_id, incognito=True
+        )
+    else:
+        await ctx.reply(
+            f"✅ Vote registered: `{_player_name(voter_id)}` → `{_player_name(target_id)}`"
+        )
+        await log_event(
+            ctx.bot, ctx.guild.id, "VOTE_CAST",
+            voter_id=voter_id, target_id=target_id, incognito=False
+        )
 
 async def unvote(ctx: commands.Context):
     voter = str(ctx.author.id)

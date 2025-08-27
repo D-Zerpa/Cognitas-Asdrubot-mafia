@@ -55,6 +55,7 @@ INITIAL_EXTENSIONS = [
     "cognitas.cogs.actions",
     "cognitas.cogs.help",
     "cognitas.cogs.fun",
+    "cognitas.cogs.role_debug",
 ]
 
 @bot.event

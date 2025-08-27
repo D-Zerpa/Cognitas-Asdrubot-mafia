@@ -13,11 +13,10 @@ class GameCog(commands.Cog):
         ctx = await commands.Context.from_interaction(interaction)
         await game_core.start(ctx, profile=profile, day_channel=interaction.channel, admin_channel=None)
         
-    @app_commands.command(name="game_reset", description="Resetear estado del juego (admin)")
+    @app_commands.command(name="game_reset", description="Hard reset of game state")
     @app_commands.default_permissions(administrator=True)
     async def game_reset(self, interaction: discord.Interaction):
-        game_core.reset()
-        await interaction.response.send_message("Game reset.", ephemeral=True)
+        await game_core.hard_reset(interaction)
 
     @app_commands.command(name="finish_game", description="Terminar partida (admin)")
     @app_commands.default_permissions(administrator=True)

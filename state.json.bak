@@ -5,7 +5,12 @@
       "name": "Hyde",
       "alive": true,
       "aliases": [],
-      "flags": {},
+      "flags": {
+        "glitched_investigations": true,
+        "nightkill_immune": true,
+        "hidden_vote": true,
+        "revelation_used": false
+      },
       "effects": [],
       "role": "YHVH"
     },
@@ -13,20 +18,31 @@
       "uid": "1269691025916559383",
       "name": "Gato Trujillo",
       "alive": true,
-      "aliases": [],
-      "flags": {},
+      "aliases": [
+        "gato"
+      ],
+      "flags": {
+        "dsp_catch_next": true
+      },
       "effects": [],
-      "role": "Mastema"
+      "role": "jonathan"
     }
   },
   "votes": {},
   "day_channel_id": 1408971466996846624,
-  "current_day_number": 1,
-  "day_deadline_epoch": null,
-  "night_channel_id": null,
+  "current_day_number": 2,
+  "day_deadline_epoch": 1756389063,
+  "night_channel_id": 1408971466996846624,
   "night_deadline_epoch": null,
   "next_day_channel_id": null,
-  "night_actions": [],
+  "night_actions": [
+    {
+      "actor": "169579154071748608",
+      "target": "1269691025916559383",
+      "note": "kill",
+      "day": 1
+    }
+  ],
   "admin_log_channel_id": null,
   "default_day_channel_id": null,
   "game_over": false
