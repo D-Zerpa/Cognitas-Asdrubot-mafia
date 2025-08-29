@@ -12,7 +12,9 @@
         "revelation_used": false
       },
       "effects": [],
-      "role": "YHVH"
+      "role": "YHVH",
+      "voting_boost": 3.0,
+      "vote_weight": 2.0
     },
     "1269691025916559383": {
       "uid": "1269691025916559383",

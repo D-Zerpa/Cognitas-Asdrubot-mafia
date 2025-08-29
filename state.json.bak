@@ -9,10 +9,13 @@
         "glitched_investigations": true,
         "nightkill_immune": true,
         "hidden_vote": true,
-        "revelation_used": false
+        "revelation_used": false,
+        "voting_boost": 2
       },
       "effects": [],
-      "role": "YHVH"
+      "role": "YHVH",
+      "voting_boost": 3.0,
+      "vote_weight": 2.0
     },
     "1269691025916559383": {
       "uid": "1269691025916559383",
@@ -28,21 +31,16 @@
       "role": "jonathan"
     }
   },
-  "votes": {},
+  "votes": {
+    "169579154071748608": "1269691025916559383"
+  },
   "day_channel_id": 1408971466996846624,
   "current_day_number": 2,
   "day_deadline_epoch": 1756389063,
-  "night_channel_id": 1408971466996846624,
+  "night_channel_id": null,
   "night_deadline_epoch": null,
   "next_day_channel_id": null,
-  "night_actions": [
-    {
-      "actor": "169579154071748608",
-      "target": "1269691025916559383",
-      "note": "kill",
-      "day": 1
-    }
-  ],
+  "night_actions": [],
   "admin_log_channel_id": null,
   "default_day_channel_id": null,
   "game_over": false
