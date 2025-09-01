@@ -134,11 +134,13 @@ async def start_day(
 
 
 
+
 async def end_day(
     ctx,
     *,
     closed_by_threshold: bool = False,
     lynch_target_id: Optional[int] = None,
+    force_target_id: Optional[int | str] = None,
 ):
     """
     Cierra la fase de Día:
@@ -147,21 +149,32 @@ async def end_day(
     - Limpia votos y deadline
     - NO inicia la Night automáticamente (eso lo controla el mod)
     """
+
+    # Normaliza ID efectivo (si nos pasan force_target_id desde el autocierre, tiene prioridad)
+    def _norm_uid(x) -> Optional[str]:
+        if x is None:
+            return None
+        try:
+            return str(int(x))
+        except Exception:
+            return str(x)
+
+    effective_lynch_id = _norm_uid(force_target_id) or _norm_uid(lynch_target_id)
+
     chan = ctx.guild.get_channel(getattr(game, "day_channel_id", None))
     if not chan:
-        return await ctx.reply("No hay canal de Día activo configurado.")
+        return await ctx.reply("No active Day channel is configured.")
 
-    # Cerrar canal para enviar
-    if lynch_target_id:
-        await chan.send(f"⚖️ **Day has ended.** Lynched: <@{lynch_target_id}>.")
-        uid = str(lynch_target_id)
-        if uid in game.players:
-            game.players[uid]["alive"] = False
+    # Anunciar ANTES de bloquear
+    if effective_lynch_id:
+        await chan.send(f"⚖️ **Day has ended.** Lynched: <@{effective_lynch_id}>.")
+        if effective_lynch_id in game.players:
+            game.players[effective_lynch_id]["alive"] = False
     else:
         reason = "2/3 requests" if closed_by_threshold else "no majority"
         await chan.send(f"⚖️ **Day has ended with no lynch** ({reason}).")
 
-    # Now lock channel for @everyone
+    # Lock channel para @everyone
     overw = chan.overwrites_for(ctx.guild.default_role)
     overw.send_messages = False
     await chan.set_permissions(ctx.guild.default_role, overwrite=overw)
@@ -178,21 +191,21 @@ async def end_day(
 
     save_state("state.json")
 
-    # Se registra el linchamiento
+    # Log de linchamiento (si aplica)
+    if effective_lynch_id:
+        await log_event(ctx.bot, ctx.guild.id, "LYNCH", target_id=str(effective_lynch_id))
 
-    if lynch_target_id:
-        await log_event(ctx.bot, ctx.guild.id, "LYNCH", target_id=str(lynch_target_id))
-
-    # Limpia el comando del chat
+    # Limpia el comando del chat (si existe mensaje — en slash puede no existir)
     try:
         await ctx.message.delete(delay=2)
     except Exception:
         pass
 
-    await log_event(ctx.bot, ctx.guild.id, "PHASE_END", phase="Day",
-        lynched_user_id=str(lynch_target_id) if lynch_target_id else "None",
-        closed_by="2/3" if closed_by_threshold else "manual/no-majority",)
-
+    await log_event(
+        ctx.bot, ctx.guild.id, "PHASE_END", phase="Day",
+        lynched_user_id=str(effective_lynch_id) if effective_lynch_id else "None",
+        closed_by="2/3" if closed_by_threshold else "manual/no-majority",
+    )
 
 
 

@@ -153,10 +153,11 @@ async def vote(ctx: commands.Context, member: discord.Member):
         # ¿Alguien alcanzó (base + extra del objetivo)?
         winner_id = next((tid for tid, total in totals.items() if total >= _needed_for_target(tid)), None)
         if winner_id:
-            game.last_lynch_target = winner_id  # opcional, para transparencia/mod tools
+            game.last_lynch_target = winner_id
             save_state("state.json")
             from . import phases
-            await phases.end_day(ctx, closed_by_threshold=False)
+            await phases.end_day(ctx, closed_by_threshold=False, force_target_id=winner_id)
+
     except Exception:
         pass
 
