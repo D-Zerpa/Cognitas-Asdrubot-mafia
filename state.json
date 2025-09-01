@@ -9,7 +9,8 @@
         "glitched_investigations": true,
         "nightkill_immune": true,
         "hidden_vote": true,
-        "revelation_used": false
+        "revelation_used": false,
+        "voting_boost": 2
       },
       "effects": [],
       "role": "YHVH",
@@ -19,7 +20,7 @@
     "1269691025916559383": {
       "uid": "1269691025916559383",
       "name": "Gato Trujillo",
-      "alive": true,
+      "alive": false,
       "aliases": [
         "gato"
       ],
@@ -30,17 +31,18 @@
       "role": "jonathan"
     }
   },
-  "votes": {
-    "169579154071748608": "1269691025916559383"
-  },
+  "votes": {},
   "day_channel_id": 1408971466996846624,
-  "current_day_number": 2,
-  "day_deadline_epoch": 1756389063,
-  "night_channel_id": null,
-  "night_deadline_epoch": null,
+  "night_channel_id": 1408971466996846624,
   "next_day_channel_id": null,
-  "night_actions": [],
   "admin_log_channel_id": null,
+  "admin_channel_id": null,
   "default_day_channel_id": null,
-  "game_over": false
+  "game_over": false,
+  "current_day_number": 3,
+  "day_deadline_epoch": 1756823364,
+  "night_deadline_epoch": null,
+  "profile": "default",
+  "roles_def": {},
+  "night_actions": []
 }
