@@ -41,6 +41,7 @@ def _make_intents() -> discord.Intents:
 COG_MODULES = [
     "cognitas.cogs.game",
     "cognitas.cogs.moderation",
+    "cognitas.cogs.maintenance",
     "cognitas.cogs.voting",
     "cognitas.cogs.players",
     "cognitas.cogs.actions",
@@ -55,9 +56,10 @@ class AsdruBot(commands.Bot):
         self._state_loaded = False
 
     async def setup_hook(self):
+
         # 1) Load persistent state
         try:
-            load_state()  # your storage.load_state is synchronous
+            load_state()  # sync
             self._state_loaded = True
             log.info("[startup] State loaded.")
         except Exception:
@@ -71,12 +73,13 @@ class AsdruBot(commands.Bot):
             except Exception:
                 log.exception(f"[cogs] Failed to load: {mod}")
 
-        # 3) Sync slash commands (global)
+        # 3) First sync after cogs are loaded (single source of truth)
         try:
-            await self.tree.sync()
-            log.info("[startup] Slash commands synced.")
+            await self.tree.sync(guild=None)  # global sync
+            log.info("[startup] Slash commands synced (global).")
         except Exception:
             log.exception("[startup] Failed to sync slash commands")
+
 
     async def on_ready(self):
         try:
@@ -85,7 +88,16 @@ class AsdruBot(commands.Bot):
         except Exception:
             log.info("Logged in.")
 
-        # Rehydrate timers for all connected guilds (or a stored one if usas state.guild_id)
+        try:
+            cmds = self.tree.get_commands()
+            qnames = sorted(c.qualified_name for c in cmds)
+            log.info(f"[commands] Loaded {len(qnames)} local commands:")
+            for q in qnames:
+                log.info(f"  - /{q}")
+        except Exception:
+            pass
+
+        # Rehydrate timers per guild
         try:
             if getattr(phases, "rehydrate_timers", None):
                 for guild in self.guilds:

@@ -50,19 +50,89 @@ class ModerationCog(commands.Cog):
         set_log_channel_core(target)
         await interaction.response.send_message(f"🧾 Logs channel set to {target.mention}", ephemeral=True)
 
-    @app_commands.command(name="purge", description="Delete N recent messages in this channel (mod)")
+    @app_commands.command(name="purge", description="Delete recent messages in this channel.")
+    @app_commands.describe(
+        limit="How many messages to scan (max 1000)",
+        user="Only delete messages from this user",
+        contains="Only delete messages containing this text",
+        include_bots="Also delete messages from bots",
+        include_pinned="Also delete pinned messages (careful!)",
+    )
     @app_commands.default_permissions(manage_messages=True)
-    async def purge(self, interaction: discord.Interaction, amount: int):
-        if amount <= 0:
-            return await interaction.response.send_message("Invalid number.", ephemeral=True)
+    async def purge(
+        self,
+        interaction: discord.Interaction,
+        limit: int = 100,
+        user: discord.Member | None = None,
+        contains: str | None = None,
+        include_bots: bool = False,
+        include_pinned: bool = False,
+    ):
+        # 1) Always defer first — prevents "Unknown interaction"
+        await interaction.response.defer(ephemeral=True)
+
+        chan = interaction.channel
+        if not isinstance(chan, (discord.TextChannel, discord.Thread)):
+            return await interaction.followup.send("This command only works in text channels or threads.", ephemeral=True)
+
+        # 2) Permission checks (bot must have Manage Messages)
+        me = chan.guild.me if isinstance(chan, discord.TextChannel) else interaction.guild.me  # type: ignore
+        perms = chan.permissions_for(me)
+        if not perms.manage_messages:
+            return await interaction.followup.send("I need **Manage Messages** permission in this channel.", ephemeral=True)
+
+        # 3) Clamp limit
+        limit = max(1, min(1000, int(limit)))
+
+        # 4) Build predicate
+        needle = (contains or "").lower().strip()
+
+        def _check(m: discord.Message) -> bool:
+            if (not include_bots) and m.author.bot:
+                return False
+            if (not include_pinned) and m.pinned:
+                return False
+            if user and m.author.id != user.id:
+                return False
+            if needle and needle not in (m.content or "").lower():
+                return False
+            return True
+
+        # 5) Try fast path: channel.purge (uses bulk delete when possible)
+        deleted_count = 0
         try:
-            deleted = await interaction.channel.purge(limit=amount)
-            await interaction.response.send_message(f"Purged {len(deleted)}.", ephemeral=True)
-        except discord.NotFound:
-            await interaction.response.send_message("Not enough messages to delete.", ephemeral=True)
+            deleted = await chan.purge(
+                limit=limit,
+                check=_check,
+                bulk=True,
+                reason=f"/purge by {interaction.user} ({interaction.user.id})",
+            )
+            deleted_count = len(deleted)
+        except AttributeError:
+            # Threads on some versions may not expose purge(); fallback to manual
+            pass
         except discord.Forbidden:
-            await interaction.response.send_message("I lack permissions to delete here.", ephemeral=True)
-        except Exception as e:
-            await interaction.response.send_message(f"Purge error: {e}", ephemeral=True)
+            return await interaction.followup.send("I don’t have permission to delete messages here.", ephemeral=True)
+        except discord.HTTPException:
+            # Some messages older than 14 days cannot be bulk-deleted; fall back to manual
+            pass
+
+        if deleted_count == 0:
+            # Manual fallback (handles >14d messages or missing purge())
+            try:
+                async for m in chan.history(limit=limit):
+                    if _check(m):
+                        try:
+                            await m.delete()
+                            deleted_count += 1
+                            # Be polite with rate limits if many single deletes
+                            await asyncio.sleep(0.2)
+                        except (discord.Forbidden, discord.HTTPException):
+                            continue
+            except Exception as e:
+                return await interaction.followup.send(f"Failed to fetch history: {e}", ephemeral=True)
+
+        # 6) Single, safe follow-up (no double replies)
+        await interaction.followup.send(f"🧹 Purged **{deleted_count}** message(s).", ephemeral=True)
 
 async def setup(bot): await bot.add_cog(ModerationCog(bot))

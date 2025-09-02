@@ -31,7 +31,9 @@
       "role": "jonathan"
     }
   },
-  "votes": {},
+  "votes": {
+    "169579154071748608": "1269691025916559383"
+  },
   "day_channel_id": 1408971466996846624,
   "night_channel_id": 1408971466996846624,
   "next_day_channel_id": null,
@@ -40,7 +42,7 @@
   "default_day_channel_id": null,
   "game_over": false,
   "current_day_number": 3,
-  "day_deadline_epoch": 1756823364,
+  "day_deadline_epoch": null,
   "night_deadline_epoch": null,
   "profile": "default",
   "roles_def": {},
