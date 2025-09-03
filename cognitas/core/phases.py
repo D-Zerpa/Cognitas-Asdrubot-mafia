@@ -125,11 +125,29 @@ async def start_day(
         game.day_timer_task.cancel()
         game.day_timer_task = None
 
+    # Check the Day number, then add one.
+    
+    curr = int(getattr(game, "current_day_number", 0) or 0)
+    phase_now = (getattr(game, "phase", "day") or "day").lower()
+
+    if phase_now != "day" or force:
+        # starting a new day cycle
+        game.current_day_number = (curr + 1) if curr >= 0 else 1
+        # optional: reset per-day data here if you keep some
+    else:
+        # staying in the same day (restart timers only)
+        game.current_day_number = max(1, curr)
+        
+        
+        
+    game.phase = "day"
+    
+    await save_state()
     # Decide Day channel (explicit > configured > current)
     target: discord.abc.Messageable = ch
     game.day_channel_id = ch.id
-    game.phase = "day"
 
+    
     # Compute and store deadline
     now = int(time.time())
     game.day_deadline_epoch = now + seconds

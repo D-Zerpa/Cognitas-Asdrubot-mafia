@@ -89,12 +89,12 @@ def _lookup_role(role_name: str, roles_index: dict, roles_def) -> dict | None:
     return None
 
 
-def set_channels(*, day: discord.TextChannel | None = None, admin: discord.TextChannel | None = None):
+async def set_channels(*, day: discord.TextChannel | None = None, admin: discord.TextChannel | None = None):
     if day is not None:
         game.day_channel_id = day.id
     if admin is not None:
         game.admin_channel_id = admin.id
-    save_state("state.json")
+    await save_state("state.json")
 
 async def start(ctx, *, profile: str = "default", day_channel: discord.TextChannel | None = None, admin_channel: discord.TextChannel | None = None):
     """
@@ -114,12 +114,13 @@ async def start(ctx, *, profile: str = "default", day_channel: discord.TextChann
     game.votes = {}
     game.end_day_votes = set()
     game.game_over = False
-    game.current_day_number = 1
+    game.current_day_number = 0
+    game.phase = "day"
     game.day_deadline_epoch = None
     game.night_deadline_epoch = None
 
     set_channels(day=day_channel or ctx.channel, admin=admin_channel)
-    save_state("state.json")
+    await save_state("state.json")
 
     chan = ctx.guild.get_channel(game.day_channel_id)
     await ctx.reply(
@@ -141,12 +142,13 @@ async def hard_reset(ctx_or_interaction):
     game.day_channel_id = None
     game.admin_channel_id = None
     game.default_day_channel_id = None
-    game.current_day_number = 1
+    game.current_day_number = 0
     game.day_deadline_epoch = None
     game.night_deadline_epoch = None
     game.profile = "default"
     game.roles_def = {}
     game.roles = {}
+    game.night_actions = {}
     game.game_over = False
     # TODO: cancelar timers si existen
 
@@ -160,7 +162,7 @@ async def hard_reset(ctx_or_interaction):
             pass
 
     # 3) persistir estado vacío
-    save_state("state.json")
+    await save_state("state.json")
 
     # 4) responder al usuario (ctx o interaction)
     try:
@@ -188,7 +190,7 @@ async def hard_reset(ctx_or_interaction):
 
 async def finish(ctx, *, reason: str | None = None):
     game.game_over = True
-    save_state("state.json")
+    await save_state("state.json")
     await ctx.reply(f"🏁 **Game finished.** {('Reason: ' + reason) if reason else ''}".strip())
     await log_event(ctx.bot, ctx.guild.id, "GAME_FINISH", reason=reason or "-")
 
@@ -230,7 +232,7 @@ async def assign_role(ctx, member: discord.Member, role_name: str):
         for k, v in defaults.items():
             flags.setdefault(k, v)
 
-    save_state("state.json")
+    await save_state("state.json")
     await ctx.reply(f"🎭 Role **{role_name}** assigned to <@{uid}>.")
     await log_event(ctx.bot, ctx.guild.id, "ASSIGN", user_id=str(member.id), role=role_name)
 
