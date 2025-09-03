@@ -1,10 +1,19 @@
-# 📖 Asdrubot v2.0 — Commands Reference
+# 📖 Asdrubot — Commands Reference (Consolidated)
 
-This document lists all available slash commands, grouped by **Player** and **Administrator** commands.
+This document lists all available slash commands, grouped by **Player** and **Administrator / Moderator** commands.
+
+> Notes
+> - *(admin)* requires **Administrator**.
+> - *(manage_messages)* requires **Manage Messages** (for moderators).
+> - Some admin commands are visible only if you have permissions.
+> - `/actions …` commands are phase-aware (Day/Night); `/act` auto-detects the current phase.
 
 ---
 
 ## 👥 Player Commands
+
+- `/help`  
+  Show the command list (ephemeral embed).
 
 - `/player list`  
   Show all registered players, separated into alive and dead.
@@ -12,11 +21,11 @@ This document lists all available slash commands, grouped by **Player** and **Ad
 - `/player alias_show @user`  
   Display all aliases of a given player.
 
-- `/player alias_add @user <alias>` *(admin only)*  
-  Add an alias to a player.
+- `/votes`  
+  Vote breakdown for the current day.
 
-- `/player alias_del @user <alias>` *(admin only)*  
-  Remove an alias from a player.
+- `/status`  
+  Global status: current phase (day/night), counter (Day N / Night N), lunar phase, time remaining, and alive players.
 
 - `/vote cast @user`  
   Cast your vote against a player during the Day.
@@ -28,117 +37,124 @@ This document lists all available slash commands, grouped by **Player** and **Ad
   Show your current vote.
 
 - `/vote end_day`  
-  Request to end the Day without a lynch. If 2/3 of alive players request this, the Day will close early.
+  Request to end the Day without a lynch (requires 2/3 of alive players).
 
-- `/votos`  
-  Show the breakdown of all current votes.
-
-- `/status`  
-  Show the current Day status and time remaining.
-
-- `/act @user [note]`  
-  Register your night action (if applicable to your role).
+- `/act [@target] [note]`  
+  Register **your action** for the current phase (Day or Night), if your role allows it (via `day_act`/`night_act` flag).
 
 - `/dice [faces=20]`  
-  Roll a die with the given number of faces.
+  Roll a die with the given number of faces (2–1000).
 
 - `/coin`  
   Flip a coin (Heads/Tails).
 
-- `/help`  
-  Show the command list (ephemeral embed).
-
 ---
 
-## 🛡️ Administrator Commands
+## 🛡️ Administrator / Moderator Commands
 
-### Player Management
-- `/player register @user [name]`  
+### 👥 Player Management
+- `/player register @user [name]` *(admin)*  
   Register a player into the game.
 
-- `/player unregister @user`  
+- `/player unregister @user` *(admin)*  
   Remove a player from the game.
 
-- `/player rename @user <new_name>`  
+- `/player rename @user <new_name>` *(admin)*  
   Change the display name of a player.
 
-- `/player edit @user field:<alive|role|name|vote_weight|voting_boost|hidden_vote> value:<...>`  
-  Edit a core field of a player directly.
+- `/player view @user` *(admin)*  
+  Show a full embed with the player’s state (name, alive, role, flags, effects, aliases).
 
-- `/player kill @user`  
+- `/player edit @user field value` *(admin)*  
+  Safely edit stored fields like `alive`, `name`, `role`, `effects`, `notes`.  
+  _(Voting/lynch-related fields must be managed via flags.)_
+
+- `/player set_flag @user <flag> <value>` *(admin)*  
+  Set a flag on a player (typed; supports autocomplete). Examples: `hidden_vote` (bool), `voting_boost` (int), `night_act`/`day_act` (bool).
+
+- `/player del_flag @user <flag>` *(admin)*  
+  Remove a flag from a player.
+
+- `/player add_effect @user <effect>` *(admin)*  
+  Add an effect to a player.
+
+- `/player remove_effect @user <effect>` *(admin)*  
+  Remove an effect from a player.
+
+- `/player kill @user` *(admin)*  
   Mark a player as dead.
 
-- `/player revive @user`  
+- `/player revive @user` *(admin)*  
   Mark a player as alive again.
 
-- `/player set_flag @user key value`  
-  Add or update a custom flag on a player.
-
-- `/player del_flag @user key`  
-  Remove a custom flag from a player.
-
-- `/player add_effect @user effect`  
-  Add a custom effect to a player.
-
-- `/player remove_effect @user effect`  
-  Remove a custom effect from a player.
-
-- `/player view @user`  
-  Show a full embed with the player’s state (name, alive, role, flags, effects, aliases, vote weights).
-
-### Game Management
-- `/game_start [profile=default]`  
+### 🎮 Game Management
+- `/game_start [profile=default]` *(admin)*  
   Start a new game with the specified role profile.
 
-- `/game_reset`  
-  Reset the current game state (players remain registered).
+- `/game_reset` *(admin)*  
+  Hard reset of game state.
 
-- `/finish_game [reason]`  
-  Finish the current game and archive state.
+- `/finish_game [reason]` *(admin)*  
+  Finish the current game and archive state (optional reason).
 
-- `/who [@user]`  
-  Show information about a specific player (role if assigned).
+- `/who [@user]` *(admin)*  
+  Show information about a specific player.
 
-- `/assign @user <role>`  
+- `/assign @user <role>` *(admin)*  
   Assign a role to a player.
 
-### Phases & Voting
-- `/start_day [duration] [channel] [force=false]`  
-  Start the Day phase, set duration and channel. Force replaces an active Day.
+### 🗳️ Phases & Voting
+- `/start_day [duration] [channel] [force=false]` *(admin)*  
+  Start the Day phase, set duration and channel. `force` replaces an active Day.
 
-- `/end_day`  
-  End the Day phase. If a player has majority votes, they are lynched.
+- `/end_day` *(admin)*  
+  End the Day phase.
 
-- `/start_night [duration]`  
-  Start the Night phase and open the Night channel.
+- `/start_night [duration]` *(admin)*  
+  Start the Night phase.
 
-- `/end_night`  
-  End the Night phase and advance to the next Day.
+- `/end_night` *(admin)*  
+  End the Night phase.
 
-- `/clearvotes`  
-  Clear all current votes (admin override).
+- `/clearvotes` *(admin)*  
+  Clear all current votes.
 
-### Moderation & Utility
-- `/bc <text>`  
+### 🌓 Actions & Logs
+- `/actions logs [phase=auto|day|night] [number] [user] [public=false]` *(admin)*  
+  - With `user` **and no `number`**: shows that user’s **entire history** for the chosen phase (all days/nights).  
+  - With `number` (optional `user`): shows logs for that specific Day/Night.
+
+- `/actions breakdown [phase=auto|day|night] [number] [public=false]` *(admin)*  
+  Who **can act** (alive with `day_act`/`night_act`), who **acted**, and who is **missing**, for that Day/Night.
+
+### 🛡️ Moderation & Utility
+- `/bc <text>` *(admin)*  
   Broadcast a message to the configured Day channel.
 
-- `/set_day_channel [#channel]`  
+- `/set_day_channel [#channel]` *(admin)*  
   Configure the Day channel.
 
-- `/set_admin_channel [#channel]`  
+- `/set_admin_channel [#channel]` *(admin)*  
   Configure the Admin channel.
 
-- `/set_log_channel [#channel]`  
+- `/set_log_channel [#channel]` *(admin)*  
   Configure the Logs channel.
 
-- `/show_channels`  
-  Display the currently configured Day and Admin channels.
+- `/show_channels` *(admin)*  
+  Display the configured Day and Admin channels.
 
-- `/purge <N>`  
-  Delete the last N messages in the current channel (requires Manage Messages).
+- `/purge [limit=100] [user] [contains] [include_bots=false] [include_pinned=false]` *(manage_messages)*  
+  Delete recent messages in the current channel with flexible filters.
 
----
+### 🧰 Maintenance
+- `/debug_roles` *(admin)*  
+  List loaded role keys.
 
-## 🌙 Expansion-Specific (SMT)
-- **Moon phases** automatically advance each Day/Night if profile `smt` is used.  
-  (No direct commands; handled by expansion hooks.)
+- `/sync_here` *(admin)*  
+  Sync slash commands for the current server (instant).
+
+- `/list_commands [scope=global|guild]` *(admin)*  
+  List remote slash commands (global or this guild), plus local ones.
+
+- `/clean_commands [scope=global|guild] [nuke=false] [prune_empty_roots=true] [also_remove=\"...\"]` *(admin)*  
+  Remove stray slash commands, optionally nuke before syncing.
