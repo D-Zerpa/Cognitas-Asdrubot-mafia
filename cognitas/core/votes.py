@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 import random
+import time
 from typing import Dict, Tuple
 
 import discord
@@ -11,6 +12,7 @@ from .state import game
 from .storage import save_state  # async
 from .logs import log_event
 from . import phases
+from . import lunar
 
 
 # ---------- Helpers (names, hidden voters, etc.) ----------
@@ -41,6 +43,21 @@ def _alive_uids() -> list[str]:
     players = getattr(game, "players", {}) or {}
     return [uid for uid, p in players.items() if p.get("alive", True)]
 
+def _alive_display_names(uids: list[str], *, max_names: int = 24) -> str:
+    """
+    Returns a human-friendly list of alive player names (or mentions).
+    Truncates if too long and appends '… (+N more)'.
+    """
+    players = getattr(game, "players", {}) or {}
+    names: list[str] = []
+    for uid in uids[:max_names]:
+        p = players.get(uid) or {}
+        label = p.get("name") or p.get("alias") or f"<@{uid}>"
+        names.append(f"`{label}`")
+    extra = len(uids) - len(names)
+    if extra > 0:
+        names.append(f"… (+{extra} more)")
+    return ", ".join(names) if names else "—"
 
 # ---------- Voting logic (simple majority + boosts & target extras) ----------
 
@@ -274,43 +291,46 @@ async def votes_breakdown(ctx: commands.Context | any):
     embed.set_footer(text="Asdrubot v2.0 — Voting UI")
     await ctx.reply(embed=embed)
 
-async def status(ctx: commands.Context | any):
+async def status(ctx):
     """
-    Compact UI: one line per target with current total and target-specific threshold.
+    Global game status:
+      - Current phase (Day/Night) and number
+      - Lunar phase (emoji + name)
+      - Time remaining (relative)
+      - Alive players (count + list)
     """
-    by_target = _group_votes_by_target()
-    totals = _tally_votes_simple_plus_boosts()
-    base_needed = _majority_base_needed()
-    day_no = getattr(game, "current_day_number", None)
-    rt = _remaining_time_str()
+    phase = (getattr(game, "phase", "day") or "day").lower()
+    day_no = int(getattr(game, "current_day_number", 1) or 1)
 
-    embed = discord.Embed(
-        title=f"Day {day_no} Status" if day_no else "Day Status",
-        description=f"Base majority needed: **{base_needed}**" + (f" • Ends {rt}" if rt else ""),
-        color=0x2ECC71,
-    )
+    # Lunar
+    _, lunar_label = lunar.current(game)
 
-    if not getattr(game, "votes", None):
-        embed.add_field(name="Votes", value="No votes have been cast.", inline=False)
+    # Deadline
+    if phase == "day":
+        deadline = getattr(game, "day_deadline_epoch", None)
     else:
-        lines = []
+        deadline = getattr(game, "night_deadline_epoch", None)
+    time_left = f"<t:{int(deadline)}:R>" if deadline else "—"
 
-        def progress_ratio(tid: str) -> float:
-            need = max(1, _needed_for_target(tid))
-            return totals.get(tid, 0) / need
+    # Alive players
+    alive_uids = _alive_uids()
+    alive_count = len(alive_uids)
+    alive_list = _alive_display_names(sorted(alive_uids))  # sorted by uid; change if you prefer by name
 
-        for target_id, _voters in sorted(
-            by_target.items(),
-            key=lambda item: (-progress_ratio(item[0]), _player_name(item[0]).lower()),
-        ):
-            tname = _player_name(target_id)
-            cur = totals.get(target_id, 0)
-            need = _needed_for_target(target_id)
-            lines.append(f"**{tname}** — **{cur} / {need}**")
+    # Embed
+    color = 0xF1C40F if phase == "day" else 0x2C3E50
+    embed = discord.Embed(
+        title="Game Status",
+        description="\n".join([
+            f"**Phase:** {'🌞 Day' if phase == 'day' else '🌙 Night'}",
+            f"**Counter:** {('Day' if phase == 'day' else 'Night')} {day_no}",
+            f"**Lunar:** {lunar_label}",
+            f"**Time left:** {time_left}",
+        ]),
+        color=color,
+    )
+    embed.add_field(name=f"Alive players ({alive_count})", value=alive_list, inline=False)
 
-        embed.add_field(name="Votes", value="\n".join(lines), inline=False)
-
-    embed.set_footer(text="Asdrubot v2.0 — Voting UI")
     await ctx.reply(embed=embed)
 
 

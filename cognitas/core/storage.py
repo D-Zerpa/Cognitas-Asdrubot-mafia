@@ -138,6 +138,7 @@ def load_state(path: str | Path | None = None) -> Dict[str, Any]:
     game.default_day_channel_id = data.get("default_day_channel_id")
     game.game_over = data.get("game_over", False)
     game.current_day_number = data.get("current_day_number", 1)
+    game.lunar_index = data.get("lunar_index", 0)
 
     game.day_deadline_epoch = data.get("day_deadline_epoch")
     game.night_deadline_epoch = data.get("night_deadline_epoch")
@@ -146,6 +147,7 @@ def load_state(path: str | Path | None = None) -> Dict[str, Any]:
     game.roles_def = data.get("roles_def", {})
 
     game.night_actions = data.get("night_actions", {})
+    game.day_actions = data.get("day_actions", {})
 
     # Re-index roles (compatible with SMT origin files)
     _rehydrate_roles_index()
@@ -178,7 +180,8 @@ async def save_state(path: str | Path | None = None):
         "profile": getattr(game, "profile", "default"),
         "roles_def": getattr(game, "roles_def", {}),
         "night_actions": getattr(game, "night_actions", {}),
-        # NOTE: We deliberately DO NOT serialize asyncio Tasks (timer tasks)
+        "day_actions": getattr(game, "day_actions", {}),
+        "lunar_index": getattr(game, "lunar_index", 0),
     }
 
     # Do the write off-thread to keep the loop snappy

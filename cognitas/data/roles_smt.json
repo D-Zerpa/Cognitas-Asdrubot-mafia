@@ -9,75 +9,75 @@
       "name": "Jonathan",
       "alignment": "Town",
       "notes": "Samurai Paladin of Loyalty",
-      "flags": { "dsp_catch_next": true },
+      "flags": { "dsp_catch_next": true, "night_act": true },
       "effects": []
     },
     {
       "name": "Walter",
       "alignment": "Town",
       "notes": "Samurai Warrior",
-      "flags": { "dsp_catch_next": true },
+      "flags": { "dsp_catch_next": true, "night_act": true },
       "effects": []
     },
     {
       "name": "Isabeau",
       "alignment": "Town",
       "notes": "Samurai Voice of Neutrality",
-      "flags": { "dsp_catch_next": true },
+      "flags": { "dsp_catch_next": true, "night_act": true },
       "effects": []
     },
     {
       "name": "Flynn",
       "alignment": "Town",
       "notes": "Samurai Bearer of Destiny",
-      "flags": { "dsp_catch_next": true, "chosen_used": false, "copied_ability": null, "copied_from": null },
+      "flags": { "dsp_catch_next": true, "chosen_used": false, "copied_ability": null, "copied_from": null, "night_act": true },
       "effects": []
     },
 
-    { "name": "Herald of Merkabah", "alignment": "Mafia", "notes": "Jonathan + Gabriel fusion", "flags": {}, "effects": [] },
-    { "name": "Herald of Lucifer", "alignment": "Mafia", "notes": "Walter + Lilith fusion", "flags": {}, "effects": [] },
-    { "name": "Herald of Masakado", "alignment": "Town", "notes": "Isabeau ascension", "flags": { "dsp_catch_next": true, "resurrection_available": true }, "effects": [] },
+    { "name": "Herald of Merkabah", "alignment": "Mafia", "notes": "Jonathan + Gabriel fusion", "flags": { "night_act": true }, "effects": [] },
+    { "name": "Herald of Lucifer", "alignment": "Mafia", "notes": "Walter + Lilith fusion", "flags": { "night_act": true }, "effects": [] },
+    { "name": "Herald of Masakado", "alignment": "Town", "notes": "Isabeau ascension", "flags": { "dsp_catch_next": true, "resurrection_available": true, "night_act": true }, "effects": [] },
 
     {
       "name": "Satanas",
       "alignment": "Mafia",
       "notes": "Chaos Leader",
-      "flags": { "faction_leader": true, "appear_town_once": true },
+      "flags": { "faction_leader": true, "appear_town_once": true, "night_act": true },
       "effects": []
     },
     {
       "name": "Helel",
       "alignment": "Mafia",
       "notes": "Lightbringer",
-      "flags": { "appear_town_once": true },
+      "flags": { "appear_town_once": true, "night_act": true },
       "effects": []
     },
     {
       "name": "Belial",
       "alignment": "Mafia",
       "notes": "The Impious",
-      "flags": {},
+      "flags": { "night_act": true },
       "effects": []
     },
     {
       "name": "Beelzebub",
       "alignment": "Mafia",
       "notes": "Lord of the Flies",
-      "flags": { "infect_link": null, "banquet_first_used": false },
+      "flags": { "infect_link": null, "banquet_first_used": false, "night_act": true },
       "effects": []
     },
     {
       "name": "Astaroth",
       "alignment": "Mafia",
       "notes": "Grand Duke of Hell",
-      "flags": {},
+      "flags": { "night_act": true },
       "effects": []
     },
     {
       "name": "Baal",
       "alignment": "Mafia",
       "notes": "Lord of the Skies",
-      "flags": { "stolen_ability": null },
+      "flags": { "stolen_ability": null, "night_act": true },
       "effects": []
     },
 
@@ -85,28 +85,28 @@
       "name": "Mastema",
       "alignment": "Mafia",
       "notes": "Accuser (Order)",
-      "flags": { "appear_town_once": true, "trial_target": null },
+      "flags": { "appear_town_once": true, "trial_target": null, "day_act": true, "night_act": true },
       "effects": []
     },
     {
       "name": "Miguel",
       "alignment": "Mafia",
       "notes": "Celestial Warrior (Order)",
-      "flags": {},
+      "flags": { "night_act": true },
       "effects": []
     },
     {
       "name": "Rafael",
       "alignment": "Mafia",
       "notes": "Healer of God (Order)",
-      "flags": { "veil_used": false },
+      "flags": { "veil_used": false, "day_act": true, "night_act": true },
       "effects": []
     },
     {
       "name": "Uriel",
       "alignment": "Mafia",
       "notes": "Flame of God (Order)",
-      "flags": {},
+      "flags": { "night_act": true },
       "effects": []
     },
 
@@ -121,35 +121,35 @@
       "name": "Jack Frost",
       "alignment": "Town",
       "notes": "Trickster of Ice",
-      "flags": { "ice_protection_used": false },
+      "flags": { "ice_protection_used": false, "night_act": true },
       "effects": []
     },
     {
       "name": "Jack-o'-Lantern",
       "alignment": "Town",
       "notes": "Flame Trickster",
-      "flags": {},
+      "flags": { "night_act": true },
       "effects": []
     },
     {
       "name": "Oni",
       "alignment": "Town",
       "notes": "Red Warrior",
-      "flags": {},
+      "flags": { "night_act": true },
       "effects": []
     },
     {
       "name": "Angel",
       "alignment": "Town",
       "notes": "Messenger of Light",
-      "flags": {},
+      "flags": { "day_act": true, "night_act": true },
       "effects": []
     },
     {
       "name": "Turbo Granny",
       "alignment": "Town",
       "notes": "Midnight Hag",
-      "flags": { "dodge_used": false },
+      "flags": { "dodge_used": false, "night_act": true },
       "effects": []
     },
 
@@ -161,7 +161,9 @@
         "glitched_investigations": true,
         "nightkill_immune": true,
         "hidden_vote": true,
-        "revelation_used": false
+        "revelation_used": false,
+        "day_act": true,
+        "night_act": true
       },
       "effects": []
     }

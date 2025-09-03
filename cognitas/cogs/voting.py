@@ -104,21 +104,17 @@ class VotingAdminCog(commands.Cog):
 
     @app_commands.command(name="votes", description="Vote breakdown (embed)")
     async def votos(self, interaction: discord.Interaction):
-        # Defer non-ephemeral if you want embeds publicly; however, since core
-        # will send to the channel via followup, we can keep it ephemeral here.
         await interaction.response.defer(ephemeral=True)
         ctx = InteractionCtx(interaction)
 
         await votes_core.votes_breakdown(ctx)
-        # No extra ack to avoid duplicate messages.
 
     @app_commands.command(name="status", description="Day status (embed)")
     async def status(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=True)
+        await interaction.response.defer()
         ctx = InteractionCtx(interaction)
 
         await votes_core.status(ctx)
-        # No extra ack.
 
     @app_commands.command(name="clearvotes", description="Clean votes(admin)")
     @app_commands.default_permissions(administrator=True)
@@ -140,7 +136,7 @@ class VoteCog(commands.GroupCog, name="vote", description="Votes"):
         ctx = InteractionCtx(interaction)
 
         await votes_core.vote(ctx, member)
-        await interaction.followup.send(f"🗳️ Vote cast for {member.mention}.", ephemeral=True)
+        await interaction.followup.send(f"🗳️ Vote cast for {member.mention}.", ephemeral=False)
 
     @app_commands.command(name="clear", description="Unvote")
     async def clear(self, interaction: discord.Interaction):
@@ -164,7 +160,7 @@ class VoteCog(commands.GroupCog, name="vote", description="Votes"):
         ctx = InteractionCtx(interaction)
 
         await votes_core.request_end_day(ctx)
-        await interaction.followup.send("📣 Your request to end day has been registered.", ephemeral=True)
+        await interaction.followup.send("📣 Your request to end day has been registered.")
 
 
 async def setup(bot: commands.Bot):

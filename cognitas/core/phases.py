@@ -9,6 +9,7 @@ from ..config import REMINDER_CHECKPOINTS
 from .state import game
 from .storage import save_state
 from .logs import log_event
+from . import lunar
 from .. import config as cfg
 from .reminders import (
     parse_duration_to_seconds,
@@ -280,6 +281,26 @@ async def start_night(
     # Store channel & phase
     game.night_channel_id = ch.id
     game.phase = "night"
+
+    # Advance lunar phase at night start
+    try:
+        lunar.advance(game, steps=1)
+        await save_state()
+    except Exception:
+        pass
+
+    # Announce lunar phase
+    idx = int(getattr(game, "lunar_index", 0))
+    msg = lunar.announcement(idx)
+
+    try:
+        chan_id = getattr(game, "day_channel_id", None)
+        if chan_id and ctx.guild:
+            chan = ctx.guild.get_channel(chan_id)
+            if chan:
+                await chan.send(msg)
+    except Exception:
+        pass
 
     # Compute and store deadline
     now = int(time.time())
