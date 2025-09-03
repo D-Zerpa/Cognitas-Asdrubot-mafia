@@ -1,93 +1,131 @@
-# 🧠 **Cognitas** *(a.k.a. Asdrubot)*  
+# 🧠 **Cognitas** *(a.k.a. Asdrubot)*  - Mafia Game Bot (v2.0)
 
-> 🎭 A modest **Discord bot** for running **Mafia / Werewolf-style games**.  
-> Automates phases, tracks secret actions, manages voting, and keeps the game flowing.
+![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python)
+![Discord](https://img.shields.io/badge/Discord-Bot-5865F2?logo=discord&logoColor=white)
+![Status](https://img.shields.io/badge/Status-Active-brightgreen)
 
-![Banner](https://img.shields.io/badge/Discord-Mafia%20Bot-7289DA?style=for-the-badge&logo=discord&logoColor=white)
-![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![Status](https://img.shields.io/badge/Status-Active-brightgreen?style=for-the-badge)
-
----
-
-## 📂 **Project Structure**
-
-| Folder / File | Purpose |
-|--------------|---------|
-| **bot.py** | Main entry point. Starts the Discord client and loads cogs. |
-| **bot_t.py** | Alternative entry point for testing purposes. |
-| **roles.json** | Stores all role definitions, abilities, and factions. |
-| **state.json** | Saves the current game state for persistence across restarts. |
-| **requirements.txt** | Project dependencies. |
-
-### `cognitas/cogs/` — **Commands**
-| File | Description |
-|------|------------|
-| **admin.py** | Admin commands: starting phases, assigning roles, etc. |
-| **actions.py** | Manages Night actions and private role abilities. |
-| **voting.py** | Handles voting logic, lynch thresholds, and vote clearing. |
-
-### `cognitas/core/` — **Game Engine**
-| File | Description |
-|------|------------|
-| **roles.py** | Loads roles from `roles.json` and resolves ability usage. |
-| **state.py** | Central game state manager (players, phases, etc.). |
-| **storage.py** | Saves and restores game progress automatically. |
-| **timer.py** | Manages day/night timers, reminders, and locks channels. |
-| **config.py** | Stores global configuration values. |
+Asdrubot is a custom **Discord bot** for hosting **Mafia / Werewolf-style games** with advanced mechanics, roleplay depth, and moderator tools.  
+Built for **personal use and supervised hosting** — not for public deployment.
 
 ---
 
-## ✨ **Features**
+## 📂 Project Structure
 
-- 🕹️ **Good Game Automation** — Phases, players, votes, kills.
-- ⏳ **Day & Night Timers** — Automatic starts, reminders & locks.
-- 🧩 **Fully Configurable Roles** — Defined in `roles.json`.
-- 🔒 **Secret Night Actions** — Private command usage.
-- 🗳️ **Weighted Voting System** — Supports buffs & debuffs.
-- 🛠️ **Persistent State** — Bot remembers game progress after restarts.
-- 📢 **Admin Logs** — All actions logged privately.
-- 🧑‍🤝‍🧑 **Multi-Channel Support** — Role, day, admin, and voting channels.
+**Disclaimer:** Cognitas is a one-man project, and that man doesn't have a good documentation practice, so the actual structure might not relate to the following tree. 
+
+```
+cognitas/
+ ├─ bot.py              # Main bot entrypoint
+ ├─ core/               # Core game logic, state, storage, roles
+ │   ├─ actions.py      # Phase-aware action storage (day/night)
+ │   ├─ lunar.py        # Lunar cycle management
+ │   ├─ phases.py       # Start/end day & night, reminders
+ │   ├─ players.py      # Player management (flags, effects, alive/dead)
+ │   └─ storage.py      # Save/load persistent state
+ └─ cogs/               # Discord slash command groups
+     ├─ actions.py      # /act (player) and /actions (admin)
+     ├─ game.py         # /game_* and role assignment
+     ├─ players.py      # /player group
+     ├─ voting.py       # /vote group and phase voting
+     ├─ moderation.py   # purge, channel setup, broadcast
+     ├─ maintenance.py  # sync, list, clean commands
+     ├─ role_debug.py   # role debug tools
+     ├─ fun.py          # /dice, /coin
+     └─ help.py         # /help
+```
 
 ---
 
-## 🎮 **Commands Overview**
+## ✨ Features
 
-### 🛠️ **Admin Commands**
+- 🌓 **Day/Night Phases** — Automatically open/close discussion and action phases.  
+- 🌑 **Lunar Cycle** — 4-step moon cycle (`New → First Quarter → Full → Last Quarter`) with game mechanics attached.  
+- 📊 **Voting System** — Supports votes, hidden votes, weighted votes, and lynch thresholds.  
+- 🎯 **Role Flags** — Player behavior driven by flags:  
+  - `day_act`, `night_act` (can perform actions in that phase)  
+  - `hidden_vote`, `voting_boost`, `no_vote`, `silenced`  
+  - `lynch_plus`, `immune_night`, `protected`, etc.  
+- 📜 **State Persistence** — Full state stored in `state.json`, with auto-backup.  
+- 🛡️ **Moderator Tools** — Clear votes, purge messages, broadcast announcements.  
+- 🎲 **Fun/utility Commands** — Dice rolls and coin flips for roleplay.  
+
+---
+
+## 👥 Player Commands
+
 | Command | Description |
-|--------|------------|
-| `!assign_roles` | Automatically assigns roles to registered players. |
-| `!set_day_channel #channel` | Sets the default Day phase discussion channel. |
-| `!set_admin_channel #channel` | Sets the admin log channel. |
-| `!start_day [time] [#channel]` | Starts a new Day phase (default `24h`). |
-| `!start_night [time] [#channel]` | Starts a new Night phase (default `12h`). |
-| `!apply_mark @player` | Applies Plotino’s mark: 1 fewer vote needed to lynch. |
-| `!clearvotes` | Clears all votes for the current Day. |
-| `!finish_game` | Ends the session and resets the state. |
-| `!purge <amount>` | Deletes messages in the current channel. |
+|---------|-------------|
+| `/help` | Show available commands |
+| `/player list` | List all registered players |
+| `/player alias_show @user` | Show aliases of a player |
+| `/votes` | Show current day’s voting breakdown |
+| `/status` | Show phase (day/night), day counter, lunar phase, time left, and alive players |
+| `/vote cast @user` | Cast a vote |
+| `/vote clear` | Remove your vote |
+| `/vote mine` | Show your vote |
+| `/vote end_day` | Request to end the day (needs 2/3 alive players) |
+| `/act [@target] [note]` | Perform your day/night action (if allowed by role) |
+| `/dice [faces]` | Roll a die (default 20) |
+| `/coin` | Flip a coin |
 
 ---
 
-### 🎭 **Player Commands**
-| Command | Description |
-|---------|------------|
-| `!vote @player` | Votes to lynch a player during the Day phase. |
-| `!unvote` | Removes your current vote. |
-| `!act @target [note]` | Submits your Night action **secretly** *(auto-deletes)*. |
-| `!status` | Displays the current game state and deadlines. |
-| `!role` | Sends you your private role card via DM. |
+## 🛡️ Admin / Moderator Commands
+
+### Player Management
+- `/player register @user [name]` — Register a player.  
+- `/player unregister @user` — Remove a player.  
+- `/player rename @user <new_name>` — Change a player’s name.  
+- `/player view @user` — Show detailed player info.  
+- `/player edit @user field value` — Safely edit player fields.  
+- `/player set_flag @user <flag> <value>` — Set a flag (typed).  
+- `/player del_flag @user <flag>` — Remove a flag.  
+- `/player add_effect @user <effect>` — Add an effect.  
+- `/player remove_effect @user <effect>` — Remove an effect.  
+- `/player kill @user` — Mark player as dead.  
+- `/player revive @user` — Mark player as alive.  
+
+### Game Management
+- `/game_start [profile]` — Start a new game.  
+- `/game_reset` — Reset game state.  
+- `/finish_game [reason]` — End the game.  
+- `/who [@user]` — Show info for a user.  
+- `/assign @user <role>` — Assign a role.  
+
+### Phases & Voting
+- `/start_day [duration] [channel] [force]` — Start Day phase.  
+- `/end_day` — End Day phase.  
+- `/start_night [duration]` — Start Night phase.  
+- `/end_night` — End Night phase.  
+- `/clearvotes` — Clear all votes.  
+
+### Actions & Logs
+- `/actions logs [phase=auto|day|night] [number] [user] [public=false]` — Logs of actions per phase.  
+- `/actions breakdown [phase=auto|day|night] [number] [public=false]` — Who can act, who acted, who is missing.  
+
+### Moderation & Utility
+- `/bc <text>` — Broadcast to Day channel.  
+- `/set_day_channel [#channel]` — Set Day channel.  
+- `/set_admin_channel [#channel]` — Set Admin channel.  
+- `/set_log_channel [#channel]` — Set Logs channel.  
+- `/show_channels` — Show configured channels.  
+- `/purge [limit] [user] [contains] …` — Bulk delete messages.  
+
+### Maintenance
+- `/debug_roles` — Show loaded roles.  
+- `/sync_here` — Sync commands in current guild.  
+- `/list_commands [scope]` — List commands (global or guild).  
+- `/clean_commands [scope] [nuke]` — Remove stray commands.  
 
 ---
 
-## 🚧 **Coming Soon**
-- 🎨 **Lynch Meme Generator** → Automatically generates memes when a player gets lynched.  
-- 🔮 **Slash Commands + Autocomplete** → Modern UI with dropdown suggestions.  
-- 📊 **Live Game Dashboard** → Real-time stats and voting visualizations.
+## 🚧 Coming Soon
+
+- More expansions, more features for those expansions, more for the **INFINITE MAFIA**.
 
 ---
 
-## 📜 **License**
-**MIT License** — Free to use, modify, and distribute.
+## 📜 Notes
 
----
-
-> “Fiat Lux, Fiat Lusus” — *Let there be light, let there be play.*
+- Designed for **manual moderator supervision**.  
+- State auto-saves to `state.json` in repo root.  
