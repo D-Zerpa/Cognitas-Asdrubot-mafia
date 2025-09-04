@@ -114,7 +114,7 @@
       "name": "Legion",
       "alignment": "Town",
       "notes": "Ensemble of Souls",
-      "flags": { "medium_level": 0 },
+      "flags": { "medium_level": 0, "night_act": true },
       "effects": []
     },
     {
@@ -165,6 +165,34 @@
         "day_act": true,
         "night_act": true
       },
+      "effects": []
+    },
+    {
+      "name": "Loki",
+      "alignment": "Town",
+      "notes": "Trickster Investigator",
+      "flags": { "night_act": true },
+      "effects": []
+    },
+    {
+      "name": "Mara",
+      "alignment": "Town",
+      "notes": "Chain Paralysis Controller",
+      "flags": { "night_act": true },
+      "effects": []
+    },
+    {
+      "name": "Norn",
+      "alignment": "Town",
+      "notes": "Oracular Weaver",
+      "flags": { "night_act": true },
+      "effects": []
+    },
+    {
+      "name": "Hecate",
+      "alignment": "Town",
+      "notes": "Day Jailor",
+      "flags": { "day_act": true },
       "effects": []
     }
   ]
