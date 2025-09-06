@@ -1,3 +1,6 @@
 .env
+.envlive
 *.pyc
 __pycache__/
+.envlive
+.vscode

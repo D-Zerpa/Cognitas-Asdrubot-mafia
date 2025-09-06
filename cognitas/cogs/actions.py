@@ -1,373 +1,317 @@
-import time, asyncio, discord
+from __future__ import annotations
+
+import time
+from typing import List, Optional
+
+import discord
+from discord import app_commands
 from discord.ext import commands
+
 from ..core.state import game
 from ..core.storage import save_state
-from ..core.timer import parse_duration_to_seconds, _night_timer_worker
+from ..core.logs import log_event  # keep if you have it; otherwise you can remove this import
+from ..core import actions as act_core  # NEW: phase-aware actions core
 
+
+
+def _label_from_uid(uid: str | None) -> str:
+    if not uid:
+        return "—"
+    p = game.players.get(str(uid), {})
+    return p.get("name") or p.get("alias") or f"<@{uid}>"
+
+def _fmt_action_line(a: dict) -> str:
+    act = a.get("action") or "act"
+    tgt = _label_from_uid(a.get("target"))
+    note = a.get("note") or "—"
+    at = a.get("at")
+    when = f"<t:{int(at)}:R>" if at else "—"
+    return f"• action=`{act}` target={tgt} note=`{note}` at={when}"
+
+
+# ---------- Small adapter to safely reply after defer ----------
+class InteractionCtx:
+    def __init__(self, interaction: discord.Interaction):
+        self._i = interaction
+        self.guild = interaction.guild
+        self.bot = interaction.client  # type: ignore
+        self.channel = interaction.channel
+        self.author = interaction.user
+        self.message = None
+
+    async def reply(self, content: str = None, **kwargs):
+        try:
+            if self._i.response.is_done():
+                return await self._i.followup.send(content or "\u200b", **kwargs)
+            else:
+                return await self._i.response.send_message(content or "\u200b", **kwargs)
+        except Exception:
+            # Fallback to channel if needed
+            if self.channel:
+                try:
+                    return await self.channel.send(content or "\u200b", **kwargs)
+                except Exception:
+                    pass
+
+    async def send(self, content: str = None, **kwargs):
+        return await self.reply(content, **kwargs)
+
+
+# =================================================================
+#  A) USER COMMAND: /act   (phase-aware: day or night)
+# =================================================================
 class ActionsCog(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot): 
         self.bot = bot
 
+    @app_commands.command(name="act", description="Register your action for the current phase (day or night).")
+    @app_commands.describe(
+        target="Target player (optional)",
+        note="Free text note about your action (optional)",
+        public="Post a public acknowledgement instead of ephemeral (default: false)",
+    )
+    async def act(
+        self, 
+        interaction: discord.Interaction, 
+        target: discord.Member | None = None, 
+        note: str = "", 
+        public: bool = False
+    ):
+        # Defer first to avoid Unknown interaction if anything takes long
+        await interaction.response.defer(ephemeral=not public)
+        ctx = InteractionCtx(interaction)
 
-    # ---------- Player action registration ----------
-    """
+        # Resolve phase automatically from game.phase
+        phase = (getattr(game, "phase", "day") or "day").lower()
+        if phase not in ("day", "night"):
+            phase = "day"
 
-    @commands.command(name="act")
-    async def act_register(self, ctx, target: discord.Member, *, note: str = ""):
-        "
-        Register your Night action target from your PRIVATE ROLE CHANNEL (or DM).
-        Usage: !act @Target [optional note]
-        - Acknowledges to the user.
-        - Forwards to admin log channel with order & timestamp.
-        "
-        import time
-        from ..core.state import game
-        from ..core.storage import save_state
-        import discord
+        # Check we actually are in a timed phase that accepts actions
+        if phase == "night" and not getattr(game, "night_deadline_epoch", None):
+            return await ctx.reply("It is not **Night** phase.", ephemeral=not public)
+        if phase == "day" and not getattr(game, "day_deadline_epoch", None):
+            # Allow you to tighten this policy to only certain day windows if desired
+            return await ctx.reply("It is not **Day** phase.", ephemeral=not public)
 
-        actor_uid = str(ctx.author.id)
-        target_uid = str(target.id)
+        actor_uid = str(interaction.user.id)
+        players = getattr(game, "players", {}) or {}
+        actor = players.get(actor_uid)
+        if not actor or not actor.get("alive", True):
+            return await ctx.reply("You are not registered or you are not alive.", ephemeral=not public)
 
-        # Must be a registered, living player
-        if actor_uid not in game.players or not game.players[actor_uid].get("alive", True):
-            return await ctx.reply("You cannot act (not a registered living player).")
+        # Permission to act in this phase comes from flags: day_act / night_act
+        flags = actor.get("flags", {}) or {}
+        needed_flag = "day_act" if phase == "day" else "night_act"
+        if not bool(flags.get(needed_flag, False)):
+            return await ctx.reply(f"You are not allowed to act during **{phase.title()}**.", ephemeral=not public)
 
-        if target_uid not in game.players:
-            return await ctx.reply("Target is not a registered player.")
+        # Validate target if provided
+        target_uid = str(target.id) if target else None
+        if target_uid:
+            t = players.get(target_uid)
+            if not t:
+                return await ctx.reply("Target is not registered.", ephemeral=not public)
+            if not t.get("alive", True):
+                return await ctx.reply("Target is not alive.", ephemeral=not public)
 
-        # Enforce privacy: only from the actor's bound role channel OR DM
-        actor_channel_id = game.players[actor_uid].get("channel_id")
-        is_dm = isinstance(ctx.channel, discord.DMChannel) or ctx.guild is None
-        is_own_role_channel = (ctx.channel.id == actor_channel_id) if not is_dm else True
+        # Determine logical number for the phase (Day N / Night N)
+        phase_norm = "day" if phase == "day" else "night"
+        number = act_core.current_cycle_number(phase_norm)
 
-        # Allow admins to relay from anywhere (optional)
-        is_admin = bool(ctx.guild and ctx.author.guild_permissions.administrator)
-
-        if not (is_own_role_channel or is_admin):
-            # Try to mention the correct channel if we know it
-            if ctx.guild and actor_channel_id:
-                ch = ctx.guild.get_channel(actor_channel_id)
-                hint = f"Please use your private channel: {ch.mention}" if ch else "Please use your private role channel."
-            else:
-                hint = "Please use your private role channel or DM me."
-            return await ctx.reply(f"Night actions must be sent **from your private channel**. {hint}")
-
-        # Optional: only accept when Night is active (comment out if you allow pre-queue)
-        # if not game.night_deadline_epoch:
-        #     return await ctx.reply("You can only send actions during Night.")
-
-        # Log entry
-        entry = {
-            "day": game.current_day_number,
-            "ts_epoch": int(time.time()),
-            "actor_uid": actor_uid,
-            "target_uid": target_uid,
-            "note": note.strip()
+        # Build action record (schema is flexible; these fields are common)
+        action_record = {
+            "uid": actor_uid,
+            "action": "act",
+            "target": target_uid,
+            "note": (note or "").strip(),
+            "at": int(time.time()),
         }
-        game.night_actions.append(entry)
-        save_state("state.json")
 
-        # Acknowledge to the user (keep it brief)
-        await ctx.reply("✅ Action registered.")
+        # Persist into the correct bucket
+        store_attr = "day_actions" if phase_norm == "day" else "night_actions"
+        store = getattr(game, store_attr, None)
+        if not isinstance(store, dict):
+            store = {}
+            setattr(game, store_attr, store)
+        bucket = store.setdefault(str(number), {})
+        bucket[actor_uid] = action_record
 
-        # Forward to admin channel (with role names if available)
-        admin_id = game.admin_log_channel_id
-        if admin_id and ctx.guild:
-            admin_chan = ctx.guild.get_channel(admin_id)
-            if admin_chan:
-                actor_role_code = game.players[actor_uid].get("role")
-                target_role_code = game.players[target_uid].get("role")
-                actor_role_name = (game.roles.get(actor_role_code, {}).get("name") or actor_role_code or "?")
-                target_role_name = (game.roles.get(target_role_code, {}).get("name") or target_role_code or "?")
-                ts = f"<t:{entry['ts_epoch']}:T>"
-                note_part = f" — _{note.strip()}_" if note.strip() else ""
-                idx = len(game.night_actions)
-                await admin_chan.send(
-                    f"📥 **Night action #{idx}** (Day {game.current_day_number})\n"
-                    f"• Actor: <@{actor_uid}> — {actor_role_name}\n"
-                    f"• Target: <@{target_uid}> — {target_role_name}\n"
-                    f"• Time: {ts}{note_part}"
-                )
+        # Save state
+        await save_state()
 
-        # Delete the original command for extra privacy
+        # Optional audit log
         try:
-            await ctx.message.delete(delay=2)
+            await log_event(
+                self.bot,
+                interaction.guild.id if interaction.guild else None,
+                f"{phase_norm.upper()}_ACTION",
+                actor_id=actor_uid,
+                target_id=(target_uid or "None"),
+                note=(note or "")
+            )
         except Exception:
             pass
 
-    """
-    
-    @commands.command(name="act")
-    async def act_register(self, ctx, target: str, *, note: str = ""):
-        """
-        Register your Night action target from your PRIVATE ROLE CHANNEL (or DM).
-        Usage: !act @Target [optional note]  OR  !act PlayerName [optional note]
-        - Works with @mention or plain text names (case/accents-insensitive; supports aliases).
-        - Acknowledges to the user.
-        - Forwards to admin log channel with order & timestamp.
-        """
-        import time
-        import unicodedata
-        import re
-        from ..core.state import game
-        from ..core.storage import save_state
-        import discord
+        await ctx.reply(f"✅ Action registered for **{phase_norm.title()} {number}**.", ephemeral=not public)
 
-        def _norm(s: str) -> str:
-            """lower + trim + remove accents/diacritics"""
-            s = (s or "").strip().casefold()
-            s = "".join(ch for ch in unicodedata.normalize("NFKD", s) if not unicodedata.combining(ch))
-            return s
 
-        def _build_index():
-            """
-            Returns:
-            - index: dict[normalized_key] = (display_name, uid_str)
-            - names_by_uid: dict[uid_str] = display_name
-            """
-            index = {}
-            names_by_uid = {}
-            for uid, pdata in game.players.items():
-                if not isinstance(uid, str):
-                    uid = str(uid)
-                display = pdata.get("name") or pdata.get("display_name") or pdata.get("username") or uid
-                names_by_uid[uid] = display
-                keys = [display, *(pdata.get("aliases") or [])]
-                for k in keys:
-                    nk = _norm(k)
-                    if nk:  # last write wins, but typically unique
-                        index[nk] = (display, uid)
-            return index, names_by_uid
+# =================================================================
+#  B) ADMIN GROUP: /actions logs | /actions breakdown
+# =================================================================
+PHASE_CHOICES = [
+    app_commands.Choice(name="auto", value="auto"),
+    app_commands.Choice(name="day", value="day"),
+    app_commands.Choice(name="night", value="night"),
+]
 
-        async def _resolve_target_uid(target_text: str) -> tuple[str | None, str | None, list[str]]:
-            """
-            Resolve target_text to (target_display, target_uid, suggestions)
-            - Tries mention first (<@id> or <@!id>).
-            - Else resolves by normalized name/alias.
-            - If not found, returns suggestions (top up to 5).
-            """
-            # 1) Mention path
-            mention_match = re.fullmatch(r"<@!?(\d+)>", target_text.strip())
-            if mention_match:
-                uid = mention_match.group(1)
-                # validate it’s a registered player
-                if uid in game.players:
-                    display = game.players[uid].get("name") or uid
-                    return display, uid, []
-                else:
-                    return None, None, []
+def _resolve_phase(phase: Optional[str]) -> str:
+    if (phase or "").lower() == "auto" or not phase:
+        return (getattr(game, "phase", "day") or "day").lower()
+    p = (phase or "").lower()
+    return p if p in ("day", "night") else "night"
 
-            # 2) Name/alias path
-            index, names_by_uid = _build_index()
-            key = _norm(target_text)
-            if key in index:
-                display, uid = index[key]
-                return display, uid, []
 
-            # 3) Suggestions (simple contains/fuzzy-ish pass)
-            #   - rank by substring containment, then by prefix match
-            sugg_pool = []
-            for nk, (disp, uid) in index.items():
-                score = 0
-                if key and nk.startswith(key):
-                    score += 2
-                if key and key in nk:
-                    score += 1
-                if score > 0:
-                    sugg_pool.append((score, disp))
-            sugg_pool.sort(key=lambda x: (-x[0], x[1]))
-            suggestions = [d for _, d in sugg_pool[:5]]
-            return None, None, suggestions
+class ActionsAdminCog(commands.GroupCog, name="actions", description="Day/Night actions utilities (admin)"):
+    def __init__(self, bot: commands.Bot):
+        self.bot = bot
 
-        actor_uid = str(ctx.author.id)
+    # /actions logs
+    @app_commands.command(
+        name="logs",
+        description="Phase logs: user=all numbers; number=specific Day/Night."
+    )
+    @app_commands.describe(
+        phase="Which phase to inspect (auto/day/night)",
+        number="Day/Night number; omit to use current for that phase",
+        user="Filter by user (if provided WITHOUT number -> all numbers for that phase)",
+        public="Post publicly instead of ephemeral (default: false)",
+    )
+    @app_commands.choices(phase=PHASE_CHOICES)
+    @app_commands.default_permissions(administrator=True)
+    async def logs_cmd(
+        self,
+        interaction: discord.Interaction,
+        phase: Optional[app_commands.Choice[str]] = None,
+        number: Optional[int] = None,
+        user: Optional[discord.Member] = None,
+        public: bool = False,
+    ):
+        await interaction.response.defer(ephemeral=not public)
+        ctx = InteractionCtx(interaction)
 
-        # Must be a registered, living player
-        if actor_uid not in game.players or not game.players[actor_uid].get("alive", True):
-            return await ctx.reply("You cannot act (not a registered living player).")
+        p = _resolve_phase(phase.value if phase else None)
 
-        # Enforce privacy: only from the actor's bound role channel OR DM
-        actor_channel_id = game.players[actor_uid].get("channel_id")
-        is_dm = isinstance(ctx.channel, discord.DMChannel) or ctx.guild is None
-        is_own_role_channel = (ctx.channel.id == actor_channel_id) if not is_dm else True
+        # Case A: user given + number omitted => ALL numbers for that phase
+        if user is not None and number is None:
+            uid = str(user.id)
+            rows = act_core.get_user_logs_all(p, uid)
 
-        # Allow admins to relay from anywhere (optional)
-        is_admin = bool(ctx.guild and ctx.author.guild_permissions.administrator)
+            title = f"{p.title()} Actions — {user.display_name} (ALL {p}s)"
+            embed = discord.Embed(title=title, color=0x8E44AD)
 
-        if not (is_own_role_channel or is_admin):
-            # Try to mention the correct channel if we know it
-            if ctx.guild and actor_channel_id:
-                ch = ctx.guild.get_channel(actor_channel_id)
-                hint = f"Please use your private channel: {ch.mention}" if ch else "Please use your private role channel."
-            else:
-                hint = "Please use your private role channel or DM me."
-            return await ctx.reply(f"Night actions must be sent **from your private channel**. {hint}")
+            if not rows:
+                embed.description = "No actions recorded for this user."
+                return await ctx.reply(embed=embed, ephemeral=not public)
 
-        # Optional: only accept when Night is active (comment out if you allow pre-queue)
-        # if not game.night_deadline_epoch:
-        #     return await ctx.reply("You can only send actions during Night.")
+            # Group by number
+            by_num: dict[int, list[dict]] = {}
+            for n, act in rows:
+                by_num.setdefault(n, []).append(act)
 
-        # === NEW: resolve target from @mention OR name/alias ===
-        target_display, target_uid, suggestions = await _resolve_target_uid(target)
-        if not target_uid:
-            if suggestions:
-                sug = ", ".join(suggestions)
-                return await ctx.reply(f"Target not found: **{target}**. Did you mean: {sug} ?")
-            return await ctx.reply(f"Target not found: **{target}**. Use the exact player name (see `!list`).")
+            for n in sorted(by_num.keys()):
+                acts = by_num[n]
+                lines = [_fmt_action_line(a) for a in acts]
+                embed.add_field(name=f"{p.title()} {n}", value=("\n".join(lines)[:1024] or "—"), inline=False)
 
-        if target_uid not in game.players:
-            return await ctx.reply("Target is not a registered player.")
+            return await ctx.reply(embed=embed, ephemeral=not public)
 
-        # Log entry
-        entry = {
-            "day": game.current_day_number,
-            "ts_epoch": int(time.time()),
-            "actor_uid": actor_uid,
-            "target_uid": target_uid,
-            "note": note.strip()
-        }
-        game.night_actions.append(entry)
-        save_state("state.json")
+        # Case B: specific number (with or without user) OR default current
+        n = number if number is not None else act_core.current_cycle_number(p)
+        uid = str(user.id) if user else None
+        rows = act_core.get_logs(p, n, uid)
 
-        # Acknowledge to the user (keep it brief)
-        await ctx.reply("✅ Action registered.")
+        title = f"{p.title()} {n} — Action Logs" + (f" (user: {user.display_name})" if user else "")
+        embed = discord.Embed(title=title, color=0x8E44AD)
 
-        # Forward to admin channel (with role names if available)
-        admin_id = game.admin_log_channel_id
-        if admin_id and ctx.guild:
-            admin_chan = ctx.guild.get_channel(admin_id)
-            if admin_chan:
-                actor_role_code = game.players[actor_uid].get("role")
-                target_role_code = game.players[target_uid].get("role")
-                actor_role_name = (game.roles.get(actor_role_code, {}).get("name") or actor_role_code or "?")
-                target_role_name = (game.roles.get(target_role_code, {}).get("name") or target_role_code or "?")
-                ts = f"<t:{entry['ts_epoch']}:T>"
-                note_part = f" — _{note.strip()}_" if note.strip() else ""
-                idx = len(game.night_actions)
-                await admin_chan.send(
-                    f"📥 **Night action #{idx}** (Day {game.current_day_number})\n"
-                    f"• Actor: <@{actor_uid}> — {actor_role_name}\n"
-                    f"• Target: <@{target_uid}> — {target_role_name}\n"
-                    f"• Time: {ts}{note_part}"
-                )
+        if not rows:
+            embed.description = "No actions recorded."
+            return await ctx.reply(embed=embed, ephemeral=not public)
 
-        # Delete the original command for extra privacy
-        try:
-            await ctx.message.delete(delay=2)
-        except Exception:
-            pass
+        # Group by user
+        by_user: dict[str, list[dict]] = {}
+        for r in rows:
+            u = str(r.get("uid"))
+            by_user.setdefault(u, []).append(r)
 
-    # ---------- Night controls ----------
-    @commands.command()
-    @commands.has_permissions(administrator=True)
-    async def start_night(self, ctx, *args):
-        """
-        Start Night (idempotent). Accepts args in any order:
-        !start_night
-        !start_night 8h
-        !start_night #village
-        !start_night 6h #village
-        !start_night #village 6h
-        !start_night 6h #village force
-        !start_night force
-        At deadline, opens the Day channel (mentioned or saved default).
-        """
-        import time
-        from ..core.timer import parse_duration_to_seconds, start_night_timer
-        from ..core.state import game
-        from ..core.storage import save_state
+        for u, acts in by_user.items():
+            lines = [_fmt_action_line(a) for a in acts]
+            name = _label_from_uid(u)
+            embed.add_field(name=f"{name} ({u})", value=("\n".join(lines)[:1024] or "—"), inline=False)
 
-        if game.game_over:
-            return await ctx.reply("Game is finished. Start a new game before starting a Night.")
 
-        tokens = [t.strip() for t in args]
-        mentioned_channels = ctx.message.channel_mentions
-        target_day_channel = mentioned_channels[0] if mentioned_channels else None
-        force = any(t.lower() == "force" for t in tokens)
+        await ctx.reply(embed=embed, ephemeral=not public)
 
-        # find a duration token (not a channel mention like "<#...>")
-        duration_token = None
-        for t in tokens:
-            if t.lower() == "force":
-                continue
-            if t.startswith("<#") and t.endswith(">"):
-                continue
-            if any(ch.isdigit() for ch in t):  # "8h", "90m", "1h30m"
-                duration_token = t
-                break
+    # /actions breakdown
+    @app_commands.command(
+        name="breakdown",
+        description="Who can act, who acted, who is missing (for the chosen phase)."
+    )
+    @app_commands.describe(
+        phase="Which phase to inspect (auto/day/night)",
+        number="Day/Night number; omit to use current for that phase",
+        public="Post publicly instead of ephemeral (default: false)",
+    )
+    @app_commands.choices(phase=PHASE_CHOICES)
+    @app_commands.default_permissions(administrator=True)
+    async def breakdown_cmd(
+        self,
+        interaction: discord.Interaction,
+        phase: Optional[app_commands.Choice[str]] = None,
+        number: Optional[int] = None,
+        public: bool = False,
+    ):
+        await interaction.response.defer(ephemeral=not public)
+        ctx = InteractionCtx(interaction)
 
-        duration_str = duration_token or "12h"
-        seconds = parse_duration_to_seconds(duration_str)
-        if seconds <= 0:
-            return await ctx.reply("Provide a valid duration (e.g., `12h`, `6h`, `90m`).")
+        p = _resolve_phase(phase.value if phase else None)
+        n = number if number is not None else act_core.current_cycle_number(p)
 
-        # refuse if a Night is already active unless forcing
-        if hasattr(game, "is_night_active") and game.is_night_active() and not force:
-            when = f"<t:{game.night_deadline_epoch}:R>" if game.night_deadline_epoch else ""
-            return await ctx.reply(f"Night already active (ends {when}). Add `force` to restart.")
+        can_act = set(act_core.actors_for_phase(p))               # alive + flags.day_act/night_act == True
+        acted = set(act_core.acted_uids(p, n))                    # those who recorded an action for that number
 
-        # cancel existing timer if forcing
-        if force and game.night_timer_task and not game.night_timer_task.done():
-            game.night_timer_task.cancel()
-            game.night_timer_task = None
+        missing = sorted(can_act - acted)
+        acted_sorted = sorted(acted & can_act)
 
-        # choose which Day channel will open at dawn: mention > saved default
-        open_channel = (
-            target_day_channel
-            or (ctx.guild.get_channel(game.default_day_channel_id) if game.default_day_channel_id else None)
+        def fmt_names(uids: List[str]) -> str:
+            if not uids:
+                return "—"
+            names = []
+            for uid in uids[:24]:
+                pdata = game.players.get(uid, {})
+                label = pdata.get("name") or pdata.get("alias") or f"<@{uid}>"
+                names.append(f"`{label}`")
+            extra = len(uids) - min(len(uids), 24)
+            if extra > 0:
+                names.append(f"… (+{extra} more)")
+            return ", ".join(names)
+
+        color = 0x2C3E50 if p == "night" else 0x3498DB
+        embed = discord.Embed(
+            title=f"{p.title()} {n} — Act Breakdown",
+            description="\n".join([
+                f"**Can act:** {len(can_act)}",
+                f"**Acted:** {len(acted_sorted)}",
+                f"**Missing:** {len(missing)}",
+            ]),
+            color=color
         )
-        if not open_channel:
-            return await ctx.reply("Please set a Day channel with `!set_day_channel` or pass one here (e.g., `!start_night 8h #village`).")
+        embed.add_field(name="Acted", value=fmt_names(acted_sorted), inline=False)
+        embed.add_field(name="Missing", value=fmt_names(missing), inline=False)
 
-        # Optional: restrict where !act is allowed = current channel
-        game.night_channel_id = ctx.channel.id
-        game.next_day_channel_id = open_channel.id
-        game.night_deadline_epoch = int(time.time()) + seconds
-        save_state("state.json")
-
-        await ctx.send(
-            f"🌙 **Night begins.** Ends at <t:{game.night_deadline_epoch}:F> (<t:{game.night_deadline_epoch}:R>).\n"
-            f"Players can register actions with `!act @Target [note]`."
-        )
-
-        # single source of truth: start the timer via API (no manual _worker spawn)
-        await start_night_timer(self.bot, ctx.guild.id)
-
-            # Delete the original command for extra privacy
-        try:
-            await ctx.message.delete(delay=2)
-        except Exception:
-            pass
+        await ctx.reply(embed=embed, ephemeral=not public)
 
 
-    @commands.command()
-    @commands.has_permissions(administrator=True)
-    async def end_night(self, ctx):
-        """End Night now; open the Day channel (idempotent)."""
-        day_chan = ctx.guild.get_channel(game.next_day_channel_id) if game.next_day_channel_id else None
-        if not day_chan:
-            return await ctx.reply("No Day channel configured to open.")
-
-        # Open day channel for sending if not already open
-        overw = day_chan.overwrites_for(ctx.guild.default_role)
-        already_open = (overw.send_messages is True)
-        if not already_open:
-            overw.send_messages = True
-            await day_chan.set_permissions(ctx.guild.default_role, overwrite=overw)
-            await day_chan.send("🌞 **Dawn breaks. Day is open.**")
-
-        game.night_deadline_epoch = None
-        if game.night_timer_task and not game.night_timer_task.done():
-            game.night_timer_task.cancel()
-            game.night_timer_task = None
-        save_state("state.json")
-
-        if already_open:
-            await ctx.reply("Day was already open. Night state synced.")
-        else:
-            await ctx.send("🛑 Night ended by a moderator.")
-            # Delete the original command for extra privacy
-        
-        try:
-            await ctx.message.delete(delay=2)
-        except Exception:
-            pass    
+# Setup: load both cogs
+async def setup(bot: commands.Bot):
+    await bot.add_cog(ActionsCog(bot))          # /act
+    await bot.add_cog(ActionsAdminCog(bot))     # /actions logs, /actions breakdown
