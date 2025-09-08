@@ -9,6 +9,7 @@ from ..config import REMINDER_CHECKPOINTS
 from .state import game
 from .storage import save_state
 from .logs import log_event
+from .johnbotjovi import linchar as make_lynch_poster
 from . import lunar
 from .. import config as cfg
 from .reminders import (
@@ -199,6 +200,7 @@ async def end_day(
     Close the Day phase:
     - Close channel for @everyone messages
     - Announce result (with or without lynch)
+    - If lynch: mark player dead and post lynch poster (core/jonbotjovi.linchar)
     - Clear deadline and cancel timer
     """
     guild: discord.Guild = ctx.guild
@@ -206,12 +208,21 @@ async def end_day(
     if not ch:
         return await ctx.reply("No Day channel configured.")
 
-    # Announce end
+    lynch_member: Optional[discord.Member] = None
+
+    # Announce end (with or without lynch)
     if lynch_target_id:
+        # Try to resolve the member object for poster + mention
+        try:
+            lynch_member = guild.get_member(lynch_target_id) or await guild.fetch_member(lynch_target_id)
+        except Exception:
+            lynch_member = None
+
         try:
             await ch.send(f"⚖️ **Day has ended.** Lynched: <@{lynch_target_id}>.")
         except Exception:
             pass
+
         # Mark player as dead if tracked
         try:
             uid = str(lynch_target_id)
@@ -219,6 +230,21 @@ async def end_day(
                 game.players[uid]["alive"] = False
         except Exception:
             pass
+
+        # Try to generate and send lynch poster
+        if lynch_member is not None:
+            try:
+                poster = await make_lynch_poster(lynch_member)
+            except Exception:
+                poster = None
+
+            if poster is not None:
+                try:
+                    await ch.send(content=f"🪓 **LYNCH!** {lynch_member.mention}", file=poster)
+                except Exception:
+                    pass
+
+
     elif closed_by_threshold:
         try:
             await ch.send("⛔ **Day has ended** due to /vote end_day threshold.")
@@ -239,7 +265,7 @@ async def end_day(
     except Exception:
         pass
 
-    # Cancel timer
+    # Cancel timer & clear deadline
     try:
         if getattr(game, "day_timer_task", None) and not game.day_timer_task.done():
             game.day_timer_task.cancel()
@@ -248,14 +274,15 @@ async def end_day(
     game.day_timer_task = None
     game.day_deadline_epoch = None
 
+    # Persist & log
     await save_state()
-    await log_event(ctx.bot, ctx.guild.id, "PHASE_END", phase="Day")
+    await log_event(ctx.bot, ctx.guild.id, "PHASE_END", phase="Day", lynch_target_id=lynch_target_id or None)
 
+    # Acknowledge
     try:
         await ctx.reply("Day closed.")
     except Exception:
         pass
-
 
 async def start_night(
     ctx,
