@@ -81,4 +81,39 @@ Otras reglas:
 
 **Habilidades**  
 - **Llama del Cielo — Activa, Nocturna:** eliges un jugador; si ese jugador no actúa esa noche, quedará silenciado al día siguiente y no podrá usar habilidades diurnas.  
-- **Centinela de la Aurora — Pasiva:** cada noche, los jugadores muertos pueden enviar un mensaje anónimo a alguien vivo; ese alguien eres tú. Tú decides si compartes esos mensajes con tu facción o los guardas para ti.  
+- **Centinela de la Aurora — Pasiva:** cada noche, los jugadores muertos pueden enviar un mensaje anónimo a alguien vivo; ese alguien eres tú. Tú decides si compartes esos mensajes con tu facción o los guardas para ti.
+
+### Sus miembros:
+
+**Mastema – El Acusador** - [User]
+
+**Habilidades**  
+- **Juicio Divino — Activa, Nocturna (de facción):** eliges a un jugador que será llevado a juicio. Junto con tu facción, deciden por votación si se le ejecuta o recluta. El resultado depende de la fase lunar.  
+- **La Victoria de los Justos / Rebelión de la Humanidad — Pasiva (de facción):**  
+  - Si el objetivo del juicio es **Jonathan** → será reclutado instantáneamente.  
+  - Si el objetivo es **Walter** → el juicio falla y muere un miembro reclutado de la Mafia (al azar). Si no hay reclutados, muere un Arcángel al azar. Si no hay Arcángeles, mueres tú.  
+- **Lengua de Serpiente — Pasiva:** la primera vez que seas investigado por alineación, apareces como “Pueblo”.  
+- **Susurro de Acusación — Activa, Diurna:** puedes enviar hasta **dos mensajes anónimos privados** por día a jugadores de tu elección.
+
+**Miguel – El Guerrero Celestial** -- [User]
+
+**Habilidades**  
+- **Espada Flamígera — Activa, Nocturna:** eliges un jugador; si actúa esa noche, su acción se refleja contra sí mismo (ej.: un investigador se investiga a sí mismo, un asesino se mata a sí mismo). El jugador no recibe aviso, solo ve el resultado.  
+- **Guardián del Reino — Pasiva:**  
+  - Si mueres de noche → tu rol aparece públicamente como “Pueblo” y se revela el nombre de tu asesino.  
+  - Si mueres por linchamiento → antes de morir eliges un jugador; ese jugador quedará marcado por la ira de Dios y morirá al final del mismo día.
+
+  **Uriel – La Llama de Dios** -- [User]
+
+  **Habilidades**  
+- **Llama del Cielo — Activa, Nocturna:** eliges un jugador; si ese jugador no actúa esa noche, quedará silenciado al día siguiente y no podrá usar habilidades diurnas. No podrás usar esta habilidad dos noches seguidas.
+- **Centinela de la Aurora — Pasiva:** cada noche, se avisará a los jugadores muertos pueden enviar un mensaje anónimo a **alguien especial**; ese alguien eres tú.
+
+**Rafael – El Sanador de Dios** -- [User]
+
+**Habilidades**  
+- **Falso Consuelo — Activa, Nocturna/Diurna:** eliges un jugador; curas cualquier aflicción en él (veneno, heridas, silencio). Si no es miembro de la Mafia, morirá al inicio del siguiente día.  
+- **Velo de Piedad — Pasiva:** se te avisará cada vez que un miembro de la Mafia sea atacado. Tendrás la opción de:  
+  - Salvarlo (solo una vez en la partida).  
+  - Sacrificarte en su lugar.  
+  - Dejarlo morir.

@@ -55,7 +55,7 @@ Sois los portadores de la rebelión eterna, los heraldos de la destrucción que 
 **Habilidades**  
 - **Brillo Radiante — Activa, Nocturna:** eliges un jugador; si actúa esa noche, su habilidad será redirigida a un objetivo aleatorio. El jugador recibe un aviso de haber sido enceguecido, pero no sabrá que fue redirigido.  
 - **Ángel Caído — Pasiva:** la primera investigación que se haga sobre ti te mostrará como “Pueblo”.  
-- **Luz Letal — Habilidad de Asesinato, Nocturna:** cuando ejecutas el kill, el testamento público del objetivo es destruido: muere sin dejar registro visible.  
+- **Luz Letal — Habilidad de Asesinato, Nocturna:** cuando ejecutas el kill, la bitácora del objetivo es destruido: muere sin dejar registro visible.  
 
 ---
 

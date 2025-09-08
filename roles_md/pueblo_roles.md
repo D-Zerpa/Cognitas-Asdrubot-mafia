@@ -11,7 +11,8 @@
   - 1–2 muertos: no obtienes información.  
   - 3+ muertos: al final del día recibes los últimos 3 mensajes enviados en el chat de los muertos.  
   - 5+ muertos: obtienes acceso directo al chat de los muertos durante el día.  
-- **¿SoMoS LeGiÓn? — Activa, Nocturna:** al inicio del siguiente día, un jugador al azar recibirá los últimos 3 mensajes del cementerio (sin contexto). En noches de **Luna llena**, puedes elegir al jugador que los recibe.  
+- **¿SoMoS LeGiÓn? — Activa, Nocturna:** al inicio del siguiente día, un jugador al azar recibirá los últimos 3 mensajes del cementerio (sin contexto). En noches de **Luna llena**, puedes elegir al jugador que los recibe. 
+  - Tras morir, puedes usar esta habilidad **una** vez más, no obstante, **debe ser en el mismo ciclo lunar en el que moriste**. 
 
 ---
 
