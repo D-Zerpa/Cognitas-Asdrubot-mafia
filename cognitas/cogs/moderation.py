@@ -1,4 +1,5 @@
 import discord
+import asyncio
 from discord import app_commands
 from discord.ext import commands
 from ..core.state import game
@@ -23,14 +24,14 @@ class ModerationCog(commands.Cog):
     @app_commands.default_permissions(administrator=True)
     async def set_day_channel(self, interaction: discord.Interaction, channel: discord.TextChannel | None = None):
         target = channel or interaction.channel
-        set_channels(day=target)
+        await set_channels(day=target)
         await interaction.response.send_message(f"Canal de Día: {target.mention}", ephemeral=True)
 
     @app_commands.command(name="set_admin_channel", description="Configurar canal de Admin (admin)")
     @app_commands.default_permissions(administrator=True)
     async def set_admin_channel(self, interaction: discord.Interaction, channel: discord.TextChannel | None = None):
         target = channel or interaction.channel
-        set_channels(admin=target)
+        await set_channels(admin=target)
         await interaction.response.send_message(f"Canal de Admin: {target.mention}", ephemeral=True)
 
     @app_commands.command(name="show_channels", description="Ver canales configurados (admin)")
@@ -47,7 +48,7 @@ class ModerationCog(commands.Cog):
     @app_commands.default_permissions(administrator=True)
     async def set_log_channel(self, interaction: discord.Interaction, channel: discord.TextChannel | None = None):
         target = channel or interaction.channel
-        set_log_channel_core(target)
+        await set_log_channel_core(target)
         await interaction.response.send_message(f"🧾 Logs channel set to {target.mention}", ephemeral=True)
 
     @app_commands.command(name="purge", description="Delete recent messages in this channel.")

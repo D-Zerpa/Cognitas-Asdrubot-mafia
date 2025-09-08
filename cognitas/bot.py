@@ -46,7 +46,6 @@ COG_MODULES = [
     "cognitas.cogs.players",
     "cognitas.cogs.actions",
     "cognitas.cogs.role_debug",
-    "cognitas.cogs.night",
     "cognitas.cogs.fun",
     "cognitas.cogs.help",
 ]

@@ -6,7 +6,7 @@ from typing import Tuple
 LUNAR_PHASES = [
     ("new", "🌑 New Moon"),
     ("first_quarter", "🌓 First Quarter"),
-    ("full", "🌕 Full Moon"),,
+    ("full", "🌕 Full Moon"),
     ("last_quarter", "🌗 Last Quarter"),
 ]
 

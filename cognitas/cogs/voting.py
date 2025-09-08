@@ -104,7 +104,7 @@ class VotingAdminCog(commands.Cog):
 
     @app_commands.command(name="votes", description="Vote breakdown (embed)")
     async def votos(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=True)
+        await interaction.response.defer()
         ctx = InteractionCtx(interaction)
 
         await votes_core.votes_breakdown(ctx)

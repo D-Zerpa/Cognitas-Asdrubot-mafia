@@ -13,6 +13,22 @@ from ..core.logs import log_event  # keep if you have it; otherwise you can remo
 from ..core import actions as act_core  # NEW: phase-aware actions core
 
 
+
+def _label_from_uid(uid: str | None) -> str:
+    if not uid:
+        return "—"
+    p = game.players.get(str(uid), {})
+    return p.get("name") or p.get("alias") or f"<@{uid}>"
+
+def _fmt_action_line(a: dict) -> str:
+    act = a.get("action") or "act"
+    tgt = _label_from_uid(a.get("target"))
+    note = a.get("note") or "—"
+    at = a.get("at")
+    when = f"<t:{int(at)}:R>" if at else "—"
+    return f"• action=`{act}` target={tgt} note=`{note}` at={when}"
+
+
 # ---------- Small adapter to safely reply after defer ----------
 class InteractionCtx:
     def __init__(self, interaction: discord.Interaction):
@@ -162,7 +178,7 @@ class ActionsAdminCog(commands.GroupCog, name="actions", description="Day/Night 
     # /actions logs
     @app_commands.command(
         name="logs",
-        description="Show actions. If you pass a user (and no number), shows that user's full history for the chosen phase."
+        description="Phase logs: user=all numbers; number=specific Day/Night."
     )
     @app_commands.describe(
         phase="Which phase to inspect (auto/day/night)",
@@ -204,14 +220,7 @@ class ActionsAdminCog(commands.GroupCog, name="actions", description="Day/Night 
 
             for n in sorted(by_num.keys()):
                 acts = by_num[n]
-                lines: list[str] = []
-                for a in acts:
-                    parts = []
-                    for k, v in a.items():
-                        if k == "uid":
-                            continue
-                        parts.append(f"`{k}`=`{v}`")
-                    lines.append(" • " + ", ".join(parts) if parts else " • (no fields)")
+                lines = [_fmt_action_line(a) for a in acts]
                 embed.add_field(name=f"{p.title()} {n}", value=("\n".join(lines)[:1024] or "—"), inline=False)
 
             return await ctx.reply(embed=embed, ephemeral=not public)
@@ -235,23 +244,17 @@ class ActionsAdminCog(commands.GroupCog, name="actions", description="Day/Night 
             by_user.setdefault(u, []).append(r)
 
         for u, acts in by_user.items():
-            lines: list[str] = []
-            for a in acts:
-                parts = []
-                for k, v in a.items():
-                    if k == "uid":
-                        continue
-                    parts.append(f"`{k}`=`{v}`")
-                lines.append(" • " + ", ".join(parts) if parts else " • (no fields)")
-            name = game.players.get(u, {}).get("name") or f"<@{u}>"
+            lines = [_fmt_action_line(a) for a in acts]
+            name = _label_from_uid(u)
             embed.add_field(name=f"{name} ({u})", value=("\n".join(lines)[:1024] or "—"), inline=False)
+
 
         await ctx.reply(embed=embed, ephemeral=not public)
 
     # /actions breakdown
     @app_commands.command(
         name="breakdown",
-        description="Action breakdown: who can act, who acted, who is missing (for the chosen phase)."
+        description="Who can act, who acted, who is missing (for the chosen phase)."
     )
     @app_commands.describe(
         phase="Which phase to inspect (auto/day/night)",

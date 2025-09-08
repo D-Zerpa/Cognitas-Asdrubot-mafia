@@ -4,10 +4,10 @@ import discord
 from .state import game
 from .storage import save_state
 
-def set_log_channel(channel: discord.TextChannel | None):
+async def set_log_channel(channel: discord.TextChannel | None):
     """Guardar/eliminar el canal de logs en el estado."""
-    game.log_channel_id = channel.id if channel else None
-    save_state("state.json")
+    game.admin_log_channel_id = channel.id if channel else None
+    await save_state("state.json")
 
 async def log_event(bot: discord.Client, guild_id: int, kind: str, **data):
     """
@@ -15,7 +15,7 @@ async def log_event(bot: discord.Client, guild_id: int, kind: str, **data):
     kind: 'PHASE_START', 'PHASE_END', 'VOTE_CAST', 'VOTE_CLEAR', 'VOTES_CLEARED',
           'END_DAY_REQUEST', 'LYNCH', 'GAME_START', 'GAME_RESET', 'GAME_FINISH', 'ASSIGN'
     """
-    chan_id = getattr(game, "log_channel_id", None)
+    chan_id = getattr(game, "admin_log_channel_id", None)
     if not chan_id:
         return  # logs desactivados
     guild = bot.get_guild(guild_id)

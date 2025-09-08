@@ -134,7 +134,7 @@ def load_state(path: str | Path | None = None) -> Dict[str, Any]:
     # Keep both keys supported; prefer admin_log_channel_id if present
     game.admin_log_channel_id = data.get("admin_log_channel_id", data.get("admin_channel_id"))
     game.admin_channel_id = data.get("admin_channel_id")
-
+    game.phase = data.get("phase","day")
     game.default_day_channel_id = data.get("default_day_channel_id")
     game.game_over = data.get("game_over", False)
     game.current_day_number = data.get("current_day_number", 1)
@@ -177,6 +177,7 @@ async def save_state(path: str | Path | None = None):
         "current_day_number": game.current_day_number,
         "day_deadline_epoch": game.day_deadline_epoch,
         "night_deadline_epoch": game.night_deadline_epoch,
+        "phase": getattr(game, "phase", "day"),
         "profile": getattr(game, "profile", "default"),
         "roles_def": getattr(game, "roles_def", {}),
         "night_actions": getattr(game, "night_actions", {}),

@@ -7,7 +7,7 @@ class GameState:
         self.players = {}               # { uid: {nick, role, channel_id, alive, flags, effects} }
         self.votes = {}                 # { voter_uid: target_uid }
         self.roles = {}                 # loaded from roles.json
-
+        self.phase: str = "day"
         # --- Day phase ---
         self.day_channel_id = None      # int | None
         self.current_day_number = 1     # int
@@ -24,7 +24,8 @@ class GameState:
         # --- Night action log (append-only) ---
         # list of dicts: {day, ts_epoch, actor_uid, target_uid, note}
         self.night_actions = []
-
+        self.day_actions = []
+        
         # --- Server-configurable channels (set via admin cmds) ---
         self.admin_log_channel_id = None    # where admin logs go
         self.default_day_channel_id = None  # default Day channel
