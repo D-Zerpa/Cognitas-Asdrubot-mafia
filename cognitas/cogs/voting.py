@@ -59,7 +59,7 @@ class VotingAdminCog(commands.Cog):
     # -----------------------
 
     @app_commands.command(name="start_day", description="Starts day (admin)")
-    @app_commands.describe(duration="Ej: 24h, 90m, 1h30m", channel="Canal de Día", force="Reinicia si ya hay un día activo")
+    @app_commands.describe(duration="Ex: 24h, 90m, 1h30m", channel="Day channel", force="Restart if a day is already active")
     @app_commands.default_permissions(administrator=True)
     async def start_day(self, interaction: discord.Interaction, duration: str = "24h", channel: discord.TextChannel | None = None, force: bool = False):
         # Defer once to avoid InteractionResponded errors
@@ -80,7 +80,7 @@ class VotingAdminCog(commands.Cog):
         await interaction.followup.send("☑️ Day finished", ephemeral=True)
 
     @app_commands.command(name="start_night", description="Starts night (admin)")
-    @app_commands.describe(duration="Ej: 12h, 8h, 45m")
+    @app_commands.describe(duration="Ex: 12h, 8h, 45m")
     @app_commands.default_permissions(administrator=True)
     async def start_night(self, interaction: discord.Interaction, duration: str = "12h"):
         await interaction.response.defer(ephemeral=True)
@@ -103,7 +103,7 @@ class VotingAdminCog(commands.Cog):
     # -----------------------
 
     @app_commands.command(name="votes", description="Vote breakdown (embed)")
-    async def votos(self, interaction: discord.Interaction):
+    async def votes(self, interaction: discord.Interaction):
         await interaction.response.defer()
         ctx = InteractionCtx(interaction)
 

@@ -24,7 +24,7 @@ class Maintenance(commands.Cog):
         if not interaction.guild:
             return await interaction.response.send_message("Use this in a server.", ephemeral=True)
         await interaction.response.defer(ephemeral=True)
-        # Opcional: trae los globales a este guild para que aparezcan ya
+        # Optional: bring global commands to this guild so they appear immediately
         try:
             self.bot.tree.copy_global_to(guild=interaction.guild)
         except Exception:

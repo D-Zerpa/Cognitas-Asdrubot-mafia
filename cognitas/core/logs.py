@@ -5,19 +5,19 @@ from .state import game
 from .storage import save_state
 
 async def set_log_channel(channel: discord.TextChannel | None):
-    """Guardar/eliminar el canal de logs en el estado."""
+    """Store or remove the log channel in persistent state."""
     game.admin_log_channel_id = channel.id if channel else None
     await save_state("state.json")
 
 async def log_event(bot: discord.Client, guild_id: int, kind: str, **data):
     """
-    Envía un embed al canal de logs configurado (si existe).
+    Send an embed to the configured log channel (if available).
     kind: 'PHASE_START', 'PHASE_END', 'VOTE_CAST', 'VOTE_CLEAR', 'VOTES_CLEARED',
           'END_DAY_REQUEST', 'LYNCH', 'GAME_START', 'GAME_RESET', 'GAME_FINISH', 'ASSIGN'
     """
     chan_id = getattr(game, "admin_log_channel_id", None)
     if not chan_id:
-        return  # logs desactivados
+        return  # logging disabled
     guild = bot.get_guild(guild_id)
     if not guild:
         return
@@ -57,14 +57,14 @@ async def log_event(bot: discord.Client, guild_id: int, kind: str, **data):
         color=color_map.get(kind, 0x34495e),
     )
 
-    # Campos comunes útiles
+    # Useful common fields
     day_no = getattr(game, "current_day_number", None)
     if day_no:
         embed.add_field(name="Day", value=str(day_no), inline=True)
 
-    # Poner pares clave/valor del payload
+    # Add payload key/value pairs
     for k, v in data.items():
-        # Renderizar user ids como mentions si parecen IDs
+        # Render user IDs as mentions if they look like IDs
         if isinstance(v, str) and v.isdigit() and k.lower().endswith(("id", "uid", "user", "target")):
             v = f"<@{v}>"
         embed.add_field(name=k, value=str(v), inline=True)

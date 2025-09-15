@@ -9,7 +9,7 @@ from ..config import REMINDER_CHECKPOINTS
 from .state import game
 from .storage import save_state
 from .logs import log_event
-from .johnbotjovi import linchar as make_lynch_poster
+from .johnbotjovi import lynch as make_lynch_poster
 from . import lunar
 from .. import config as cfg
 from .reminders import (
@@ -200,7 +200,7 @@ async def end_day(
     Close the Day phase:
     - Close channel for @everyone messages
     - Announce result (with or without lynch)
-    - If lynch: mark player dead and post lynch poster (core/jonbotjovi.linchar)
+    - If lynch: mark player dead and post lynch poster (core/jonbotjovi.lynch)
     - Clear deadline and cancel timer
     """
     guild: discord.Guild = ctx.guild

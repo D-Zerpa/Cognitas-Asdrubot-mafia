@@ -1,4 +1,4 @@
-# cognitas/core/jonbotjovi.py
+# cognitas/core/johnbotjovi.py
 from __future__ import annotations
 
 import io
@@ -33,11 +33,11 @@ _USED: set[str] = set()
 def _coords_from_filename(fname: str) -> tuple[int | None, int | None]:
     """
     Extract (x, y) from filenames like:
-      linchar02-960-240-.png
+      lynch02-960-240-.png
       whatever-960-240.png
       bg-120-300-extra.jpg
     We split on '-' and only accept tokens that are pure digits,
-    so 'linchar02' is ignored but '960' and '240' are taken.
+    so 'lynch02' is ignored but '960' and '240' are taken.
     """
     name, _ext = os.path.splitext(os.path.basename(fname))
     tokens = name.split("-")
@@ -119,7 +119,7 @@ async def _read_avatar_bytes(member: discord.Member, size: int = 128) -> bytes |
 # Public API
 # ---------------------------------------------------------------------
 
-async def linchar(member: discord.Member) -> Optional[discord.File]:
+async def lynch(member: discord.Member) -> Optional[discord.File]:
     """
     Create a lynch poster by pasting the user's circular avatar on a random background.
     Avatar placement:
