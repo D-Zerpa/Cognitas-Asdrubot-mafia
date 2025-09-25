@@ -10,7 +10,7 @@ class DebugRoles(commands.Cog):
     async def debug_roles(self, interaction):
         idx = getattr(game, "roles", {}) or {}
         keys = sorted(list(idx.keys()))
-        # Muestra las primeras N para no romper el límite
+        # Show the first N to avoid hitting the limit
         sample = keys[:80]
         text = "Loaded roles (keys):\n" + ", ".join(sample) + (", ..." if len(keys) > 80 else "")
         await interaction.response.send_message(text[:1900], ephemeral=True)

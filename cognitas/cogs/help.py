@@ -13,19 +13,16 @@ class HelpCog(commands.Cog):
         is_admin = user.guild_permissions.administrator
         can_purge = user.guild_permissions.manage_messages
         phase = getattr(game, "moon_phase", None)
-        
-        if phase:
-            embed.set_footer(text=f"Asdrubot v2.0 — Moon: {phase}")
-        else:
-            embed.set_footer(text="Asdrubot v2.0 — Slash Edition")
-
-
 
         embed = discord.Embed(
             title="Asdrubot — Commands",
             description="Slash command index. You will only see admin/mod sections if you have permissions.",
             color=0x2ecc71
         )
+        if phase:
+            embed.set_footer(text=f"Asdrubot v2.0 — Moon: {phase}")
+        else:
+            embed.set_footer(text="Asdrubot v2.0 — Slash Edition")
 
         # Players
         embed.add_field(
@@ -54,7 +51,7 @@ class HelpCog(commands.Cog):
                 "`/vote clear`",
                 "`/vote mine`",
                 "`/vote end_day` *(2/3 of alive)*",
-                "`/votos`",
+                "`/votes`",
                 "`/status`",
                 "`/start_day [duration] [channel] [force]` *(admin)*",
                 "`/end_day` *(admin)*",
@@ -100,8 +97,6 @@ class HelpCog(commands.Cog):
             inline=False
         )
 
-        # Footer
-        embed.set_footer(text="Asdrubot v2.0 — Slash Edition")
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
 async def setup(bot): await bot.add_cog(HelpCog(bot))

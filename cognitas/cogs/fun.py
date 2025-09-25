@@ -14,13 +14,13 @@ class FunCog(commands.Cog):
 
     @app_commands.command(name="coin", description="Toss a coin")
     async def coin(self, interaction):
-        await interaction.response.send_message("🪙 Cara" if random.random() < 0.5 else "🪙 Cruz")
+        await interaction.response.send_message("🪙 Heads" if random.random() < 0.5 else "🪙 Tails")
         
     @app_commands.command(name="lynch", description="Generate a lynch poster using the target's avatar.")
     @app_commands.describe(target="Target player to feature on the poster")
     async def lynch_cmd(self, interaction: discord.Interaction, target: discord.Member):
         await interaction.response.defer()
-        f = await johnbotjovi.linchar(target)
+        f = await johnbotjovi.lynch(target)
         if f is None:
             return await interaction.followup.send(
                 f"LYNCH! {target.mention} — (Pillow not available or no backgrounds found)"

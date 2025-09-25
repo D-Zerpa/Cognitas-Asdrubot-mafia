@@ -8,26 +8,26 @@ import unicodedata
 
 
 def _norm_key(s: str) -> str:
-    """Normaliza la clave para lookup case-insensitive y sin acentos."""
+    """Normalize a key for case-insensitive lookup without accents."""
     if not isinstance(s, str):
         return ""
-    # quita espacios extremos y normaliza acentos
+    # remove surrounding spaces and strip accents
     s = unicodedata.normalize("NFKD", s.strip())
     s = "".join(ch for ch in s if not unicodedata.combining(ch))
     return s.upper()
 
 def _extract_role_defaults(role_def: dict) -> dict:
     """
-    Obtiene defaults robusto según el profile:
+    Get profile-aware defaults:
     - SMT:        role_def["flags"]
-    - Otros:      role_def["defaults"] | role_def["base_flags"] | role_def["abilities"]["defaults"]
+    - Others:     role_def["defaults"] | role_def["base_flags"] | role_def["abilities"]["defaults"]
     """
     if not isinstance(role_def, dict):
         return {}
     # SMT
     if isinstance(role_def.get("flags"), dict):
         return role_def["flags"]
-    # Otros
+    # Others
     if isinstance(role_def.get("defaults"), dict):
         return role_def["defaults"]
     if isinstance(role_def.get("base_flags"), dict):
@@ -39,8 +39,8 @@ def _extract_role_defaults(role_def: dict) -> dict:
 
 def _build_roles_index(roles_def) -> dict:
     """
-    Devuelve un índice robusto: KEY normalizada -> role_def
-    Acepta 'code' | 'id' | 'name' + 'aliases' en cualquier combinación.
+    Build a robust index: normalized KEY -> role_def
+    Accepts 'code' | 'id' | 'name' plus 'aliases' in any combination.
     """
     roles_list = []
     if isinstance(roles_def, dict):
@@ -59,20 +59,20 @@ def _build_roles_index(roles_def) -> dict:
         for a in (r.get("aliases") or []):
             if isinstance(a, str) and a.strip():
                 keys.append(_norm_key(a))
-        # registra todas las variantes hacia el mismo role_def
+        # register all variants pointing to the same role_def
         for key in keys:
             if key:
                 idx[key] = r
     return idx
 
 def _lookup_role(role_name: str, roles_index: dict, roles_def) -> dict | None:
-    """Busca primero en el índice (rápido) y cae a escaneo del JSON si hiciera falta."""
+    """Search index first (fast) and fall back to scanning JSON if needed."""
     key = _norm_key(role_name or "")
     role_def = roles_index.get(key)
     if role_def:
         return role_def
 
-    # Fallback defensivo (por si el índice aún no estaba construido)
+    # Defensive fallback (in case the index wasn't built yet)
     roles_list = []
     if isinstance(roles_def, dict):
         roles_list = list(roles_def.get("roles") or [])
@@ -98,19 +98,19 @@ async def set_channels(*, day: discord.TextChannel | None = None, admin: discord
 
 async def start(ctx, *, profile: str = "default", day_channel: discord.TextChannel | None = None, admin_channel: discord.TextChannel | None = None):
     """
-    Inicia una partida con un profile de roles (default, smt, ...).
-    - Carga roles_{profile}.json (o fallback default)
-    - Resetea contadores básicos
-    - Setea canales de día/admin si se pasan
+    Start a game with a roles profile (default, smt, ...).
+    - Load roles_{profile}.json (or fall back to default)
+    - Reset basic counters
+    - Set day/admin channels if provided
     """
     
     game.profile = profile.lower()
     game.roles_def = load_roles(game.profile)
     game.roles = _build_roles_index(game.roles_def)
-    game.expansion = _load_expansion_for(game.profile)  # <-- NUEVO
+    game.expansion = _load_expansion_for(game.profile)  # new
 
 
-    # (Reseteos mínimos no destructivos de jugadores)
+    # Minimal non-destructive resets of players
     game.votes = {}
     game.end_day_votes = set()
     game.game_over = False
@@ -132,11 +132,11 @@ async def start(ctx, *, profile: str = "default", day_channel: discord.TextChann
 
 async def hard_reset(ctx_or_interaction):
     """
-    Full reset que funciona con:
-    - commands.Context (ctx)  -> usa ctx.reply(...)
-    - discord.Interaction     -> usa interaction.response / followup
+    Full reset compatible with:
+    - commands.Context (ctx)  -> uses ctx.reply(...)
+    - discord.Interaction     -> uses interaction.response / followup
     """
-    # 1) limpiar memoria
+    # 1) clear memory
     game.players = {}
     game.votes = {}
     game.day_channel_id = None
@@ -150,9 +150,9 @@ async def hard_reset(ctx_or_interaction):
     game.roles = {}
     game.night_actions = {}
     game.game_over = False
-    # TODO: cancelar timers si existen
+    # TODO: cancel timers if they exist
 
-    # 2) borrar archivos
+    # 2) delete files
     for path in ("state.json", "state.json.bak", "status.json", "status.json.bak"):
         try:
             os.remove(path)
@@ -161,10 +161,10 @@ async def hard_reset(ctx_or_interaction):
         except Exception:
             pass
 
-    # 3) persistir estado vacío
+    # 3) persist empty state
     await save_state("state.json")
 
-    # 4) responder al usuario (ctx o interaction)
+    # 4) respond to the user (ctx or interaction)
     try:
         if isinstance(ctx_or_interaction, discord.Interaction):
             interaction = ctx_or_interaction
@@ -178,7 +178,7 @@ async def hard_reset(ctx_or_interaction):
     except Exception:
         pass
 
-    # 5) log al canal de logs (funciona con ambos)
+    # 5) log to the log channel (works for both)
     try:
         if isinstance(ctx_or_interaction, discord.Interaction):
             await log_event(ctx_or_interaction.client, ctx_or_interaction.guild.id, "GAME_RESET")
@@ -197,23 +197,23 @@ async def finish(ctx, *, reason: str | None = None):
 
 async def who(ctx, member: discord.Member | None = None):
     """
-    Muestra info del jugador (rol si procede) o listado básico.
+    Show player info (role if any) or a basic list.
     """
     if member:
         uid = str(member.id)
         pdata = game.players.get(uid)
         if not pdata:
-            return await ctx.reply("Jugador no registrado.")
+            return await ctx.reply("Player not registered.")
         role = pdata.get("role") or "—"
         alive = "✅" if pdata.get("alive", True) else "☠️"
         return await ctx.reply(f"<@{uid}> — **{pdata.get('name','?')}** | Role: **{role}** | {alive}")
-    # listado rápido si no se pasa miembro
-    vivos = [u for u, p in game.players.items() if p.get("alive", True)]
-    await ctx.reply(f"Jugadores vivos: {', '.join(f'<@{u}>' for u in vivos) if vivos else '—'}")
+    # quick list if no member is passed
+    alive = [u for u, p in game.players.items() if p.get("alive", True)]
+    await ctx.reply(f"Alive players: {', '.join(f'<@{u}>' for u in alive) if alive else '—'}")
 
 async def assign_role(ctx, member: discord.Member, role_name: str):
     """
-    Asigna un rol a un jugador y aplica defaults (SMT: 'flags').
+    Assign a role to a player and apply defaults (SMT: 'flags').
     """
     uid = str(member.id)
     if uid not in game.players:
@@ -225,7 +225,7 @@ async def assign_role(ctx, member: discord.Member, role_name: str):
 
     game.players[uid]["role"] = role_name
 
-    # Merge defaults/flags sin sobreescribir lo existente
+    # Merge defaults/flags without overwriting existing values
     defaults = _extract_role_defaults(role_def)
     if defaults:
         flags = game.players[uid].setdefault("flags", {})
