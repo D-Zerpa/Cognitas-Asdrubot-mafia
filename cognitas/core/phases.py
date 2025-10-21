@@ -125,6 +125,15 @@ async def start_day(
         game.day_timer_task.cancel()
         game.day_timer_task = None
 
+    try:
+        # Cancel Night reminders worker
+        if getattr(game, "night_timer_task", None) and not game.night_timer_task.done():
+            game.night_timer_task.cancel()
+    except Exception:
+        pass
+    game.night_timer_task = None
+    game.night_deadline_epoch = None
+
     # Check the Day number, then add one.
     
     curr = int(getattr(game, "current_day_number", 0) or 0)
@@ -136,11 +145,19 @@ async def start_day(
         # optional: reset per-day data here if you keep some
     else:
         # staying in the same day (restart timers only)
-        game.current_day_number = max(1, curr)
-        
-        
+        game.current_day_number = max(1, curr)  
         
     game.phase = "day"
+
+
+    try:
+        if hasattr(game, "votes"):
+            game.votes.clear()
+        else:
+            game.votes = {}
+    except Exception:
+        game.votes = {}
+
 
         # Notify expansion about phase change into Day
     try:
@@ -290,6 +307,17 @@ async def end_day(
         pass
     game.day_timer_task = None
     game.day_deadline_epoch = None
+    
+    # Clear votes at day end to avoid stale tallies carrying over 
+    try:
+        if hasattr(game, "votes"):
+            game.votes.clear()
+        else:
+            game.votes = {}
+    except Exception:
+        game.votes = {}
+
+
 
     # Persist & log
     await save_state()
@@ -339,6 +367,14 @@ async def start_night(
     if force and getattr(game, "night_timer_task", None) and not game.night_timer_task.done():
         game.night_timer_task.cancel()
         game.night_timer_task = None
+
+    try:
+        if getattr(game, "day_timer_task", None) and not game.day_timer_task.done():
+            game.day_timer_task.cancel()
+    except Exception:
+        pass
+    game.day_timer_task = None
+    game.day_deadline_epoch = None
 
     # Store channel & phase
     game.night_channel_id = ch.id
