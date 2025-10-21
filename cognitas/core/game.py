@@ -240,8 +240,14 @@ async def assign_role(ctx, member: discord.Member, role_name: str):
 
 
 def _load_expansion_for(profile: str):
-    if profile == "smt":
+    from ..expansions import get_registered
+    cls = get_registered(profile)
+    if cls:
+        return cls()
+    # Fallbacks
+    if (profile or "").lower() in ("smt", "persona", "megaten"):
         from ..expansions.smt import SMTExpansion
         return SMTExpansion()
-    return None
+    from ..expansions.philosophers import PhilosophersExpansion
+    return PhilosophersExpansion()
 

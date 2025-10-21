@@ -1,14 +1,18 @@
-from . import Expansion
+from . import Expansion, register
+from ..core import lunar
 
-MOON_ORDER = ["New", "Waxing", "Full", "Waning"]
-
+@register("smt")
+@register("persona")
+@register("megaten")
 class SMTExpansion(Expansion):
     name = "smt"
 
     def on_phase_change(self, game_state, new_phase: str):
-        current = getattr(game_state, "moon_phase", "New")
-        try:
-            idx = MOON_ORDER.index(current)
-        except ValueError:
-            idx = 0
-        game_state.moon_phase = MOON_ORDER[(idx + 1) % len(MOON_ORDER)]
+        # Advance the lunar cycle at the start of the Night phase
+        if new_phase == "night":
+            lunar.advance(game_state, steps=1)
+
+    def banner_for_day(self, game_state):
+        # Announce the current lunar phase at dawn
+        _code, label = lunar.current(game_state)
+        return f"{label}"

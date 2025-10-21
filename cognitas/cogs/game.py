@@ -2,6 +2,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from ..core import game as game_core
+from .. import config as cfg
 
 
 class GameCog(commands.Cog):
@@ -10,9 +11,9 @@ class GameCog(commands.Cog):
     @app_commands.command(name="game_start", description="Iniciar partida con profile (admin)")
     @app_commands.describe(profile="default | smt | ...")
     @app_commands.default_permissions(administrator=True)
-    async def game_start(self, interaction: discord.Interaction, profile: str = "default"):
+    async def game_start(self, interaction: discord.Interaction, profile: str | None = None):
         ctx = await commands.Context.from_interaction(interaction)
-        await game_core.start(ctx, profile=profile, day_channel=interaction.channel, admin_channel=None)
+        await game_core.start(ctx, profile=(profile or cfg.DEFAULT_PROFILE), day_channel=interaction.channel, admin_channel=None)
         
     @app_commands.command(name="game_reset", description="Hard reset of game state")
     @app_commands.default_permissions(administrator=True)

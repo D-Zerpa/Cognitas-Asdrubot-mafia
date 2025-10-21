@@ -123,7 +123,7 @@ class VotingAdminCog(commands.Cog):
         ctx = InteractionCtx(interaction)
 
         await votes_core.clearvotes(ctx)
-        await interaction.followup.send("🧹 Votes cleared.", ephemeral=True)
+        await interaction.followup.send("🧹 Votes cleared.", ephemeral=False)
 
 
 class VoteCog(commands.GroupCog, name="vote", description="Votes"):
@@ -132,7 +132,7 @@ class VoteCog(commands.GroupCog, name="vote", description="Votes"):
 
     @app_commands.command(name="cast", description="Vote for a player")
     async def cast(self, interaction: discord.Interaction, member: discord.Member):
-        await interaction.response.defer(ephemeral=True)
+        await interaction.response.defer(ephemeral=False)
         ctx = InteractionCtx(interaction)
 
         await votes_core.vote(ctx, member)
@@ -140,11 +140,11 @@ class VoteCog(commands.GroupCog, name="vote", description="Votes"):
 
     @app_commands.command(name="clear", description="Unvote")
     async def clear(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=True)
+        await interaction.response.defer(ephemeral=False)
         ctx = InteractionCtx(interaction)
 
         await votes_core.unvote(ctx)
-        await interaction.followup.send("🗑️ Vote cleared.", ephemeral=True)
+        await interaction.followup.send("🗑️ Vote cleared.", ephemeral=False)
 
     @app_commands.command(name="mine", description="See your current vote")
     async def mine(self, interaction: discord.Interaction):

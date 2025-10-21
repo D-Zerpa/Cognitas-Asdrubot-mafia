@@ -86,6 +86,15 @@ def _ensure_defaults():
         if not hasattr(game, k):
             setattr(game, k, v)
 
+    # Ensure a concrete expansion object exists (safe fallback to base)
+    try:
+        if not hasattr(game, "expansion") or game.expansion is None:
+            from .game import _load_expansion_for
+            game.expansion = _load_expansion_for(getattr(game, "profile", "default"))
+    except Exception:
+        # Avoid breaking load paths if expansion resolution fails
+        pass
+
 
 def _rehydrate_roles_index():
     """

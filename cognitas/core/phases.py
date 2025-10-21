@@ -10,7 +10,6 @@ from .state import game
 from .storage import save_state
 from .logs import log_event
 from .johnbotjovi import lynch as make_lynch_poster
-from . import lunar
 from .. import config as cfg
 from .reminders import (
     parse_duration_to_seconds,
@@ -142,7 +141,15 @@ async def start_day(
         
         
     game.phase = "day"
-    
+
+        # Notify expansion about phase change into Day
+    try:
+        game.expansion.on_phase_change(game, "day")
+
+    except Exception:
+        pass
+
+
     await save_state()
     # Decide Day channel (explicit > configured > current)
     target: discord.abc.Messageable = ch
@@ -161,6 +168,16 @@ async def start_day(
         await ch.set_permissions(everyone, overwrite=ow)
     except Exception:
         pass
+
+    # Expansion may provide a Day banner (e.g., lunar announcement)
+    try:
+        banner = getattr(game, "expansion", None) and game.expansion.banner_for_day(game)
+        if banner:
+            await ch.send(str(banner))
+    except Exception:
+        pass
+
+
 
     # Announce
     abs_ts = f"<t:{game.day_deadline_epoch}:F>"
@@ -327,23 +344,9 @@ async def start_night(
     game.night_channel_id = ch.id
     game.phase = "night"
 
-    # Advance lunar phase at night start
+    # Notify expansion about phase change into Night
     try:
-        lunar.advance(game, steps=1)
-        await save_state()
-    except Exception:
-        pass
-
-    # Announce lunar phase
-    idx = int(getattr(game, "lunar_index", 0))
-    msg = lunar.announcement(idx)
-
-    try:
-        chan_id = getattr(game, "day_channel_id", None)
-        if chan_id and ctx.guild:
-            chan = ctx.guild.get_channel(chan_id)
-            if chan:
-                await chan.send(msg)
+        game.expansion.on_phase_change(game, "night")
     except Exception:
         pass
 

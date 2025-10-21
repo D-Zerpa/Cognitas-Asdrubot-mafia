@@ -19,6 +19,7 @@ INTENTS_KWARGS = {
 BASE_DIR = Path(__file__).resolve().parents[1]  # ascend from cognitas/ to root
 # Absolute path to state.json at root
 STATE_PATH = Path(os.getenv("STATE_PATH", str(BASE_DIR / "state.json")))
+DEFAULT_PROFILE = os.getenv("ASDRUBOT_DEFAULT_PROFILE", "default")
 
 # Reminder mentions
 MENTION_EVERYONE = True          # set False to disable @everyone
