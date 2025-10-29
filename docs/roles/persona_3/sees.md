@@ -1,249 +1,322 @@
 # 💠 SEES – Specialized Extracurricular Execution Squad
-> *«Luchamos no por el destino, sino por aquellos que aún creen en el amanecer.»*
+
+> «Luchamos no por el destino, sino por aquellos que aún creen en el amanecer.»
 
 **Alineación:** Pueblo  
-**Condición de victoria:** **Vencer la Hora Oscura** y **evitar El Despertar**.
+**Condición de victoria:** Vencer a la Hora Oscura y evitar El Despertar.
 
 ---
 
 ## 📜 Descripción
-Durante la **Hora Oscura**, solo unos pocos humanos son capaces de resistir y combatir a las Sombras. Tú eres uno de ellos.  
-Perteneces al escuadrón conocido como **SEES**, un grupo secreto de estudiantes que portan el poder de **Persona**, espíritus que reflejan la fuerza del alma.  
-No todos los miembros del escuadrón están plenamente conscientes de su poder: **algunos han despertado, otros aún buscan su propósito**.  
-Vuestra fuerza proviene del **vínculo** que los une y de la **coordinación** entre sus miembros.
+Durante la Hora Oscura, solo unos pocos humanos son capaces de resistir y combatir las Sombras.  
+Tú eres uno de ellos.  
+Perteneces al escuadrón conocido como **SEES**, un grupo secreto de estudiantes que portan el poder de Persona, espíritus que reflejan la fuerza del alma.  
+No todos los miembros del escuadrón están plenamente conscientes de su poder: algunos han despertado, otros aún buscan su propósito.  
+Vuestra fuerza proviene del vínculo que los une y de la coordinación entre sus miembros.
 
 ---
 
 ## 💠 Mecánica general
-- **SEES es un grupo cooperativo del Pueblo.**
-- Sus miembros **comparten un canal de comunicación nocturno** para planificar.
-- Existen jugadores con el **potencial** (espíritu lo suficientemente fuerte) para **despertar un Persona**.
-- Esos jugadores **no tienen habilidades al inicio**; sus verdaderas habilidades **despiertan al unirse a SEES**.
-- Parte de las labores de SEES es **reclutar** a esos jugadores y **guiarlos en su despertar**.
-- **La sinergia es la clave:** cuanto más unidos estén, **más eficaces** serán.
+SEES es un grupo cooperativo dentro del Pueblo.
+
+- Todos sus miembros comparten un **canal de comunicación nocturno** para planificar sus acciones.  
+- Existen diferentes jugadores con el potencial, es decir, portadores de un espíritu lo suficientemente fuerte como para despertar un Persona.  
+- Dichos jugadores **no tienen habilidades al inicio** de la partida; sus verdaderas habilidades se **despiertan al unirse** al grupo.  
+- Parte de las labores de SEES es **reclutar** a esos jugadores y guiarlos en su despertar.  
+
+La sinergia es la clave: **cuanto más unidos estén, más eficaces serán.**
 
 ---
 
 ## ✴️ Theurgies: las habilidades definitivas
-Cuando se hayan **reclutado tres miembros**, SEES obtiene acceso a las **Theurgies**, habilidades poderosas y **únicas** de cada integrante.
+Una vez se hayan reclutado **tres miembros**, se tendrá acceso a las **Theurgies**, habilidades poderosas y únicas que posee cada miembro de SEES.  
+Estas habilidades cuentan como la **habilidad diurna o nocturna** de cada personaje; si se usa una Theurgy, dicho jugador **no podrá usar el resto de sus habilidades** hasta el próximo día.
 
-**Reglas de uso**
-- Una Theurgy **cuenta como la acción diurna o nocturna** del personaje que la usa.  
-  > Si se usa una Theurgy, ese jugador **no puede usar otras habilidades** hasta el próximo día.
-- **Solo puede usarse una Theurgy por día o por noche.**  
-  > Si se usa en el día, no puede usarse otra en la noche (y viceversa).
-- Cada Theurgy tiene su **enfriamiento** específico antes de volver a usarse.
-
-**📘 Lista de Theurgies desbloqueadas hasta el momento:** *Ninguna*
+- Solo se puede usar **una Theurgy por día o noche** (si se usa durante el día, **no puede usarse ninguna otra en la noche**).  
+- Cada Theurgy tiene un **tiempo de enfriamiento** antes de poder volver a usarse.
 
 ---
 
-<details>
-<summary><strong>🔒 Oculto para los jugadores – Detalle de Theurgies</strong></summary>
-
-### ❄️ Mitsuru Kirijo – <em>Diamond Dust</em> (Activa, Nocturna — <strong>1 noche de enfriamiento</strong>)
-- Seleccionas a un jugador; queda **encarcelado** ✶.
-- Mientras esté encarcelado:
-  - **No puede usar habilidades** esa noche (si ya declaró una sin resolución inmediata, **se anula**).
-  - Se abre un **chat privado** entre Mitsuru y el objetivo, que puedes mantener **toda la noche y el día siguiente**.
-  - Puedes **liberarlo** en cualquier momento.
-  - Si sigue encarcelado de día, **no puede hablar ni votar** en el chat público.
-  - Mientras dure el encierro, **no puede ser atacado** ni afectado por otras habilidades.
-- **Restricciones:** no puede usarse **dos veces seguidas sobre el mismo jugador**.
+📘 **Lista de Theurgies desbloqueadas hasta el momento:**  
+*(Ninguna)*
 
 ---
 
-### 🛰️ Fuuka Yamagishi – <em>Oracle Scan</em> (Activa, Nocturna — <strong>2 noches de enfriamiento</strong>)
-- Al final de la noche, recibes una **lista de hasta 5 jugadores al azar entre quienes actuaron**.
-- Para cada uno, sabrás **en quién actuó** (no qué habilidad usó).
+====================
+Oculto para los jugadores
+====================
+
+**Mitsuru Kirijo – Diamond Dust (Activa, Nocturna – 1 noche de enfriamiento)**  
+Durante la noche, seleccionas a un jugador; este **quedará encarcelado ✶ (resolución instantánea)**.  
+Mientras esté encarcelado, **no podrá usar habilidades** esa noche (si ya había usado una habilidad no resuelta instantáneamente, **su acción queda anulada**).  
+Se abrirá un **chat privado** entre Mitsuru y el jugador encarcelado, que podrá mantenerse **hasta el inicio de la siguiente noche**.  
+Puedes **liberarlo** en cualquier momento.  
+Si el jugador continúa encarcelado durante el día, **no podrá hablar** en el chat público **ni votar**.  
+Mientras esté encarcelado, **no puede ser atacado ni afectado** por ninguna otra habilidad.  
+**Restricción:** No puede usarse **dos veces consecutivas** sobre el mismo jugador.
+
+--
+
+**Fuuka Yamagishi – Oracle Scan (Activa, Nocturna – 2 noches de enfriamiento)**  
+Al final de la noche, recibes una **lista de hasta 5 jugadores al azar** entre los que hayan actuado esa noche.  
+Para cada jugador de esa lista, **sabrás en quién actuó**, pero **no** qué habilidad usó.
+
+--
+
+**Akihiko Sanada – Sonic Counter (Activa, Nocturna – 2 noches de enfriamiento)**  
+Seleccionas **dos jugadores**.  
+Si alguno de ellos usa su habilidad esta noche, **dicha habilidad será reflejada en su contra ✶**.  
+Si no usa ninguna habilidad, **quedará paralizado ✶**.  
+Los jugadores afectados por un reflejo serán **notificados** de que “su acción ha sido devuelta sobre ellos”, pero **no** se informará qué efecto se aplicó ni **cuál** de los dos objetivos fue afectado por cada resultado.  
+**Restricción:** No puede usarse **dos veces consecutivas** sobre el mismo jugador.
+
+--
+
+**Yukari Takeba – Hymn of Salvation (Activa, Nocturna – 4 noches de enfriamiento)**  
+Durante esta noche, **todas las habilidades de asesinato serán bloqueadas ✶**.  
+Los intentos de asesinato o cualquier otra habilidad con resultado de muerte **no surtirán efecto**.  
+Las demás habilidades **no letales** se resuelven con normalidad.
+
+--
+
+**Junpei Iori – Heroic Strike (Activa, Nocturna – 3 noches de enfriamiento)**  
+Eliges un jugador y te lanzas sobre él:  
+Si el jugador pertenece a una **facción enemiga**, **será asesinado ✶** inmediatamente.  
+Si pertenece al **Pueblo**, el golpe **falla** y **sales herido** del encuentro.  
+**Notas:** El ataque **no puede ser bloqueado ni reflejado**.
+
+--
+
+**Aigis – Orgia Mode (Activa, Nocturna – 2 noches de enfriamiento)**  
+Activas tu **modo de sobrecarga total**.  
+Durante esta noche:  
+- **Interceptas** todas las habilidades de asesinato o disruptivas que se dirijan hacia **cualquier** miembro de SEES.  
+- Cada habilidad redirigida hacia ti **aumenta tu temperatura interna**.  
+- Si interceptas **más de tres habilidades**, **morirás** al final de la noche.  
+**Notas:** Mientras *Orgia Mode* esté activo, **no puedes ser curada ni protegida.**
+
+--
+
+**Ken Amada – Final Justice (Activa, Nocturna – 3 noches de enfriamiento)**  
+Invocas el poder de la **Justicia divina**.  
+Elige un jugador muerto. Si el responsable de la muerte del jugador ha sido el **responsable de tres muertes o más** a lo largo de la partida, se te **revelará el nombre del perpetrador**.
+
+--
+
+**Koromaru – Lunar Scent (Activa, Nocturna – 2 noches de enfriamiento)**  
+Durante esta noche:  
+Puedes **elegir hasta dos jugadores**.  
+Sabrás **a quién visitó** cada uno y **quién los visitó a ellos**.  
+Si alguno de ellos **intenta asesinar o envenenar**, lo **detectarás inmediatamente** y se te notificará antes del amanecer.
+
+--
+
+**Makoto Yuki – Messiah’s Blessing (Activa, Nocturna – 3 noches de enfriamiento)**  
+Invocas el poder de los **vínculos** para restaurar la armonía.  
+Durante esta noche:  
+- Todos los miembros de SEES obtienen **prioridad aumentada** en sus habilidades (**no pueden ser bloqueadas ni redirigidas**).  
+- Si alguna habilidad de SEES habría fallado por **probabilidad** o **efecto aleatorio**, **se considera exitosa**.  
+- Además, **todos los estados alterados** activos en SEES se **eliminan al final de la noche**.
 
 ---
 
-### 🥊 Akihiko Sanada – <em>Sonic Counter</em> (Activa, Nocturna — <strong>2 noches de enfriamiento</strong>)
-- Seleccionas **dos jugadores**.
-  - Si alguno **usa su habilidad**, se **refleja** ✶ en su contra.
-  - Si no usa ninguna, queda **paralizado** ✶.
-- Los reflejados reciben aviso de que *“su acción fue devuelta”*.
-- **No se informa** a Akihiko qué resultado aplicó a cada objetivo.
-- **Restricción:** no puede usarse **dos veces consecutivas** sobre los **mismos jugadores**.
+## 💠 Miembros de SEES
 
----
+## 💠 Mitsuru Kirijo – La Emperatriz del Invierno
+> «No temo a la oscuridad, porque la razón es mi espada y el deber mi escudo.»
 
-### 🌸 Yukari Takeba – <em>Hymn of Salvation</em> (Activa, Nocturna — <strong>4 noches de enfriamiento</strong>)
-- Durante esta noche, **todas las habilidades de asesinato** ✶ quedan **anuladas**.  
-- El resto de habilidades **no letales** se resuelven con normalidad.
-
----
-
-### 🔥 Junpei Iori – <em>Heroic Strike</em> (Activa, Nocturna — <strong>3 noches de enfriamiento</strong>)
-- Eliges un jugador y te lanzas sobre él:
-  - Si es de facción enemiga, **muere** ✶ inmediatamente.
-  - Si pertenece al Pueblo, el golpe **falla** y **quedas herido** ✶.
-- **Notas:** el ataque **no puede** ser **bloqueado ni reflejado**.
-
----
-
-### ⚙️ Aigis – <em>Orgia Mode</em> (Activa, Nocturna — <strong>2 noches de enfriamiento</strong>)
-- Interceptas **todas las habilidades de asesinato o disruptivas** dirigidas a **cualquier miembro de SEES**.
-- Cada habilidad redirigida **aumenta tu temperatura interna**.
-- Si interceptas **más de 3** habilidades, **mueres** ✶ al final de la noche.
-- **Nota:** mientras dure *Orgia Mode*, **no puedes ser curada ni protegida**.
-
----
-
-### ⚖️ Ken Amada – <em>Final Justice</em> (Activa, Nocturna — <strong>3 noches de enfriamiento</strong>)
-- Eliges un **jugador muerto**.
-- Si el responsable de su muerte **acumula 3+ muertes** en la partida, **se te revela** su identidad.
-
----
-
-### 🐾 Koromaru – <em>Lunar Scent</em> (Activa, Nocturna — <strong>2 noches de enfriamiento</strong>)
-- Eliges **hasta dos jugadores**.
-- Sabes **a quién visitó cada uno** y **quién los visitó a ellos**.
-- Si alguno intenta **asesinar o envenenar**, **lo detectas** de inmediato (notificación previa al amanecer).
-
----
-
-### 🌙 Makoto Yuki – <em>Messiah’s Blessing</em> (Activa, Nocturna — <strong>3 noches de enfriamiento</strong>)
-- Todos los **miembros de SEES** obtienen **prioridad aumentada** (sus habilidades **no pueden** ser **bloqueadas ni redirigidas**).
-- Si una habilidad de SEES **fallaría por azar**, **se considera exitosa**.
-- Todos los **estados alterados** activos en SEES se **eliminan al final** de la noche.
-
-</details>
-
----
-
-## 👥 Miembros de SEES (fichas visibles)
-
-### 💠 Mitsuru Kirijo – *La Emperatriz del Invierno*
-> «No temo a la oscuridad, porque la razón es mi espada y el deber mi escudo.»  
-**Alineación:** SEES (Pueblo) • **Arcano:** La Emperatriz (III)  
+**Alineación:** SEES (Pueblo)  
+**Arcano:** La Emperatriz (III)  
 **Condición de victoria:** Vencer a la Hora Oscura y evitar El Despertar.
 
-**Habilidades**
-- **Análisis Táctico** — *Activa, Nocturna*  
-  Elige un jugador.  
-  - Si **pertenece al Pueblo**: *“El alma de este jugador no representa peligro.”*  
-  - Si **no pertenece al Pueblo**: *“Esta alma vibra con algo desconocido.”*  
-  - Si el jugador es **miembro con potencial SEES**, **despierta** su Persona y **se une** al escuadrón.  
-  *(Se resuelve al instante.)*
+### 💠 Habilidades
+**Análisis Táctico — Activa, Nocturna**  
+Elige un jugador. Podrás determinar **si es parte o no del Pueblo** (si no es parte del Pueblo, no se especifica de qué bando es).  
+Si el jugador es un **miembro con potencial** de unirse a SEES, **despierta su Persona** y se une oficialmente al escuadrón.  
+Esta habilidad **se resuelve al instante** (no debe esperarse al final de la noche).
 
 ---
 
-### 🛰️ Fuuka Yamagishi – *La Sacerdotisa del Silencio*
-> «Mientras todos duermen, yo escucho los ecos que deja la noche.»  
-**Alineación:** SEES (Pueblo) • **Arcano:** La Sacerdotisa (II)  
+## 🛰️ Fuuka Yamagishi – La Sacerdotisa del Silencio
+> «Mientras todos duermen, yo escucho los ecos que deja la noche.»
+
+**Alineación:** SEES (Pueblo)  
+**Arcano:** La Sacerdotisa (II)  
 **Condición de victoria:** Vencer a la Hora Oscura y evitar El Despertar.
 
-**Habilidades**
-- **Sensores Oraculares** — *Pasiva*  
-  Cada vez que **una habilidad** se use **contra un miembro de SEES**, recibes una **notificación inmediata** (quién fue el objetivo, **sin** atacante ni tipo).
-- **Registro Táctico** — *Pasiva*  
-  Al final de cada noche, recibes la **lista de todos los jugadores que actuaron** (sin objetivos ni tipo de acción).
+### 💠 Habilidades
+**El Potencial — Pasiva (solo antes del reclutamiento)**  
+Durante la noche, **emites una señal imperceptible** que solo Mitsuru puede detectar.  
+Esta señal confirma que aún posees el potencial para despertar un Persona.  
+No revela tu identidad, solo que **sigues con vida**.
+
+**Sensores Oraculares — Pasiva**  
+Cada vez que una habilidad sea usada en contra de un miembro de SEES, recibirás una **notificación inmediata**.  
+No tendrás información sobre **quién** la usó o **cuál** fue la habilidad. Solo que **fue usada** y **en contra de qué miembro**.
+
+**Registro Táctico — Pasiva**  
+Al final de cada noche, recibes una **lista con los nombres** de todos los jugadores que **han actuado** durante la noche.  
+No se indica **a quién** apuntaron ni **qué tipo** de habilidad usaron.
 
 ---
 
-### 🥊 Akihiko Sanada – *El Puño del Amanecer*
-> «Mientras tenga fuerza para mover mis puños, no dejaré que la noche reclame otra vida.»  
+## 🥊 Akihiko Sanada – El Puño del Amanecer
+> «Mientras tenga fuerza para mover mis puños, no dejaré que la noche reclame otra vida.»
+
 **Alineación:** SEES (Pueblo)  
 **Condición de victoria:** Vencer a la Hora Oscura y evitar El Despertar.
 
-**Habilidades**
-- **Puños de Voltaje** — *Activa, Nocturna*  
-  Elige un jugador. Si **usa su habilidad** esta noche, queda **bloqueado** ✶.  
-  Al finalizar la noche, sabrás si el objetivo **intentó** usar su habilidad.
-- **Instinto de Combate** — *Pasiva*  
-  Si actúan sobre ti durante la noche, **25 %** de probabilidad de **reflejar** ✶ la primera habilidad.  
-  Se te informa si se activa (sin detallar la habilidad reflejada).
+### 💠 Habilidades
+**El Potencial — Pasiva (solo antes del reclutamiento)**  
+Durante la noche, **emites una señal imperceptible** que solo Mitsuru puede detectar.  
+Esta señal confirma que aún posees el potencial para despertar un Persona.  
+No revela tu identidad, solo que **sigues con vida**.
+
+**Puños de Voltaje — Activa, Nocturna**  
+Elige un jugador. Si dicho jugador usa su habilidad esta noche, **será bloqueado ✶**.  
+Al finalizar la noche, recibirás una **notificación** si el objetivo intentó usar su habilidad.
+
+**Instinto de Combate — Pasiva**  
+Si algún jugador actúa sobre ti durante la noche, hay un **25 % de probabilidad** de que **reflejes ✶** la primera habilidad usada en tu contra de forma automática.  
+Serás informado si esta pasiva se activa, pero **no** se te dirá **qué habilidad** fue reflejada.
 
 ---
 
-### 🌸 Yukari Takeba – *El Viento del Alba*
-> «Mientras alguien respire bajo esta luna, seguiré luchando por mantenerlos con vida.»  
-**Alineación:** SEES (Pueblo) • **Arcano:** Los Amantes (VI)  
+## 🌸 Yukari Takeba – El Viento del Alba
+> «Mientras alguien respire bajo esta luna, seguiré luchando por mantenerlos con vida.»
+
+**Alineación:** SEES (Pueblo)  
+**Arcano:** Los Amantes (VI)  
 **Condición de victoria:** Vencer a la Hora Oscura y evitar El Despertar.
 
-**Habilidades**
-- **Viento de Vida** — *Activa, Nocturna*  
-  Elige un jugador. Lo **proteges** ✶: si es objetivo de una **habilidad de asesinato o disruptiva**, **se anula**.  
-  *(Si usas esta habilidad, no puedes usar tu curación al día siguiente.)*
-- **Luz Sanadora** — *Activa, Diurna*  
-  Elige un jugador con **estado alterado** y lo **curas** ✶ inmediatamente.  
-  *(No disponible si usaste Viento de Vida la noche anterior.)*
+### 💠 Habilidades
+**El Potencial — Pasiva (solo antes del reclutamiento)**  
+Durante la noche, **emites una señal imperceptible** que solo Mitsuru puede detectar.  
+Esta señal confirma que aún posees el potencial para despertar un Persona.  
+No revela tu identidad, solo que **sigues con vida**.
+
+**Viento de Vida — Activa, Nocturna**  
+Elige un jugador. Lo **proteges ✶** esa noche.
+
+**Luz Sanadora — Activa, Diurna**  
+Elige un jugador que sufra un estado alterado. **Curas ✶** dicho estado inmediatamente.  
+Si utilizaste *Viento de Vida* la noche anterior, **no podrás usar** esta habilidad.
 
 ---
 
-### 🔥 Junpei Iori – *El Filo del Caos*
-> «No soy un genio ni un héroe... pero si tengo que lanzarme al fuego por mis amigos, que así sea.»  
+## 🔥 Junpei Iori – El Filo del Caos
+> «No soy un genio ni un héroe... pero si tengo que lanzarme al fuego por mis amigos, que así sea.»
+
 **Alineación:** SEES (Pueblo)  
 **Condición de victoria:** Vencer a la Hora Oscura y evitar El Despertar.
 
-**Habilidades**
-- **Ataque Temerario** — *Activa, Nocturna*  
-  Elige un jugador y lanza un **dado de 3 caras** 🎲.  
-  - **1 – Golpe Crítico:** **Bloqueas** ✶ al jugador y descubres si **intentó** usar una habilidad.  
-  - **2 – Golpe Torpe:** **Hiere** ✶ al jugador por error.  
-  - **3 – Falla Garrafal:** quedas **herido** ✶.  
-  *No se informa el número, solo el efecto.*
-- **De las Cenizas** — *Activa, Nocturna (1 uso por partida)*  
-  Puedes **repetir la tirada** de una de tus habilidades. El segundo resultado es **definitivo**.
+### 💠 Habilidades
+**El Potencial — Pasiva (solo antes del reclutamiento)**  
+Durante la noche, **emites una señal imperceptible** que solo Mitsuru puede detectar.  
+Esta señal confirma que aún posees el potencial para despertar un Persona.  
+No revela tu identidad, solo que **sigues con vida**.
+
+**Ataque Temerario — Activa, Nocturna**  
+Eliges un jugador y lanzas un **dado de tres caras 🎲**.  
+**1 – Golpe Crítico:** **Bloqueas ✶** al jugador y descubres si intentó usar una habilidad esa noche.  
+**2 – Golpe Torpe:** Atacas al jugador por error: este **sufre una herida ✶**.  
+**3 – Falla Garrafal:** Tropiezas y te lastimas: **quedas herido ✶**.
+
+**De las Cenizas — Activa, Nocturna**  
+Una vez por partida, puedes **repetir la tirada** de dados de alguna de tus habilidades.  
+El **segundo resultado** será definitivo.
 
 ---
 
-### ⚙️ Aigis – *El Corazón Mecánico*
-> «No entiendo del todo qué significa proteger... pero mi cuerpo sabe hacerlo.»  
+## ⚙️ Aigis – El Corazón Mecánico
+> «No entiendo del todo qué significa proteger... pero mi cuerpo sabe hacerlo.»
+
 **Alineación:** SEES (Pueblo)  
 **Condición de victoria:** Vencer a la Hora Oscura y evitar El Despertar.
 
-**Habilidades**
-- **Modo Guardia** — *Activa, Nocturna*  
-  Elige un jugador. **Rediriges hacia ti** todas las habilidades **de asesinato o disruptivas** que le apunten.  
-  *No puede usarse dos noches seguidas.*
-- **Protocolo Defensivo** — *Pasiva*  
-  Posees un **escudo** que te protege **la primera vez que mueras**.  
-  Si mueres de noche, quien te atacó queda **herido** ✶ al amanecer.
+### 💠 Habilidades
+**El Potencial — Pasiva (solo antes del reclutamiento)**  
+Durante la noche, **emites una señal imperceptible** que solo Mitsuru puede detectar.  
+Esta señal confirma que aún posees el potencial para despertar un Persona.  
+No revela tu identidad, solo que **sigues con vida**.
+
+**Modo Guardia — Activa, Nocturna**  
+Elige un jugador. Durante esta noche, **todas las habilidades** (de asesinato o disruptivas) **dirigidas a ese jugador se redirigen hacia ti.**  
+No puede ser usado **dos noches seguidas**.
+
+**Protocolo Defensivo — Pasiva**  
+Posees un **escudo** que te protege de la **primera vez que mueras**.  
+Si mueres durante la noche por cualquier causa, el jugador que te haya atacado **quedará herido ✶** al amanecer.
 
 ---
 
-### ⚖️ Ken Amada – *El Portador de la Justicia*
-> «La justicia no es bondad... es la promesa de que el mal no quedará impune.»  
+## ⚖️ Ken Amada – El Portador de la Justicia
+> «La justicia no es bondad... es la promesa de que el mal no quedará impune.»
+
 **Alineación:** SEES (Pueblo)  
 **Condición de victoria:** Vencer a la Hora Oscura y evitar El Despertar.
 
-**Habilidades**
-- **Lanza del Castigo** — *Activa, Nocturna*  
-  Elige un jugador. Ese jugador **muere** ✶; si resulta ser **Pueblo**, **mueres con él**.  
-  *No puede usarse dos noches seguidas.*
-- **Justicia Retrógrada** — *Pasiva*  
-  Cada vez que **muere un SEES** (reclutado o no), obtienes una **carga de Ira**.  
-  Con **3 cargas**, puedes usar **Lanza del Castigo sin restricciones**.
+### 💠 Habilidades
+**El Potencial — Pasiva (solo antes del reclutamiento)**  
+Durante la noche, **emites una señal imperceptible** que solo Mitsuru puede detectar.  
+Esta señal confirma que aún posees el potencial para despertar un Persona.  
+No revela tu identidad, solo que **sigues con vida**.
+
+**Lanza del Castigo — Activa, Nocturna**  
+Elige un jugador. Ese jugador **será asesinado ✶**, no obstante, si dicho jugador **resulta ser Pueblo**, **tú mueres con él**.  
+Esta habilidad **no puede ser usada dos noches seguidas**.
+
+**Justicia Retrógrada — Pasiva**  
+Cada vez que un miembro de SEES muere (haya sido reclutado o no), obtienes una **carga de Ira**.  
+Si logras acumular **tres cargas de Ira**, puedes usar *Lanza del Castigo* **sin restricciones**.
 
 ---
 
-### 🐾 Koromaru – *El Guardián Silencioso*
-> «Las sombras pueden engañar a los hombres... pero no al instinto.»  
+## 🐾 Koromaru – El Guardián Silencioso
+> «Las sombras pueden engañar a los hombres... pero no al instinto.»
+
 **Alineación:** SEES (Pueblo)  
 **Condición de victoria:** Vencer a la Hora Oscura y evitar El Despertar.
 
-**Habilidades**
-- **Olfato Espiritual** — *Activa, Nocturna*  
-  Elige un jugador; sabrás **a quién visitó**. Si no actuó, sabrás **quién lo visitó a él**.
-- **Instinto de Alerta** — *Pasiva*  
-  Cada noche, la **primera habilidad** usada en ti tiene **50 %** de fallar.  
-  Si falla, se te avisa **qué tipo de habilidad** era (Asesinato, Disruptiva, Investigativa o Soporte).
+### 💠 Habilidades
+**El Potencial — Pasiva (solo antes del reclutamiento)**  
+Durante la noche, **emites una señal imperceptible** que solo Mitsuru puede detectar.  
+Esta señal confirma que aún posees el potencial para despertar un Persona.  
+No revela tu identidad, solo que **sigues con vida**.
+
+**Olfato Espiritual — Activa, Nocturna**  
+**Rastreas** a un jugador. Si el jugador **no actúa** esa noche, **lo vigilas** (sabrás si alguien lo visitó).
+
+**Instinto de Alerta — Pasiva**  
+Cada noche, la **primera habilidad** que usen en ti tiene un **50% de probabilidad de fallar**.  
+Si falla, se te avisará **qué tipo de habilidad** intentaron usar en ti (**Asesinato, Disruptiva, Investigativa o Soporte**).
 
 ---
 
-### 🌙 Makoto Yuki – *El Portador del Alma*
-> «No temo al final. Solo temo olvidar por qué seguimos luchando.»  
-**Alineación:** SEES (Pueblo) • **Arcano:** La Muerte (XIII)  
+## 🌙 Makoto Yuki – El Portador del Alma
+> «No temo al final. Solo temo olvidar por qué seguimos luchando.»
+
+**Alineación:** SEES (Pueblo)  
+**Arcano:** La Muerte (XIII)  
 **Condición de victoria:** Vencer a la Hora Oscura y evitar El Despertar.
 
-**Habilidades**
-- **Wild Resonance** — *Activa, Nocturna*  
-  Elige un miembro de SEES. **Copias su habilidad activa** y la usas como propia.  
-  Si ambos apuntan al mismo objetivo, el efecto **no se duplica**, pero gana **prioridad aumentada** (no bloqueable).  
-  *No puedes copiar la misma habilidad en noches consecutivas.*
-- **Luz de los Vínculos** — *Pasiva*  
-  Cada noche que un SEES use con éxito su habilidad, acumulas una **carga de Afinidad**.  
-  Con **3 cargas**, puedes **potenciar** tu próxima habilidad (doble/extendida, según el tipo).
+### 💠 Habilidades
+**El Potencial — Pasiva (solo antes del reclutamiento)**  
+Durante la noche, **emites una señal imperceptible** que solo Mitsuru puede detectar.  
+Esta señal confirma que aún posees el potencial para despertar un Persona.  
+No revela tu identidad, solo que **sigues con vida**.
+
+**Social Links — Activa, Nocturna (solo antes del reclutamiento)**  
+Durante la noche, puedes **abrir un canal privado de conversación** con un jugador de tu elección.  
+Puedes hablar libremente con él hasta el amanecer.  
+No genera efectos directos, pero puede ayudarte a **ser encontrado más rápido por Mitsuru**.
+
+**Wild Resonance — Activa, Nocturna**  
+Elige un **miembro de SEES**. Durante esta noche, **copias la habilidad activa** de ese jugador y la usas como si fuese tuya.  
+Si ambos usan habilidades sobre el **mismo objetivo**, el efecto **no se duplica**, pero tiene **prioridad aumentada ✶** (no puede ser bloqueado).  
+No puedes **copiar la misma habilidad dos noches seguidas**.
+
+**Luz de los Vínculos — Pasiva**  
+Cada noche que un miembro de SEES usa su habilidad con éxito, acumulas una **carga de Afinidad**.  
+Al alcanzar **tres cargas**, puedes **gastarlas** para **potenciar la próxima habilidad** que uses.
+

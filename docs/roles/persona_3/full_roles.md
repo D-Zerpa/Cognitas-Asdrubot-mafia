@@ -86,9 +86,9 @@ y el amor, incluso cuando duele, es lo único que aún me deja respirar.»
 
 **Rosa de la Resurrección** — Activa, Nocturna: Elige un jugador muerto. Lo revives sin habilidades (ni activas, ni pasivas), y heredas una de sus habilidades activas. Al final de la próxima noche, mueres automáticamente. El jugador revivido mantiene su alineamiento.  
 
-## 👥 Miembros de SEES (fichas visibles)
+# 👥 Miembros de SEES (fichas visibles)
 
-### 💠 Mitsuru Kirijo – *La Emperatriz del Invierno*
+## 💠 Mitsuru Kirijo – *La Emperatriz del Invierno*
 > «No temo a la oscuridad, porque la razón es mi espada y el deber mi escudo.»  
 **Alineación:** SEES (Pueblo) • **Arcano:** La Emperatriz (III)  
 **Condición de victoria:** Vencer a la Hora Oscura y evitar El Despertar.
@@ -103,7 +103,7 @@ y el amor, incluso cuando duele, es lo único que aún me deja respirar.»
 
 ---
 
-### 🛰️ Fuuka Yamagishi – *La Sacerdotisa del Silencio*
+## 🛰️ Fuuka Yamagishi – *La Sacerdotisa del Silencio*
 > «Mientras todos duermen, yo escucho los ecos que deja la noche.»  
 **Alineación:** SEES (Pueblo) • **Arcano:** La Sacerdotisa (II)  
 **Condición de victoria:** Vencer a la Hora Oscura y evitar El Despertar.
@@ -116,7 +116,7 @@ y el amor, incluso cuando duele, es lo único que aún me deja respirar.»
 
 ---
 
-### 🥊 Akihiko Sanada – *El Puño del Amanecer*
+## 🥊 Akihiko Sanada – *El Puño del Amanecer*
 > «Mientras tenga fuerza para mover mis puños, no dejaré que la noche reclame otra vida.»  
 **Alineación:** SEES (Pueblo)  
 **Condición de victoria:** Vencer a la Hora Oscura y evitar El Despertar.
@@ -131,7 +131,7 @@ y el amor, incluso cuando duele, es lo único que aún me deja respirar.»
 
 ---
 
-### 🌸 Yukari Takeba – *El Viento del Alba*
+## 🌸 Yukari Takeba – *El Viento del Alba*
 > «Mientras alguien respire bajo esta luna, seguiré luchando por mantenerlos con vida.»  
 **Alineación:** SEES (Pueblo) • **Arcano:** Los Amantes (VI)  
 **Condición de victoria:** Vencer a la Hora Oscura y evitar El Despertar.
@@ -146,7 +146,7 @@ y el amor, incluso cuando duele, es lo único que aún me deja respirar.»
 
 ---
 
-### 🔥 Junpei Iori – *El Filo del Caos*
+## 🔥 Junpei Iori – *El Filo del Caos*
 > «No soy un genio ni un héroe... pero si tengo que lanzarme al fuego por mis amigos, que así sea.»  
 **Alineación:** SEES (Pueblo)  
 **Condición de victoria:** Vencer a la Hora Oscura y evitar El Despertar.
@@ -163,7 +163,7 @@ y el amor, incluso cuando duele, es lo único que aún me deja respirar.»
 
 ---
 
-### ⚙️ Aigis – *El Corazón Mecánico*
+## ⚙️ Aigis – *El Corazón Mecánico*
 > «No entiendo del todo qué significa proteger... pero mi cuerpo sabe hacerlo.»  
 **Alineación:** SEES (Pueblo)  
 **Condición de victoria:** Vencer a la Hora Oscura y evitar El Despertar.
@@ -178,7 +178,7 @@ y el amor, incluso cuando duele, es lo único que aún me deja respirar.»
 
 ---
 
-### ⚖️ Ken Amada – *El Portador de la Justicia*
+## ⚖️ Ken Amada – *El Portador de la Justicia*
 > «La justicia no es bondad... es la promesa de que el mal no quedará impune.»  
 **Alineación:** SEES (Pueblo)  
 **Condición de victoria:** Vencer a la Hora Oscura y evitar El Despertar.
@@ -193,7 +193,7 @@ y el amor, incluso cuando duele, es lo único que aún me deja respirar.»
 
 ---
 
-### 🐾 Koromaru – *El Guardián Silencioso*
+## 🐾 Koromaru – *El Guardián Silencioso*
 > «Las sombras pueden engañar a los hombres... pero no al instinto.»  
 **Alineación:** SEES (Pueblo)  
 **Condición de victoria:** Vencer a la Hora Oscura y evitar El Despertar.
@@ -207,7 +207,7 @@ y el amor, incluso cuando duele, es lo único que aún me deja respirar.»
 
 ---
 
-### 🌙 Makoto Yuki – *El Portador del Alma*
+## 🌙 Makoto Yuki – *El Portador del Alma*
 > «No temo al final. Solo temo olvidar por qué seguimos luchando.»  
 **Alineación:** SEES (Pueblo) • **Arcano:** La Muerte (XIII)  
 **Condición de victoria:** Vencer a la Hora Oscura y evitar El Despertar.
@@ -221,13 +221,15 @@ y el amor, incluso cuando duele, es lo único que aún me deja respirar.»
   Cada noche que un SEES use con éxito su habilidad, acumulas una **carga de Afinidad**.  
   Con **3 cargas**, puedes **potenciar** tu próxima habilidad (doble/extendida, según el tipo).
 
-🃏 **Kenji Tomochika – El Impulsivo**
+# Pueblo (Arcanos)
+
+## 🃏Kenji Tomochika – El Impulsivo
 «No tengo un plan... ¡pero seguro que algo saldrá bien!»  
 **Alineación:** Pueblo  
 **Arcano:** El Mago (I)  
 **Condición de victoria:** Que todas las amenazas externas sean eliminadas.
 
-### 💠 Habilidades
+**Habilidades**
 
 **Charla Improvisada** — *Activa, Diurna*  
 Una vez por día, puedes elegir un jugador e **iniciar una charla** con él.  
@@ -246,6 +248,8 @@ Si obtienes **6**, el linchamiento o asesinato **falla automáticamente**, y sob
 > “Kenji tropezó y esquivó el golpe por accidente.”  
 
 ---
+
+## Arcanos e Indepes
 
 🏛️ **Hidetoshi Odagiri – El Legislador del Orden**  
 «Las reglas no existen para limitarnos... existen para recordarnos quiénes somos.»  
@@ -394,3 +398,4 @@ Cuando alcanza **3 puntos de Redención**, puede usar esta habilidad **dos veces
 **🕯️ Destino Sellado** — *Pasiva*  
 Vives un máximo de **cinco noches completas.**  
 Mueres automáticamente al amanecer de la **noche 6**, sin importar tu estado o heridas.  
+
