@@ -6,6 +6,7 @@ import discord
 from typing import Optional
 
 from ..config import REMINDER_CHECKPOINTS
+from ..status import engine as SE
 from .state import game
 from .storage import save_state
 from .logs import log_event
@@ -91,7 +92,7 @@ async def start_day(
     duration_str: str = "24h",
     target_channel: Optional[discord.TextChannel] = None,
     force: bool = False,
-):
+    ):
     """
     Start the Day phase:
     - Resolve Day channel (explicit > configured default) and validate it
@@ -194,7 +195,30 @@ async def start_day(
     except Exception:
         pass
 
-
+        # --- Status engine: 1 tick at Day start (announce day banners publicly) ---
+    try:
+        banners = SE.tick(game, "day")
+        for uid, text in banners:
+            if not text:
+                continue
+            member = None
+            try:
+                member = guild.get_member(int(uid)) or await guild.fetch_member(int(uid))
+            except Exception:
+                member = None
+            # Day: announce in Day channel by default (your spec says day messages are public)
+            try:
+                await ch.send(text if isinstance(text, str) else str(text))
+            except Exception:
+                # fallback to DM if channel send fails
+                if member:
+                    try:
+                        await member.send(text if isinstance(text, str) else str(text))
+                    except Exception:
+                        pass
+        await save_state()
+    except Exception:
+        pass
 
     # Announce
     abs_ts = f"<t:{game.day_deadline_epoch}:F>"
@@ -229,7 +253,7 @@ async def end_day(
     *,
     closed_by_threshold: bool = False,
     lynch_target_id: Optional[int] = None,
-):
+    ):
     """
     Close the Day phase:
     - Close channel for @everyone messages
@@ -335,7 +359,7 @@ async def start_night(
     duration_str: str = "12h",
     target_channel: Optional[discord.TextChannel] = None,
     force: bool = False,
-):
+    ):
     """
     Start the Night phase:
     - Resolve Night channel (explicit > configured default) and validate it
@@ -385,6 +409,28 @@ async def start_night(
         game.expansion.on_phase_change(game, "night")
     except Exception:
         pass
+
+
+        # --- Status engine: 1 tick at Night start (night messages via DM) ---
+    try:
+        banners = SE.tick(game, "night")
+        for uid, text in banners:
+            if not text:
+                continue
+            try:
+                member = guild.get_member(int(uid)) or await guild.fetch_member(int(uid))
+            except Exception:
+                member = None
+            if member:
+                try:
+                    # Night: DM only (your spec)
+                    await member.send(text if isinstance(text, str) else str(text))
+                except Exception:
+                    pass
+        await save_state()
+    except Exception:
+        pass
+
 
     # Compute and store deadline
     now = int(time.time())

@@ -91,6 +91,11 @@ def _ensure_defaults():
         if not hasattr(game, "expansion") or game.expansion is None:
             from .game import _load_expansion_for
             game.expansion = _load_expansion_for(getattr(game, "profile", "default"))
+
+        # Status system containers
+        if not hasattr(game, "status_map"): game.status_map = {}
+        if not hasattr(game, "status_log"): game.status_log = []
+
     except Exception:
         # Avoid breaking load paths if expansion resolution fails
         pass
@@ -158,6 +163,10 @@ def load_state(path: str | Path | None = None) -> Dict[str, Any]:
     game.night_actions = data.get("night_actions", {})
     game.day_actions = data.get("day_actions", {})
 
+    # Status engine persistence
+    game.status_map = data.get("status_map", {})
+    game.status_log = data.get("status_log", [])
+
     # Re-index roles (compatible with SMT origin files)
     _rehydrate_roles_index()
 
@@ -192,6 +201,8 @@ async def save_state(path: str | Path | None = None):
         "night_actions": getattr(game, "night_actions", {}),
         "day_actions": getattr(game, "day_actions", {}),
         "lunar_index": getattr(game, "lunar_index", 0),
+        "status_map": getattr(game, "status_map", {}),
+        "status_log": getattr(game, "status_log", []),
     }
 
     # Do the write off-thread to keep the loop snappy

@@ -1,0 +1,310 @@
+{
+  "meta": {
+    "name": "Persona 3 Mafia – Roles Base",
+    "version": "1.1",
+    "notes": "Nombres simplificados (mayúscula inicial). Flags: arcana(bool), sees(bool), oracle(bool en Fuuka), status(str)."
+  },
+  "roles": [
+    {
+      "name": "Nyx",
+      "alignment": "Mafia",
+      "notes": "NYX – El Fin Inevitable | Antagonista principal; poder escala con Arcanos muertos. Investigación devuelve Ryoji.",
+      "flags": {
+        "arcana": false,
+        "sees": false,
+        "night_act": true,
+        "day_act": false
+      },
+      "status": "",
+      "effects": []
+    },
+    {
+      "name": "Takaya",
+      "alignment": "Independent",
+      "notes": "Takaya – El Profeta del Crepúsculo | Strega; killer con 3 balas + robo de habilidad al quedarse sin balas.",
+      "flags": {
+        "arcana": true,
+        "sees": false,
+        "night_act": true,
+        "day_act": false
+      },
+      "status": "",
+      "effects": []
+    },
+    {
+      "name": "Jin",
+      "alignment": "Independent",
+      "notes": "Jin Shirato – El Analista del Abismo | Strega; análisis de tipo de habilidad y control disruptivo al encontrar a Nyx.",
+      "flags": {
+        "arcana": true,
+        "sees": false,
+        "night_act": true,
+        "day_act": false
+      },
+      "status": "",
+      "effects": []
+    },
+    {
+      "name": "Chidori",
+      "alignment": "Independent",
+      "notes": "Chidori Yoshino – La Voz del Colgado | Strega; medium con resurrección incompleta y herencia de habilidad.",
+      "flags": {
+        "arcana": true,
+        "sees": false,
+        "night_act": true,
+        "day_act": false
+      },
+      "status": "",
+      "effects": []
+    },
+    {
+      "name": "Mitsuru",
+      "alignment": "Town",
+      "notes": "Mitsuru Kirijo – La Emperatriz del Invierno | SEES; líder reclutadora (despierta Personas) y habilita Theurgies.",
+      "flags": {
+        "arcana": true,
+        "sees": true,
+        "night_act": true,
+        "day_act": false
+      },
+      "status": "",
+      "effects": []
+    },
+    {
+      "name": "Fuuka",
+      "alignment": "Town",
+      "notes": "Fuuka Yamagishi – La Sacerdotisa del Silencio | SEES; oráculo (radar) pasivo y registro táctico nocturno.",
+      "flags": {
+        "arcana": true,
+        "sees": true,
+        "oracle": false,
+        "night_act": true,
+        "day_act": false
+      },
+      "status": "",
+      "effects": []
+    },
+    {
+      "name": "Akihiko",
+      "alignment": "Town",
+      "notes": "Akihiko Sanada – El Puño del Amanecer | SEES; bloqueo reactivo y reflejo 25%.",
+      "flags": {
+        "arcana": false,
+        "sees": true,
+        "night_act": true,
+        "day_act": false
+      },
+      "status": "",
+      "effects": []
+    },
+    {
+      "name": "Yukari",
+      "alignment": "Town",
+      "notes": "Yukari Takeba – El Viento del Alba | SEES; protección nocturna, curación diurna, theurgy anti-kill global.",
+      "flags": {
+        "arcana": true,
+        "sees": true,
+        "night_act": true,
+        "day_act": true
+      },
+      "status": "",
+      "effects": []
+    },
+    {
+      "name": "Junpei",
+      "alignment": "Town",
+      "notes": "Junpei Iori – El Filo del Caos | SEES; RNG 1-3 con bloque/herida/autolesión y reroll 1/partida.",
+      "flags": {
+        "arcana": false,
+        "sees": true,
+        "night_act": true,
+        "day_act": false
+      },
+      "status": "",
+      "effects": []
+    },
+    {
+      "name": "Aigis",
+      "alignment": "Town",
+      "notes": "Aigis – El Corazón Mecánico | SEES; pararrayos, escudo al morir, Orgia Mode.",
+      "flags": {
+        "arcana": false,
+        "sees": true,
+        "night_act": true,
+        "day_act": false
+      },
+      "status": "",
+      "effects": []
+    },
+    {
+      "name": "Ken",
+      "alignment": "Town",
+      "notes": "Ken Amada – El Portador de la Justicia | SEES; lanza letal con costo si es Town; acumula Ira por caídos SEES.",
+      "flags": {
+        "arcana": false,
+        "sees": true,
+        "night_act": true,
+        "day_act": false
+      },
+      "status": "",
+      "effects": []
+    },
+    {
+      "name": "Koromaru",
+      "alignment": "Town",
+      "notes": "Koromaru – El Guardián Silencioso | SEES; tracker/visitor + evasión 50%.",
+      "flags": {
+        "arcana": true,
+        "sees": true,
+        "night_act": true,
+        "day_act": false
+      },
+      "status": "",
+      "effects": []
+    },
+    {
+      "name": "Makoto",
+      "alignment": "Town",
+      "notes": "Makoto Yuki – El Portador del Alma | SEES; Wild Resonance (copia) + Afinidad + Theurgy de prioridad; Social Links nocturno; arcano clave.",
+      "flags": {
+        "arcana": true,
+        "sees": true,
+        "night_act": true,
+        "day_act": false
+      },
+      "status": "",
+      "effects": []
+    },
+    {
+      "name": "Kenji",
+      "alignment": "Town",
+      "notes": "Kenji Tomochika – El Impulsivo | Arcano civil; charla privada diurna + revelación mutua si coinciden votos; suerte del 6.",
+      "flags": {
+        "arcana": true,
+        "sees": false,
+        "night_act": false,
+        "day_act": true
+      },
+      "status": "",
+      "effects": []
+    },
+    {
+      "name": "Hidetoshi",
+      "alignment": "Town",
+      "notes": "Hidetoshi Odagiri – El Legislador del Orden | Arcano civil; sanción de voto y registros de conducta (silencio/auto-fallo).",
+      "flags": {
+        "arcana": true,
+        "sees": false,
+        "night_act": false,
+        "day_act": true
+      },
+      "status": "",
+      "effects": []
+    },
+    {
+      "name": "Rio",
+      "alignment": "Town",
+      "notes": "Rio Iwasaki – La Determinación en Marcha | Arcano civil; buff de enfoque/voto doble; momentum acumulable.",
+      "flags": {
+        "arcana": true,
+        "sees": false,
+        "night_act": false,
+        "day_act": true
+      },
+      "status": "",
+      "effects": []
+    },
+    {
+      "name": "Yuko",
+      "alignment": "Town",
+      "notes": "Yuko Nishiwaki – La Fortaleza del Corazón | Arcano civil; protección diurna contra estados + moral y cargas extra.",
+      "flags": {
+        "arcana": true,
+        "sees": false,
+        "night_act": false,
+        "day_act": true
+      },
+      "status": "",
+      "effects": []
+    },
+    {
+      "name": "Chihiro",
+      "alignment": "Town",
+      "notes": "Chihiro Fushimi – El Espejo de la Verdad | Arcano civil; juicio moral diurno con resoluciones de confusión; pasiva de equilibrio.",
+      "flags": {
+        "arcana": true,
+        "sees": false,
+        "night_act": false,
+        "day_act": true
+      },
+      "status": "",
+      "effects": []
+    },
+    {
+      "name": "Shinjiro_B",
+      "alignment": "Independent",
+      "notes": "Shinjiro Aragaki – El Berserker del Crepúsculo | Hierofante; RNG nocturno (kill/herida/nada). Condición con Ken o bajas totales.",
+      "flags": {
+        "arcana": true,
+        "sees": false,
+        "night_act": true,
+        "day_act": false
+      },
+      "status": "",
+      "effects": []
+    },
+    {
+      "name": "Shinjiro_S",
+      "alignment": "Independent",
+      "notes": "Shinjiro Aragaki – El Escudo del Atardecer | Hierofante; intercepta asesinatos y acumula Redención. Condición con Ken o asesinatos totales.",
+      "flags": {
+        "arcana": true,
+        "sees": false,
+        "night_act": true,
+        "day_act": false
+      },
+      "status": "",
+      "effects": []
+    },
+    {
+      "name": "Elizabeth",
+      "alignment": "Independent",
+      "notes": "Elizabeth – La Observadora del Velo | Neutral; investiga tipo+alineamiento y altera la habilidad objetivo; victoria por set de conocimientos.",
+      "flags": {
+        "arcana": false,
+        "sees": false,
+        "night_act": true,
+        "day_act": false
+      },
+      "status": "",
+      "effects": []
+    },
+    {
+      "name": "Reaper",
+      "alignment": "Independent",
+      "notes": "The Reaper – El Eco de la Muerte | Anti-Pueblo; despierta N4; asesinato inevitable hasta lograr 3 muertes para victoria instantánea.",
+      "flags": {
+        "arcana": false,
+        "sees": false,
+        "night_act": true,
+        "day_act": false
+      },
+      "status": "",
+      "effects": []
+    },
+    {
+      "name": "Kotone",
+      "alignment": "Independent",
+      "notes": "Kotone Shiomi – La Visitante del Amanecer | Neutral; chats nocturnos (vínculos), copia de habilidad; hidden vote; victoria al hallar a Makoto y su nombre.",
+      "flags": {
+        "arcana": false,
+        "sees": false,
+        "night_act": true,
+        "day_act": true,
+        "hidden_vote": true
+      },
+      "status": "",
+      "effects": []
+    }
+  ]
+}

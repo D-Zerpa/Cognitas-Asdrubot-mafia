@@ -9,8 +9,9 @@ from discord.ext import commands
 
 from ..core.state import game
 from ..core.storage import save_state
-from ..core.logs import log_event  # keep if you have it; otherwise you can remove this import
-from ..core import actions as act_core  # NEW: phase-aware actions core
+from ..core.logs import log_event  
+from ..core import actions as act_core 
+from ..status import engine as SE
 
 
 
@@ -99,6 +100,11 @@ class ActionsCog(commands.Cog):
         if not actor or not actor.get("alive", True):
             return await ctx.reply("You are not registered or you are not alive.", ephemeral=not public)
 
+        # Require users to run /act from their own role channel, if set
+        role_ch_id = (actor.get("role_channel_id") if isinstance(actor, dict) else None)
+        if role_ch_id and interaction.channel and interaction.channel.id != role_ch_id:
+            return await ctx.reply("Use your role’s private channel to /act.", ephemeral=not public)
+
         # Permission to act in this phase comes from flags: day_act / night_act
         flags = actor.get("flags", {}) or {}
         needed_flag = "day_act" if phase == "day" else "night_act"
@@ -113,6 +119,26 @@ class ActionsCog(commands.Cog):
                 return await ctx.reply("Target is not registered.", ephemeral=not public)
             if not t.get("alive", True):
                 return await ctx.reply("Target is not alive.", ephemeral=not public)
+
+
+        # Decide action kind for this phase (day/night)
+        action_kind = "day_action" if phase == "day" else "night_action"
+
+        # Status engine gate (blocks like Paralyzed/Drowsiness/Jailed; Confusion may redirect)
+        check = SE.check_action(game, actor_uid, action_kind, target_uid)
+        if not check.get("allowed", True):
+            # You can customize this message further if you want per-status flavor.
+            # check["reason"] can be "blocked_by:<StatusName>"
+            return await ctx.reply("You're affected and can't use your abilities right now.", ephemeral=not public)
+
+        # Confusion: action may be redirected to a random alive player
+        if check.get("redirect_to"):
+            target_uid = check["redirect_to"]
+            # Optional flavor (the coin toss message). Comment out if you prefer silent redirect.
+            try:
+                await ctx.reply(f"🌀 You're Confused... your action was redirected.", ephemeral=True)
+            except Exception:
+                pass
 
         # Determine logical number for the phase (Day N / Night N)
         phase_norm = "day" if phase == "day" else "night"

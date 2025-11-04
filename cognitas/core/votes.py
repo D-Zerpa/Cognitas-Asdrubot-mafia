@@ -13,6 +13,7 @@ from .storage import save_state  # async
 from .logs import log_event
 from . import phases
 from . import lunar
+from ..status import engine as SE
 
 
 # ---------- Helpers (names, hidden voters, etc.) ----------
@@ -61,25 +62,24 @@ def _alive_display_names(uids: list[str], *, max_names: int = 24) -> str:
 
 # ---------- Voting logic (simple majority + boosts & target extras) ----------
 
-def _voter_vote_value(voter_id: str) -> int:
+def _voter_vote_value(voter_id: str) -> float:
     """
-    Value contributed by a voter's ballot:
-      - default: 1
-      - + voting_boost (if present, non-negative int)
-      - 0 if the voter is dead or has 'no_vote'/'silenced' flags
+    Status-aware vote value:
+      - 0 if dead or any status blocks voting (e.g., Wounded)
+      - base 1.0 modified by active statuses (e.g., Double vote +1.0, Sanctioned -0.5 per stack)
     """
     pdata = _player_record(voter_id)
     if not pdata.get("alive", True):
-        return 0
-    flags = pdata.get("flags", {}) or {}
-    if flags.get("no_vote") or flags.get("silenced"):
-        return 0
-    boost = 0
-    try:
-        boost = int(flags.get("voting_boost", 0))
-    except Exception:
-        boost = 0
-    return max(0, 1 + max(0, boost))
+        return 0.0
+
+    # If any status blocks vote, or computed weight == 0, ballot is invalid
+    chk = SE.check_action(game, voter_id, "vote")
+    if not chk.get("allowed", True):
+        return 0.0
+
+    weight = SE.compute_vote_weight(game, voter_id, base=1.0)
+    return max(0.0, float(weight))
+
 
 def _target_extra_needed(target_id: str) -> int:
     """
@@ -116,19 +116,21 @@ def _group_votes_by_target() -> dict[str, list[str]]:
         by_target.setdefault(target, []).append(voter)
     return by_target
 
-def _tally_votes_simple_plus_boosts() -> dict[str, int]:
+def _tally_votes_simple_plus_boosts() -> dict[str, float]:
     """
-    Totals by target summing each voter's value:
-    - Each voter contributes 1 + voting_boost (if they have one).
-    - Voters with value 0 (dead/silenced/no_vote) are ignored.
+    Totals by target, summing each voter's status-aware value (can be fractional).
     """
-    totals: dict[str, int] = {}
+    totals: dict[str, float] = {}
     for voter_id, target_id in (getattr(game, "votes", {}) or {}).items():
         val = _voter_vote_value(voter_id)
-        if val <= 0:
+        if val <= 0.0:
             continue
-        totals[target_id] = totals.get(target_id, 0) + val
+        totals[target_id] = totals.get(target_id, 0.0) + val
     return totals
+
+def _fmt_num(x: float) -> str:
+    s = f"{x:.1f}"
+    return s[:-2] if s.endswith(".0") else s
 
 def _progress_bar(current: int, needed: int, width: int = 10) -> str:
     if needed <= 0:
@@ -150,6 +152,15 @@ async def vote(ctx: commands.Context | any, member: discord.Member):
         return await ctx.reply("Target must be a registered and alive player.", ephemeral=True)
     if getattr(game, "phase", "day") != "day":
         return await ctx.reply("Voting is only available during the **Day**.", ephemeral=True)
+
+        # Status check: can this user vote right now?
+    chk = SE.check_action(game, voter_id, "vote")
+    if not chk.get("allowed", True):
+        return await ctx.reply("You can't vote right now.", ephemeral=True)
+
+    # Weight must be > 0 (e.g., Sanctioned x2 -> 0)
+    if _voter_vote_value(voter_id) <= 0.0:
+        return await ctx.reply("You can't vote right now.", ephemeral=True)
 
     # Register vote
     if not isinstance(getattr(game, "votes", None), dict):
@@ -272,7 +283,7 @@ async def votes_breakdown(ctx: commands.Context | any):
             bar = _progress_bar(cur, need)
             voters_fmt = _format_voter_list(voters)
             embed.add_field(
-                name=f"{tname} — **{cur} / {need}** {bar}",
+                name=f"{tname} — **{_fmt_num(cur)} / {need}** {bar}",
                 value=voters_fmt,
                 inline=False
             )

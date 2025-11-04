@@ -16,6 +16,11 @@ def _norm(name: str) -> str:
     return NAME_RX.sub(" ", (name or "").strip())
 
 
+def _slug(name: str) -> str:
+    s = _norm(name).lower()
+    return re.sub(r"[^a-z0-9\-]+", "-", s.replace(" ", "-")).strip("-") or "player"
+
+
 def _ensure_player(uid: str, display_name: str | None = None):
     game.players.setdefault(uid, {
         "uid": uid,
@@ -75,10 +80,13 @@ def get_player_snapshot(user_id: str) -> dict:
     role = p.get("role")
     voting_boost = p.get("voting_boost")
     vote_weight_field = p.get("vote_weight")
-    hidden_vote = bool(p.get("hidden_vote", False))
+    hidden_vote = bool(flags.get("hidden_vote", False))
     aliases = list(p.get("aliases", []))
     effects = list(p.get("effects", []))
     flags = dict(p.get("flags", {}))
+
+    #Role private channel id
+    role_channel_id = p.get("role_channel_id")
 
     # Computed vote weight (if GameState exposes a helper)
     vote_weight_computed = None
@@ -99,6 +107,7 @@ def get_player_snapshot(user_id: str) -> dict:
         "effects": effects,
         "flags": flags,
         "vote_weight_computed": vote_weight_computed,
+        "role_channel_id": role_channel_id,
     }
 
 
@@ -126,16 +135,80 @@ async def list_players(ctx):
 async def register(ctx, member: discord.Member | None = None, *, name: str | None = None):
     if not _is_admin(ctx):
         return await ctx.reply("Admins only.", ephemeral=True)
+    guild = getattr(ctx, "guild", None)
+    if not guild:
+        return await ctx.reply("Guild context required.", ephemeral=True)
+
     target = member or getattr(ctx, "author", None) or getattr(ctx, "user", None)
     if not target:
         return await ctx.reply("No target user provided.", ephemeral=True)
+
     uid = str(target.id)
     display = (name or getattr(target, "display_name", None) or f"User-{uid}").strip()
+
     _ensure_player(uid, display)
     game.players[uid]["name"] = display
     game.players[uid]["alive"] = True
+
+    # --- Create or reuse player's private role channel ---
+    # If already has one and channel exists, keep it. Else create.
+    existing_ch_id = game.players[uid].get("role_channel_id")
+    existing_ch = guild.get_channel(existing_ch_id) if existing_ch_id else None
+
+    if existing_ch is None:
+        # Build overwrites: @everyone = no view, player+bot = view/send
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(view_channel=False),
+            target: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True),
+            guild.me: discord.PermissionOverwrite(view_channel=True, send_messages=True, manage_messages=True),
+        }
+
+        # Optional: place under the same category as the Day channel if you want grouping
+        parent = None
+        try:
+            day_id = getattr(game, "day_channel_id", None)
+            if day_id:
+                day_ch = guild.get_channel(day_id)
+                parent = getattr(day_ch, "category", None)
+        except Exception:
+            parent = None
+
+        ch_name = f"role-{_slug(display)}"
+        try:
+            role_ch = await guild.create_text_channel(
+                ch_name, overwrites=overwrites, category=parent, reason="Asdrubot: player role channel"
+            )
+            game.players[uid]["role_channel_id"] = role_ch.id
+        except Exception as e:
+            # Soft fail: just skip channel creation
+            game.players[uid]["role_channel_id"] = None
+    else:
+        # Keep existing
+        game.players[uid]["role_channel_id"] = existing_ch.id
+
     await save_state()
-    await ctx.reply(f"✅ Registered: <@{uid}> as **{display}** (alive).", ephemeral=True)
+
+    # Friendly confirmation (ephemeral)
+    ch_mention = ""
+    try:
+        rcid = game.players[uid].get("role_channel_id")
+        rch = guild.get_channel(rcid) if rcid else None
+        if rch:
+            ch_mention = f" — channel: {rch.mention}"
+    except Exception:
+        pass
+
+    await ctx.reply(f"✅ Registered: <@{uid}> as **{display}** (alive){ch_mention}.", ephemeral=True)
+
+    # Optional: greet in private role channel
+    try:
+        rcid = game.players[uid].get("role_channel_id")
+        rch = guild.get_channel(rcid) if rcid else None
+        if rch:
+            await rch.send(f"Welcome, <@{uid}>! This is your private role channel. Use `/act` here to perform your actions.")
+    except Exception:
+        pass
+
 
 
 async def unregister(ctx, member: discord.Member):
