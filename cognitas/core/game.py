@@ -94,7 +94,7 @@ async def set_channels(*, day: discord.TextChannel | None = None, admin: discord
         game.day_channel_id = day.id
     if admin is not None:
         game.admin_channel_id = admin.id
-    await save_state("state.json")
+    await save_state()
 
 async def start(ctx, *, profile: str = "default", day_channel: discord.TextChannel | None = None, admin_channel: discord.TextChannel | None = None):
     """
@@ -119,8 +119,8 @@ async def start(ctx, *, profile: str = "default", day_channel: discord.TextChann
     game.day_deadline_epoch = None
     game.night_deadline_epoch = None
 
-    set_channels(day=day_channel or ctx.channel, admin=admin_channel)
-    await save_state("state.json")
+    await set_channels(day=day_channel or ctx.channel, admin=admin_channel)
+    await save_state()
 
     chan = ctx.guild.get_channel(game.day_channel_id)
     await ctx.reply(
@@ -162,7 +162,7 @@ async def hard_reset(ctx_or_interaction):
             pass
 
     # 3) persist empty state
-    await save_state("state.json")
+    await save_state()
 
     # 4) respond to the user (ctx or interaction)
     try:
@@ -190,7 +190,7 @@ async def hard_reset(ctx_or_interaction):
 
 async def finish(ctx, *, reason: str | None = None):
     game.game_over = True
-    await save_state("state.json")
+    await save_state()
     await ctx.reply(f"🏁 **Game finished.** {('Reason: ' + reason) if reason else ''}".strip())
     await log_event(ctx.bot, ctx.guild.id, "GAME_FINISH", reason=reason or "-")
 
@@ -232,22 +232,17 @@ async def assign_role(ctx, member: discord.Member, role_name: str):
         for k, v in defaults.items():
             flags.setdefault(k, v)
 
-    await save_state("state.json")
+    await save_state()
     await ctx.reply(f"🎭 Role **{role_name}** assigned to <@{uid}>.")
     await log_event(ctx.bot, ctx.guild.id, "ASSIGN", user_id=str(member.id), role=role_name)
-
-
 
 
 def _load_expansion_for(profile: str):
     from ..expansions import get_registered
     cls = get_registered(profile)
-    if cls:
-        return cls()
-    # Fallbacks
-    if (profile or "").lower() in ("smt", "persona", "megaten"):
-        from ..expansions.smt import SMTExpansion
-        return SMTExpansion()
-    from ..expansions.philosophers import PhilosophersExpansion
-    return PhilosophersExpansion()
+    if not cls:
+        # Fallback al perfil por defecto registrado
+        cls = get_registered("default") or get_registered("base")
+    return cls() if cls else None
+
 

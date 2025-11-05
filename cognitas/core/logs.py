@@ -7,7 +7,7 @@ from .storage import save_state
 async def set_log_channel(channel: discord.TextChannel | None):
     """Store or remove the log channel in persistent state."""
     game.admin_log_channel_id = channel.id if channel else None
-    await save_state("state.json")
+    await save_state()
 
 async def log_event(bot: discord.Client, guild_id: int, kind: str, **data):
     """

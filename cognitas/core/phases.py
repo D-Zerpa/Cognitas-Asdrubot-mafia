@@ -4,8 +4,8 @@ import time
 import asyncio
 import discord
 from typing import Optional
+import logging
 
-from ..config import REMINDER_CHECKPOINTS
 from ..status import engine as SE
 from .state import game
 from .storage import save_state
@@ -17,6 +17,8 @@ from .reminders import (
     start_day_timer,
     start_night_timer,
 )
+
+log = logging.getLogger(__name__)
 
 # -------------------------
 # Checkpoints normalization
@@ -544,11 +546,11 @@ async def _autoclose_after(bot: discord.Client, guild_id: int, phase: str, unix_
                     async def reply(self, *a, **k): pass
                 await end_night(_Ctx(guild))
         except Exception as e:
-            print(f"[phases] autoclose error for {phase}: {e!r}")
+            log.info(f"[phases] autoclose error for {phase}: {e!r}")
     except asyncio.CancelledError:
         pass
     except Exception as e:
-        print(f"[phases] autoclose crash for {phase}: {e!r}")
+        log.info(f"[phases] autoclose crash for {phase}: {e!r}")
 
 
 async def rehydrate_timers(bot: discord.Client, guild: discord.Guild):
@@ -609,6 +611,6 @@ async def rehydrate_timers(bot: discord.Client, guild: discord.Guild):
                         async def reply(self, *a, **k): pass
                     await end_night(_Ctx(guild))
             except Exception as e:
-                print(f"[phases] rehydrate autoclose error for {phase}: {e!r}")
+                log.info(f"[phases] rehydrate autoclose error for {phase}: {e!r}")
     except Exception as e:
-        print(f"[phases] rehydrate_timers error: {e!r}")
+        log.info(f"[phases] rehydrate_timers error: {e!r}")

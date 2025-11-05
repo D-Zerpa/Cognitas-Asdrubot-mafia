@@ -1,4 +1,3 @@
-import time
 from math import ceil
 
 class GameState:
@@ -23,8 +22,8 @@ class GameState:
 
         # --- Night action log (append-only) ---
         # list of dicts: {day, ts_epoch, actor_uid, target_uid, note}
-        self.night_actions = []
-        self.day_actions = []
+        self.night_actions = {}
+        self.day_actions = {}
         
         # --- Server-configurable channels (set via admin cmds) ---
         self.admin_log_channel_id = None    # where admin logs go

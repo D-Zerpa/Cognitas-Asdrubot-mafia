@@ -30,6 +30,15 @@ def _fmt_action_line(a: dict) -> str:
     return f"• action=`{act}` target={tgt} note=`{note}` at={when}"
 
 
+async def _gate_action(ctx, game, actor_uid, action_kind: str, target_uid=None, public=False):
+    chk = SE.check_action(game, actor_uid, action_kind, target_uid)
+    if not chk.get("allowed", True):
+        reason = (chk.get("reason") or "").strip()
+        msg = SE.get_block_message(reason)
+        return {"ok": False, "msg": msg, "ephemeral": not public, "redirect_to": None}
+    return {"ok": True, "msg": None, "ephemeral": False, "redirect_to": chk.get("redirect_to")}
+
+
 # ---------- Small adapter to safely reply after defer ----------
 class InteractionCtx:
     def __init__(self, interaction: discord.Interaction):
@@ -125,18 +134,14 @@ class ActionsCog(commands.Cog):
         action_kind = "day_action" if phase == "day" else "night_action"
 
         # Status engine gate (blocks like Paralyzed/Drowsiness/Jailed; Confusion may redirect)
-        check = SE.check_action(game, actor_uid, action_kind, target_uid)
-        if not check.get("allowed", True):
-            # You can customize this message further if you want per-status flavor.
-            # check["reason"] can be "blocked_by:<StatusName>"
-            return await ctx.reply("You're affected and can't use your abilities right now.", ephemeral=not public)
+        gate = await _gate_action(ctx, game, actor_uid, action_kind, target_uid, public=public)
+        if not gate["ok"]:
+            return await ctx.reply(gate["msg"], ephemeral=gate["ephemeral"])
 
-        # Confusion: action may be redirected to a random alive player
-        if check.get("redirect_to"):
-            target_uid = check["redirect_to"]
-            # Optional flavor (the coin toss message). Comment out if you prefer silent redirect.
+        if gate.get("redirect_to"):
+            target_uid = gate["redirect_to"]
             try:
-                await ctx.reply(f"🌀 You're Confused... your action was redirected.", ephemeral=True)
+                await ctx.reply("🌀 You're Confused... your action was redirected.", ephemeral=True)
             except Exception:
                 pass
 
@@ -153,17 +158,49 @@ class ActionsCog(commands.Cog):
             "at": int(time.time()),
         }
 
-        # Persist into the correct bucket
-        store_attr = "day_actions" if phase_norm == "day" else "night_actions"
-        store = getattr(game, store_attr, None)
-        if not isinstance(store, dict):
-            store = {}
-            setattr(game, store_attr, store)
-        bucket = store.setdefault(str(number), {})
-        bucket[actor_uid] = action_record
+        # Try via central helper.
+        try:
+            res = act_core.enqueue_action(
+                game=game,
+                actor_uid=actor_uid,
+                action_kind=action_kind,          # "day_action" / "night_action"
+                target_uid=target_uid,
+                payload={                         # payload/metadata libre
+                    "action": "act",
+                    "note": (note or "").strip(),
+                    "at": int(time.time()),
+                },
+                number=number,                    # opcional: explícita el N si tu helper lo admite
+            )
+            if isinstance(res, dict) and not res.get("ok", True):
+                # Defensa: si el core nos bloquea, respetamos el motivo
+                msg = res.get("reason") or "Action rejected by core."
+                return await ctx.reply(msg, ephemeral=not public)
 
-        # Save state
-        await save_state()
+            await save_state()
+
+        except AttributeError:
+            # Enqueue centrally via core helper
+            res = act_core.enqueue_action(
+                game=game,
+                actor_uid=actor_uid,
+                action_kind=action_kind,          # "day_action" / "night_action"
+                target_uid=target_uid,
+                payload={
+                    "action": "act",
+                    "note": (note or "").strip(),
+                    "at": int(time.time()),       # not required (core sets it) but harmless if present
+                },
+                number=number,                    # explicit cycle number (optional)
+                action_name="act",
+            )
+            if not res.get("ok", True):
+                # Map block reason to a user-facing message via StatusEngine
+                msg = SE.get_block_message(res.get("reason") or "")
+                return await ctx.reply(msg or "Action rejected.", ephemeral=not public)
+
+            await save_state()
+
 
         # Optional audit log
         try:

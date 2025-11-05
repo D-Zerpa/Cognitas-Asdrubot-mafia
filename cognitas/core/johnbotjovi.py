@@ -4,7 +4,7 @@ from __future__ import annotations
 import io
 import os
 import random
-from typing import Optional, Tuple
+from typing import Optional
 
 import discord
 

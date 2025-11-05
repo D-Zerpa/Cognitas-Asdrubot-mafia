@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, asdict
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Dict, List, Optional
 
 import discord
 from discord import app_commands
-from discord.ext import commands, tasks
+from discord.ext import commands
 
 # Prefer Python's stdlib zoneinfo (py3.9+). Fall back to pytz if needed.
 try:

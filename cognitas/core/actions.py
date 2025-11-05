@@ -1,8 +1,9 @@
-# cognitas/core/actions.py
 from __future__ import annotations
 
+import time
 from typing import Any, Dict, List, Tuple, Optional
 from .state import game
+from ..status import engine as SE
 
 PHASE_DAY = "day"
 PHASE_NIGHT = "night"
@@ -129,6 +130,70 @@ def get_user_logs_all(phase: str, user_id: str) -> List[Tuple[int, Dict[str, Any
     rows.sort(key=lambda t: t[0])
     return rows
 
+# ------------ Centralized enqueue (defense-in-depth) ------------
+
+# Keys we build in the canonical action record (do not allow payload to overwrite them)
+_RESERVED_ACTION_KEYS = {"uid", "action", "target", "at"}
+
+def _ensure_action_store(phase: str) -> Dict[str, Dict[str, Dict[str, Any]]]:
+    """
+    Ensure the phase store exists and has the canonical structure:
+        { "<N>": { "<uid>": action_record } }
+    Returns the store mapping.
+    """
+    p = _normalize_phase(phase)
+    attr = _attr_for_phase(p)
+    store = _ensure_actions_dict(attr)  # leverage the normalizer/safety net
+    return store
+
+def enqueue_action(
+    game,
+    actor_uid: str,
+    action_kind: str,                  # "day_action" | "night_action"
+    target_uid: Optional[str] = None,
+    payload: Optional[Dict[str, Any]] = None,  # e.g. {"action": "protect", "note": "..."}
+    number: Optional[int] = None,
+    action_name: str = "act",
+) -> Dict[str, Any]:
+    """
+    Insert an action into the canonical store, with a second gate check.
+    Returns:
+        {"ok": True, "number": <int>, "record": {...}} on success
+        {"ok": False, "reason": "<blocked_by:StatusName | message>"} on failure
+    """
+    if action_kind not in ("day_action", "night_action"):
+        return {"ok": False, "reason": f"invalid_action_kind:{action_kind}"}
+
+    phase_norm = PHASE_DAY if action_kind == "day_action" else PHASE_NIGHT
+
+    # Gate re-check (defense-in-depth)
+    chk = SE.check_action(game, actor_uid, action_kind, target_uid)
+    if not chk.get("allowed", True):
+        return {"ok": False, "reason": chk.get("reason") or "blocked"}
+
+    # Resolve logical number
+    if number is None:
+        number = current_cycle_number(phase_norm)
+
+    # Canonical action record
+    record: Dict[str, Any] = {
+        "uid": str(actor_uid),
+        "action": str((payload or {}).get("action") or action_name),
+        "target": (str(target_uid) if target_uid else None),
+        "at": int(time.time()),
+    }
+    # Merge additional metadata (without overriding reserved keys)
+    if isinstance(payload, dict):
+        for k, v in payload.items():
+            if k not in _RESERVED_ACTION_KEYS:
+                record[k] = v
+
+    # Insert into store
+    store = _ensure_action_store(phase_norm)
+    bucket = store.setdefault(str(number), {})
+    bucket[str(actor_uid)] = record
+
+    return {"ok": True, "number": number, "record": record}
 
 # ------------ Who can act / who acted ------------
 

@@ -5,7 +5,6 @@ from discord import app_commands
 from discord.ext import commands
 
 from ..core import phases, votes as votes_core
-from ..core.logs import log_event
 
 
 # --- Adapter to bridge slash Interaction <-> legacy ctx-style calls ---

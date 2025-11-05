@@ -1,5 +1,7 @@
 from __future__ import annotations
 from . import Expansion, register
+from ..status import register_block_messages
+
 
 @register("myexp")
 class MyExpansion(Expansion):
@@ -17,6 +19,8 @@ class MyExpansion(Expansion):
         # Return a string to announce every dawn, or None
         # return "✨ A new omen rises…"
         return None
+
+    register_block_messages({"blocked_by:MoonCurse": "The moon ritual prevents that action tonight."})
 
     # Optional:
     # def on_game_start(self, game_state): ...

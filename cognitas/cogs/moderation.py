@@ -9,7 +9,6 @@ from ..core.logs import set_log_channel as set_log_channel_core
 from ..core.storage import save_state
 from ..core.game import _load_expansion_for
 from typing import Literal
-from .. import config as cfg
 
 class ModerationCog(commands.Cog):
     def __init__(self, bot): self.bot = bot

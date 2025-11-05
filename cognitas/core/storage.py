@@ -7,10 +7,13 @@ import tempfile
 import asyncio
 from pathlib import Path
 from typing import Any, Dict
-
+import logging
 from .. import config as cfg
 from .state import game
 
+
+
+log = logging.getLogger(__name__)
 
 # -------------------------------------------------------------------
 # Atomic JSON writer (kept from your original, great for integrity)
@@ -212,4 +215,4 @@ async def save_state(path: str | Path | None = None):
     try:
         await asyncio.to_thread(_write)
     except Exception as e:
-        print(f"[storage] Failed to write state to {eff_path}: {e!r}")
+        log.info(f"[storage] Failed to write state to {eff_path}: {e!r}")

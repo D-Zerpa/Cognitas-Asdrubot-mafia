@@ -1,7 +1,8 @@
 from __future__ import annotations
 import random
-from typing import Optional, Dict, Any, List, Tuple
-from . import get_state_cls, list_registered, Status
+from typing import Optional, Dict, List, Tuple
+from . import get_state_cls
+from . import get_block_message as _get_block_message
 
 # game.status_map structure:
 # { uid: { state_name: {"remaining": int, "stacks": int, "source": str|"system"|"GM",
@@ -190,3 +191,7 @@ def pick_random_alive(game, *, exclude: Optional[str] = None) -> Optional[str]:
     if exclude and exclude in players:
         players.remove(exclude)
     return random.choice(players) if players else None
+
+def get_block_message(reason: str) -> str:
+    """Proxy for status.get_block_message, so cogs importing engine can resolve messages."""
+    return _get_block_message(reason)

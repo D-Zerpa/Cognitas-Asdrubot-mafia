@@ -51,7 +51,7 @@ class Confusion(Status):
 class Jailed(Status):
     name = "Jailed"; type = "debuff"; visibility = "private"
     stack_policy = "refresh"; default_duration = 1
-    blocks = {"day_action": True, "night_action": True}
+    blocks = {"day_action": True, "night_action": True, "vote": True, "day_talk": True}
 
     def on_apply(self, game, uid, entry): return f"<@{uid}> You've been Jailed!"
     def on_expire(self, game, uid, entry): return f"<@{uid}> You're free again!"
@@ -68,10 +68,10 @@ class Silenced(Status):
     def on_expire(self, game, uid, entry): return f"<@{uid}> You can speak again."
 
 # ---------- Double vote (stacking adds weight) ----------
-@register("Double vote")
+@register("DoubleVote")
 class DoubleVote(Status):
     name = "Double vote"; type = "buff"; visibility = "private"
-    stack_policy = "add"; default_duration = 2
+    stack_policy = "multiple"; default_duration = 2
     vote_weight_delta = +1.0  # base 1 -> 2; stacking adds more
 
     def on_apply(self, game, uid, entry): return f"<@{uid}> You've been blessed with double vote!"
@@ -80,9 +80,11 @@ class DoubleVote(Status):
 # ---------- Sanctioned (stacking halves, then blocks) ----------
 @register("Sanctioned")
 class Sanctioned(Status):
-    name = "Sanctioned"; type = "deb uff"; visibility = "private"
-    stack_policy = "add"; default_duration = 2
-    vote_weight_delta = -0.5  # first time halves (1.0 -> 0.5). two stacks -> 0.0 (blocked by votes layer)
+    name = "Sanctioned"; type = "debuff"; visibility = "private"
+    # stacks should accumulate to affect vote twice -> 0.0
+    stack_policy = "multiple"
+    default_duration = 2
+    vote_weight_delta = -0.5
 
     def on_apply(self, game, uid, entry):
         stacks = entry.get("stacks", 1)

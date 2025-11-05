@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import math
 import random
-import time
-from typing import Dict, Tuple
 
 import discord
 from discord.ext import commands
