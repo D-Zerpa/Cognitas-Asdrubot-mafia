@@ -11,6 +11,7 @@ from .state import game
 from .storage import save_state
 from .logs import log_event
 from .johnbotjovi import lynch as make_lynch_poster
+from .infra import ensure_day_channel, rename_day_channel, set_day_channel_posting
 from .. import config as cfg
 from .reminders import (
     parse_duration_to_seconds,
@@ -152,6 +153,17 @@ async def start_day(
         
     game.phase = "day"
 
+    # Ensure and rename the single public channel, then allow posting
+    if ctx and getattr(ctx, "guild", None):
+        guild = ctx.guild
+        try:
+            # Make sure the channel exists under the intended category (optional)
+            # If you keep the public category id in infra, you can pass it to ensure_day_channel
+            await ensure_day_channel(guild)
+            await rename_day_channel(guild, phase="day", number=game.current_day_number)
+            await set_day_channel_posting(guild, allow=True)  # allow talking during day
+        except Exception:
+            pass
 
     try:
         if hasattr(game, "votes"):
@@ -405,6 +417,17 @@ async def start_night(
     # Store channel & phase
     game.night_channel_id = ch.id
     game.phase = "night"
+
+
+    # Rename to night-N and disable posting for everyone
+    if ctx and getattr(ctx, "guild", None):
+        guild = ctx.guild
+        try:
+            await ensure_day_channel(guild)  # ensure exists
+            await rename_day_channel(guild, phase="night", number=game.current_day_number)
+            await set_day_channel_posting(guild, allow=False)  # lock during night
+        except Exception:
+            pass
 
     # Notify expansion about phase change into Night
     try:

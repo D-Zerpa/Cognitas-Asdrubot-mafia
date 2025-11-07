@@ -47,9 +47,10 @@ class Status:
 
 BLOCK_MESSAGES: dict[str, str] = {
     "blocked_by:Jailed": "You're jailed and can't act right now.",
-    "blocked_by:Sanctioned": "You are sanctioned and can't vote right now.",
     "blocked_by:Paralyzed": "You're paralyzed and can't use day abilities.",
     "blocked_by:Drowsiness": "You're drowsy and can't use night abilities.",
+    "blocked_by:Silenced": "You're silenced and cannot speak or perform this action here.",
+    "blocked_by:Wounded": "You're too wounded to perform this action right now.",
 }
 
 def get_block_message(reason: str) -> str:

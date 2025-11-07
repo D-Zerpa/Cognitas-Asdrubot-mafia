@@ -5,6 +5,8 @@ from discord import app_commands
 from discord.ext import commands
 
 from ..core import phases, votes as votes_core
+from ..status import engine as SE
+from ..core.state import game
 
 
 # --- Adapter to bridge slash Interaction <-> legacy ctx-style calls ---
@@ -131,11 +133,24 @@ class VoteCog(commands.GroupCog, name="vote", description="Votes"):
 
     @app_commands.command(name="cast", description="Vote for a player")
     async def cast(self, interaction: discord.Interaction, member: discord.Member):
+        # Defer first to avoid interaction timing issues
         await interaction.response.defer(ephemeral=False)
         ctx = InteractionCtx(interaction)
 
+        # 1) Gate voting through the Status Engine for clear UX
+        voter_uid = str(interaction.user.id)
+        chk = SE.check_action(game, voter_uid, "vote")
+        if not chk.get("allowed", True):
+            # Map engine reason -> human-friendly message
+            msg = SE.get_block_message(chk.get("reason") or "")
+            return await ctx.reply(msg or "You can't vote right now.", ephemeral=True)
+
+        # 2) Proceed with normal vote
         await votes_core.vote(ctx, member)
-        await interaction.followup.send(f"🗳️ Vote cast for {member.mention}.", ephemeral=False)
+
+        # 3) show effective weight for transparency:
+        w = SE.compute_vote_weight(game, voter_uid, base=1.0)
+        return await interaction.followup.send(f"🗳️ Vote cast for {member.mention} (weight={w:g}).", ephemeral=False)
 
     @app_commands.command(name="clear", description="Unvote")
     async def clear(self, interaction: discord.Interaction):

@@ -10,9 +10,15 @@ from .state import game
 from .storage import save_state  # async
 from .logs import log_event
 from . import phases
-from . import lunar
 from ..status import engine as SE
+import importlib
 
+# Optional lunar provider (expansion-defined)
+try:
+    # Import 'cognitas.core.lunar' if present; otherwise disable gracefully.
+    lunar = importlib.import_module(f"{__package__}.lunar")
+except Exception:
+    lunar = None
 
 # ---------- Helpers (names, hidden voters, etc.) ----------
 
@@ -297,7 +303,7 @@ async def votes_breakdown(ctx: commands.Context | any):
             inline=False
         )
 
-    embed.set_footer(text="Asdrubot v2.0 — Voting UI")
+    embed.set_footer(text="Asdrubot v3.0 — Voting UI")
     await ctx.reply(embed=embed)
 
 async def status(ctx):
@@ -311,8 +317,14 @@ async def status(ctx):
     phase = (getattr(game, "phase", "day") or "day").lower()
     day_no = int(getattr(game, "current_day_number", 1) or 1)
 
-    # Lunar
-    _, lunar_label = lunar.current(game)
+    # Lunar (optional)
+    if lunar and hasattr(lunar, "current"):
+        try:
+            _, lunar_label = lunar.current(game)
+        except Exception:
+            lunar_label = "—"
+    else:
+        lunar_label = "—"
 
     # Deadline
     if phase == "day":
@@ -328,14 +340,17 @@ async def status(ctx):
 
     # Embed
     color = 0xF1C40F if phase == "day" else 0x2C3E50
+    lines = [
+        f"**Phase:** {'🌞 Day' if phase == 'day' else '🌙 Night'}",
+        f"**Counter:** {('Day' if phase == 'day' else 'Night')} {day_no}",
+        f"**Time left:** {time_left}",
+    ]
+    if lunar_label and lunar_label != "—":
+        lines.insert(2, f"**Lunar:** {lunar_label}")  # insert after Counter
+
     embed = discord.Embed(
         title="Game Status",
-        description="\n".join([
-            f"**Phase:** {'🌞 Day' if phase == 'day' else '🌙 Night'}",
-            f"**Counter:** {('Day' if phase == 'day' else 'Night')} {day_no}",
-            f"**Lunar:** {lunar_label}",
-            f"**Time left:** {time_left}",
-        ]),
+        description="\n".join(lines),
         color=color,
     )
     embed.add_field(name=f"Alive players ({alive_count})", value=alive_list, inline=False)
@@ -354,12 +369,13 @@ async def request_end_day(ctx: commands.Context | any):
     if uid not in game.players or not game.players[uid].get("alive", True):
         return await ctx.reply("You must be a registered and alive player to request end of Day.", ephemeral=True)
 
-    end_set = getattr(game, "end_day_votes", None)
-    if not isinstance(end_set, set):
-        end_set = set()
-        game.end_day_votes = end_set
+    # Keep a local set for operations, persist as list for JSON safety
+    raw = getattr(game, "end_day_votes", [])
+    end_set = set(raw if isinstance(raw, (list, set, tuple)) else [])
     end_set.add(uid)
-    await save_state()  # harmless even if set isn't serialized
+    game.end_day_votes = list(end_set)
+    await save_state()
+
 
     alive = _alive_uids()
     need = math.ceil((2 * len(alive)) / 3) if alive else 0

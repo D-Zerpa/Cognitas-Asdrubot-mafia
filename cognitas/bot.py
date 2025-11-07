@@ -49,7 +49,8 @@ COG_MODULES = [
     "cognitas.cogs.fun",
     "cognitas.cogs.help",
     "cognitas.cogs.timezones",
-    "cognitas.cogs.status"
+    "cognitas.cogs.status",
+    "cognitas.cogs.bootstrap"
 ]
 
 class AsdruBot(commands.Bot):
