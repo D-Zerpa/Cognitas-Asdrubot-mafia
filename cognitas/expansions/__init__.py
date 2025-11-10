@@ -1,5 +1,8 @@
 from __future__ import annotations
 from typing import Optional, Any, Dict, Type, Callable
+from importlib import import_module
+import pkgutil as _pkgutil
+
 
 class Expansion:
     """
@@ -31,3 +34,25 @@ def register(name: str) -> Callable[[Type[Expansion]], Type[Expansion]]:
 
 def get_registered(profile: str):
     return _EXPANSION_REGISTRY.get((profile or "").lower().strip())
+
+
+# ---- Utilities for discovery ----
+def list_registered_keys() -> list[str]:
+    """Return registered expansion keys (ensure discovery first)."""
+    _auto_import_all()
+    return sorted(_EXPANSION_REGISTRY.keys())
+
+def _auto_import_all() -> None:
+    """
+    Import known expansion modules so their @register decorators run.
+    You can keep this static list or do pkgutil discovery.
+    """
+    for mod in ("philosophers", "smt", "myexp"):
+        try:
+            import_module(f".{mod}", __name__)
+        except Exception:
+            pass
+
+# Ensure registry is populated on package import
+_auto_import_all()
+

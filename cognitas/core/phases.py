@@ -11,7 +11,7 @@ from .state import game
 from .storage import save_state
 from .logs import log_event
 from .johnbotjovi import lynch as make_lynch_poster
-from .infra import ensure_day_channel, rename_day_channel, set_day_channel_posting
+from .infra import ensure_day_channel, rename_day_channel, set_day_channel_posting, get_infra
 from .. import config as cfg
 from .reminders import (
     parse_duration_to_seconds,
@@ -107,8 +107,19 @@ async def start_day(
 
     guild: discord.Guild = ctx.guild
 
-    # Resolve the target channel
-    ch = target_channel or _get_channel_or_none(guild, getattr(game, "day_channel_id", None)) or ctx.channel
+   # Resolve the target channel (explicit > game > infra > ctx.channel)
+    infra_day_id = None
+    try:
+        infra_day_id = (get_infra(ctx.guild.id).get("channels", {}) or {}).get("day")
+    except Exception:
+        infra_day_id = None
+
+    ch = (
+        target_channel
+        or _get_channel_or_none(ctx.guild, getattr(game, "day_channel_id", None))
+        or _get_channel_or_none(ctx.guild, infra_day_id)
+        or ctx.channel
+    )
     if not isinstance(ch, (discord.TextChannel, discord.Thread)):
         return await ctx.reply("Day channel must be a text channel or a thread.")
 

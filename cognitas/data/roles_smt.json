@@ -1,199 +1,290 @@
 {
   "meta": {
-    "name": "Shin Megami Tensei Expansion",
-    "version": "1.0",
-    "notes": "Roles and abilities for SMT-themed Mafia. Flags are set for initial states where needed."
+    "expansion": "smt",
+    "version": "3.0-D",
+    "generated_at": "2025-11-10T08:05:32.734880Z"
   },
   "roles": [
     {
-      "name": "Jonathan",
-      "alignment": "Town",
-      "notes": "Samurai Paladin of Loyalty",
-      "flags": { "dsp_catch_next": true, "night_act": true },
-      "effects": []
-    },
-    {
-      "name": "Walter",
-      "alignment": "Town",
-      "notes": "Samurai Warrior",
-      "flags": { "dsp_catch_next": true, "night_act": true },
-      "effects": []
-    },
-    {
-      "name": "Isabeau",
-      "alignment": "Town",
-      "notes": "Samurai Voice of Neutrality",
-      "flags": { "dsp_catch_next": true, "night_act": true },
-      "effects": []
-    },
-    {
-      "name": "Flynn",
-      "alignment": "Town",
-      "notes": "Samurai Bearer of Destiny",
-      "flags": { "dsp_catch_next": true, "chosen_used": false, "copied_ability": null, "copied_from": null, "night_act": true },
-      "effects": []
-    },
-
-    { "name": "Herald of Merkabah", "alignment": "Mafia", "notes": "Jonathan + Gabriel fusion", "flags": { "night_act": true }, "effects": [] },
-    { "name": "Herald of Lucifer", "alignment": "Mafia", "notes": "Walter + Lilith fusion", "flags": { "night_act": true }, "effects": [] },
-    { "name": "Herald of Masakado", "alignment": "Town", "notes": "Isabeau ascension", "flags": { "dsp_catch_next": true, "resurrection_available": true, "night_act": true }, "effects": [] },
-
-    {
-      "name": "Satanas",
-      "alignment": "Mafia",
-      "notes": "Chaos Leader",
-      "flags": { "faction_leader": true, "appear_town_once": true, "night_act": true },
-      "effects": []
-    },
-    {
-      "name": "Helel",
-      "alignment": "Mafia",
-      "notes": "Lightbringer",
-      "flags": { "appear_town_once": true, "night_act": true },
-      "effects": []
-    },
-    {
-      "name": "Belial",
-      "alignment": "Mafia",
-      "notes": "The Impious",
-      "flags": { "night_act": true },
-      "effects": []
-    },
-    {
-      "name": "Beelzebub",
-      "alignment": "Mafia",
-      "notes": "Lord of the Flies",
-      "flags": { "infect_link": null, "banquet_first_used": false, "night_act": true },
-      "effects": []
-    },
-    {
+      "id": "astaroth",
       "name": "Astaroth",
-      "alignment": "Mafia",
       "notes": "Grand Duke of Hell",
-      "flags": { "night_act": true },
-      "effects": []
-    },
-    {
-      "name": "Baal",
-      "alignment": "Mafia",
-      "notes": "Lord of the Skies",
-      "flags": { "stolen_ability": null, "night_act": true },
-      "effects": []
-    },
-
-    {
-      "name": "Mastema",
-      "alignment": "Mafia",
-      "notes": "Accuser (Order)",
-      "flags": { "appear_town_once": true, "trial_target": null, "day_act": true, "night_act": true },
-      "effects": []
-    },
-    {
-      "name": "Miguel",
-      "alignment": "Mafia",
-      "notes": "Celestial Warrior (Order)",
-      "flags": { "night_act": true },
-      "effects": []
-    },
-    {
-      "name": "Rafael",
-      "alignment": "Mafia",
-      "notes": "Healer of God (Order)",
-      "flags": { "veil_used": false, "day_act": true, "night_act": true },
-      "effects": []
-    },
-    {
-      "name": "Uriel",
-      "alignment": "Mafia",
-      "notes": "Flame of God (Order)",
-      "flags": { "night_act": true },
-      "effects": []
-    },
-
-    {
-      "name": "Legion",
-      "alignment": "Town",
-      "notes": "Ensemble of Souls",
-      "flags": { "medium_level": 0, "night_act": true },
-      "effects": []
-    },
-    {
-      "name": "Jack Frost",
-      "alignment": "Town",
-      "notes": "Trickster of Ice",
-      "flags": { "ice_protection_used": false, "night_act": true },
-      "effects": []
-    },
-    {
-      "name": "Jack-o'-Lantern",
-      "alignment": "Town",
-      "notes": "Flame Trickster",
-      "flags": { "night_act": true },
-      "effects": []
-    },
-    {
-      "name": "Oni",
-      "alignment": "Town",
-      "notes": "Red Warrior",
-      "flags": { "night_act": true },
-      "effects": []
-    },
-    {
-      "name": "Angel",
-      "alignment": "Town",
-      "notes": "Messenger of Light",
-      "flags": { "day_act": true, "night_act": true },
-      "effects": []
-    },
-    {
-      "name": "Turbo Granny",
-      "alignment": "Town",
-      "notes": "Midnight Hag",
-      "flags": { "dodge_used": false, "night_act": true },
-      "effects": []
-    },
-
-    {
-      "name": "YHVH",
-      "alignment": "Neutral",
-      "notes": "Lord of All",
+      "team": "mafia",
       "flags": {
-        "glitched_investigations": true,
-        "nightkill_immune": true,
-        "hidden_vote": true,
-        "revelation_used": false,
+        "night_act": true,
+        "day_act": false
+      }
+    },
+    {
+      "id": "baal",
+      "name": "Baal",
+      "notes": "Lord of the Skies",
+      "team": "mafia",
+      "flags": {
+        "night_act": true,
+        "day_act": false
+      }
+    },
+    {
+      "id": "beelzebub",
+      "name": "Beelzebub",
+      "notes": "Lord of the Flies",
+      "team": "mafia",
+      "flags": {
+        "night_act": true,
+        "day_act": false
+      }
+    },
+    {
+      "id": "belial",
+      "name": "Belial",
+      "notes": "The Impious",
+      "team": "mafia",
+      "flags": {
+        "night_act": true,
+        "day_act": false
+      }
+    },
+    {
+      "id": "helel",
+      "name": "Helel",
+      "notes": "Lightbringer",
+      "team": "mafia",
+      "flags": {
+        "night_act": true,
+        "day_act": false
+      }
+    },
+    {
+      "id": "herald-of-lucifer",
+      "name": "Herald Of Lucifer",
+      "notes": "Walter + Lilith fusion",
+      "team": "mafia",
+      "flags": {
+        "night_act": true,
+        "day_act": false
+      }
+    },
+    {
+      "id": "herald-of-merkabah",
+      "name": "Herald Of Merkabah",
+      "notes": "Jonathan + Gabriel fusion",
+      "team": "mafia",
+      "flags": {
+        "night_act": true,
+        "day_act": false
+      }
+    },
+    {
+      "id": "mastema",
+      "name": "Mastema",
+      "notes": "Accuser (Order)",
+      "team": "mafia",
+      "flags": {
         "day_act": true,
         "night_act": true
-      },
-      "effects": []
+      }
     },
     {
-      "name": "Loki",
-      "alignment": "Town",
-      "notes": "Trickster Investigator",
-      "flags": { "night_act": true },
-      "effects": []
+      "id": "miguel",
+      "name": "Miguel",
+      "notes": "Celestial Warrior (Order)",
+      "team": "mafia",
+      "flags": {
+        "night_act": true,
+        "day_act": false
+      }
     },
     {
-      "name": "Mara",
-      "alignment": "Town",
-      "notes": "Chain Paralysis Controller",
-      "flags": { "night_act": true },
-      "effects": []
+      "id": "rafael",
+      "name": "Rafael",
+      "notes": "Healer of God (Order)",
+      "team": "mafia",
+      "flags": {
+        "day_act": true,
+        "night_act": true
+      }
     },
     {
-      "name": "Norn",
-      "alignment": "Town",
-      "notes": "Oracular Weaver",
-      "flags": { "night_act": true },
-      "effects": []
+      "id": "satanas",
+      "name": "Satanas",
+      "notes": "Chaos Leader",
+      "team": "mafia",
+      "flags": {
+        "night_act": true,
+        "day_act": false
+      }
     },
     {
+      "id": "uriel",
+      "name": "Uriel",
+      "notes": "Flame of God (Order)",
+      "team": "mafia",
+      "flags": {
+        "night_act": true,
+        "day_act": false
+      }
+    },
+    {
+      "id": "yhvh",
+      "name": "Yhvh",
+      "notes": "Lord of All",
+      "team": "neutral",
+      "flags": {
+        "hidden_vote": true,
+        "day_act": true,
+        "night_act": true
+      }
+    },
+    {
+      "id": "angel",
+      "name": "Angel",
+      "notes": "Messenger of Light",
+      "team": "town",
+      "flags": {
+        "day_act": true,
+        "night_act": true
+      }
+    },
+    {
+      "id": "flynn",
+      "name": "Flynn",
+      "notes": "Samurai Bearer of Destiny",
+      "team": "town",
+      "flags": {
+        "night_act": true,
+        "day_act": false
+      }
+    },
+    {
+      "id": "hecate",
       "name": "Hecate",
-      "alignment": "Town",
       "notes": "Day Jailor",
-      "flags": { "day_act": true },
-      "effects": []
+      "team": "town",
+      "flags": {
+        "day_act": true,
+        "night_act": false
+      }
+    },
+    {
+      "id": "herald-of-masakado",
+      "name": "Herald Of Masakado",
+      "notes": "Isabeau ascension",
+      "team": "town",
+      "flags": {
+        "night_act": true,
+        "day_act": false
+      }
+    },
+    {
+      "id": "isabeau",
+      "name": "Isabeau",
+      "notes": "Samurai Voice of Neutrality",
+      "team": "town",
+      "flags": {
+        "night_act": true,
+        "day_act": false
+      }
+    },
+    {
+      "id": "jack-frost",
+      "name": "Jack Frost",
+      "notes": "Trickster of Ice",
+      "team": "town",
+      "flags": {
+        "night_act": true,
+        "day_act": false
+      }
+    },
+    {
+      "id": "jack-o-lantern",
+      "name": "Jack-O'-Lantern",
+      "notes": "Flame Trickster",
+      "team": "town",
+      "flags": {
+        "night_act": true,
+        "day_act": false
+      }
+    },
+    {
+      "id": "jonathan",
+      "name": "Jonathan",
+      "notes": "Samurai Paladin of Loyalty",
+      "team": "town",
+      "flags": {
+        "night_act": true,
+        "day_act": false
+      }
+    },
+    {
+      "id": "legion",
+      "name": "Legion",
+      "notes": "Ensemble of Souls",
+      "team": "town",
+      "flags": {
+        "night_act": true,
+        "day_act": false
+      }
+    },
+    {
+      "id": "loki",
+      "name": "Loki",
+      "notes": "Trickster Investigator",
+      "team": "town",
+      "flags": {
+        "night_act": true,
+        "day_act": false
+      }
+    },
+    {
+      "id": "mara",
+      "name": "Mara",
+      "notes": "Chain Paralysis Controller",
+      "team": "town",
+      "flags": {
+        "night_act": true,
+        "day_act": false
+      }
+    },
+    {
+      "id": "norn",
+      "name": "Norn",
+      "notes": "Oracular Weaver",
+      "team": "town",
+      "flags": {
+        "night_act": true,
+        "day_act": false
+      }
+    },
+    {
+      "id": "oni",
+      "name": "Oni",
+      "notes": "Red Warrior",
+      "team": "town",
+      "flags": {
+        "night_act": true,
+        "day_act": false
+      }
+    },
+    {
+      "id": "turbo-granny",
+      "name": "Turbo Granny",
+      "notes": "Midnight Hag",
+      "team": "town",
+      "flags": {
+        "night_act": true,
+        "day_act": false
+      }
+    },
+    {
+      "id": "walter",
+      "name": "Walter",
+      "notes": "Samurai Warrior",
+      "team": "town",
+      "flags": {
+        "night_act": true,
+        "day_act": false
+      }
     }
   ]
 }

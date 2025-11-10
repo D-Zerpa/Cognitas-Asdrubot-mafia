@@ -3,11 +3,37 @@ from __future__ import annotations
 import discord
 from .state import game
 from .storage import save_state
+from .infra import get_infra
+
 
 async def set_log_channel(channel: discord.TextChannel | None):
     """Store or remove the log channel in persistent state."""
     game.admin_log_channel_id = channel.id if channel else None
     await save_state()
+
+def _resolve_logs_channel(bot: discord.Client, guild_id: int) -> discord.abc.Messageable | None:
+    guild = bot.get_guild(guild_id)
+    if not guild:
+        return None
+
+    # Prefer infra channel
+    try:
+        infra = get_infra(guild_id)
+        logs_id = (infra.get("channels", {}) or {}).get("logs")
+        if logs_id:
+            ch = guild.get_channel(logs_id) or guild.get_thread(logs_id)
+            if ch:
+                return ch
+    except Exception:
+        pass
+
+    # Fallback: legacy game.admin_log_channel_id
+    chan_id = getattr(game, "admin_log_channel_id", None)
+    if chan_id:
+        return guild.get_channel(chan_id) or guild.get_thread(chan_id)
+
+    return None
+
 
 async def log_event(bot: discord.Client, guild_id: int, kind: str, **data):
     """
@@ -21,7 +47,7 @@ async def log_event(bot: discord.Client, guild_id: int, kind: str, **data):
     guild = bot.get_guild(guild_id)
     if not guild:
         return
-    chan = guild.get_channel(chan_id)
+    chan = _resolve_logs_channel(bot, guild_id)
     if not chan:
         return
 

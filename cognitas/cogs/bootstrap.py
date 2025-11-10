@@ -360,6 +360,19 @@ class BootstrapCog(commands.Cog):
         )
         embed.add_field(name="How it works", value=_short_mechanics(), inline=False)
         await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+        
+
+    @app_commands.command(name="wipe", description="Clean all [ASDRUBOT] channels (keeps Admin).")
+    @app_commands.default_permissions(administrator=True)
+    async def wipe(self, interaction: discord.Interaction):
+        view = WipeConfirmView(interaction.user)  # reusa tu view actual
+        await interaction.response.send_message(
+            "⚠️ This will delete all [ASDRUBOT] channels except Admin. Are you sure?",
+            view=view,
+            ephemeral=True,
+        )
+
+    
 
     # global component router (ensures buttons fire on mobile/web)
     @commands.Cog.listener()

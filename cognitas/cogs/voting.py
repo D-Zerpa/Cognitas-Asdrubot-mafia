@@ -147,10 +147,7 @@ class VoteCog(commands.GroupCog, name="vote", description="Votes"):
 
         # 2) Proceed with normal vote
         await votes_core.vote(ctx, member)
-
-        # 3) show effective weight for transparency:
-        w = SE.compute_vote_weight(game, voter_uid, base=1.0)
-        return await interaction.followup.send(f"🗳️ Vote cast for {member.mention} (weight={w:g}).", ephemeral=False)
+        return 
 
     @app_commands.command(name="clear", description="Unvote")
     async def clear(self, interaction: discord.Interaction):

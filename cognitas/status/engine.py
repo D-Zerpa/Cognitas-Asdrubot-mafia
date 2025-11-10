@@ -160,22 +160,66 @@ def check_action(game, uid: str, action_kind: str, target_uid: Optional[str] = N
 
 def compute_vote_weight(game, uid: str, base: float = 1.0) -> float:
     """
-    Adds up vote deltas from active statuses (e.g., +1 for DoubleVote, -0.5 per Sanction).
-    Clamp at 0..max reasonable (e.g., 4).
+    Compute final vote weight for a voter:
+      1) Start from base.
+      2) Add additive deltas from active statuses (vote_weight_delta * stacks).
+      3) Apply multiplicative modifiers (vote_weight_multiplier ** stacks).
+      4) Apply static role flag 'double_vote' as a multiplier (x2).
+      5) Clamp to [0.0, 4.0].
+
+    Notes:
+      - If a status defines vote_weight_multiplier, we DO NOT also apply its delta,
+        to avoid double counting. Prefer multiplier for 'DoubleVote'-style effects.
     """
     _ensure_maps(game)
-    weight = base
-    for key, entry in game.status_map.get(uid, {}).items():
+
+    # 1) base
+    w = float(base)
+
+    # 2) additive deltas + 3) multiplicative modifiers
+    mult = 1.0
+    for key, entry in (getattr(game, "status_map", {}) or {}).get(uid, {}).items():
         st_cls = get_state_cls(key)
-        st = st_cls() if st_cls else None
-        if not st:
+        if not st_cls:
             continue
-        # stacking: apply per stack
-        delta = getattr(st, "vote_weight_delta", 0.0) * max(1, int(entry.get("stacks", 1)))
-        weight += delta
-    if weight < 0: weight = 0.0
-    if weight > 4: weight = 4.0
-    return weight
+        st = st_cls()
+        stacks = max(1, int(entry.get("stacks", 1)))
+
+        # Prefer multiplicative path when available
+        vm = getattr(st, "vote_weight_multiplier", None)
+        if vm is not None:
+            try:
+                mult *= float(vm) ** stacks
+            except Exception:
+                pass
+            # Do NOT also add delta for this status
+            continue
+
+        # Legacy/additive path
+        delta = float(getattr(st, "vote_weight_delta", 0.0)) * stacks
+        w += delta
+
+    # Clamp after additive
+    if w < 0.0:
+        w = 0.0
+    if w > 4.0:
+        w = 4.0
+
+    # 4) static role flag 'double_vote' => multiplier x2
+    try:
+        flags = (getattr(game, "players", {}) or {}).get(uid, {}).get("flags", {}) or {}
+        if flags.get("double_vote", False):
+            mult *= 2.0
+    except Exception:
+        pass
+
+    # Apply multiplier and final clamp
+    w *= mult
+    if w < 0.0:
+        w = 0.0
+    if w > 4.0:
+        w = 4.0
+    return float(w)
 
 def _audit(game, text: str):
     log = getattr(game, "status_log", None)

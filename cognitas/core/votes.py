@@ -154,13 +154,14 @@ async def vote(ctx: commands.Context | any, member: discord.Member):
         return await ctx.reply("You must be a registered and alive player to vote.", ephemeral=True)
     if target_id not in game.players or not game.players[target_id].get("alive", True):
         return await ctx.reply("Target must be a registered and alive player.", ephemeral=True)
-    if getattr(game, "phase", "day") != "day":
+    if getattr(game, "phase", "day").lower() != "day":
         return await ctx.reply("Voting is only available during the **Day**.", ephemeral=True)
 
-        # Status check: can this user vote right now?
+    # Status check: can this user vote right now?
     chk = SE.check_action(game, voter_id, "vote")
     if not chk.get("allowed", True):
-        return await ctx.reply("You can't vote right now.", ephemeral=True)
+        msg = SE.get_block_message(chk)
+        return await ctx.reply(msg, ephemeral=True)
 
     # Weight must be > 0 (e.g., Sanctioned x2 -> 0)
     if _voter_vote_value(voter_id) <= 0.0:
@@ -172,13 +173,16 @@ async def vote(ctx: commands.Context | any, member: discord.Member):
     game.votes[voter_id] = target_id
     await save_state()  # async
 
+    # Show effective weight for transparency:
+    w = SE.compute_vote_weight(game, voter_id, base=1.0)
+
     # Anonymous vote?
     incognito = bool(game.players.get(voter_id, {}).get("flags", {}).get("hidden_vote", False))
     if incognito:
         fake_name = _glitch_name()
-        await ctx.reply(f"✅ Vote registered: `{fake_name}` → `{_player_name(target_id)}`", ephemeral=True)
+        await ctx.reply(f"✅ Vote registered: `{fake_name}` → `{_player_name(target_id)}` (weight={w:g})", ephemeral=True)
     else:
-        await ctx.reply(f"✅ Vote registered: `{_player_name(voter_id)}` → `{_player_name(target_id)}`", ephemeral=True)
+        await ctx.reply(f"✅ Vote registered: `{_player_name(voter_id)}` → `{_player_name(target_id)}` (weight={w:g})", ephemeral=False)
 
     # Log (best-effort)
     try:
