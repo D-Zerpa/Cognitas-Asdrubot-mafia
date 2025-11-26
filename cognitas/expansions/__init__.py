@@ -53,6 +53,17 @@ def _auto_import_all() -> None:
         except Exception:
             pass
 
+
+def load_expansion_instance(profile: str) -> Optional[Expansion]:
+    """
+    Factory function to instantiate an expansion by profile name.
+    Falls back to 'default' or 'base' if not found.
+    """
+    cls = get_registered(profile)
+    if not cls:
+        cls = get_registered("default") or get_registered("base")
+    return cls() if cls else None
+
 # Ensure registry is populated on package import
 _auto_import_all()
 

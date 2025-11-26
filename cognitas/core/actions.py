@@ -183,10 +183,12 @@ def enqueue_action(
         "at": int(time.time()),
     }
     # Merge additional metadata (without overriding reserved keys)
+    safe_payload = {}
     if isinstance(payload, dict):
+        # Allow only simple types to be serialized safely
         for k, v in payload.items():
-            if k not in _RESERVED_ACTION_KEYS:
-                record[k] = v
+            if k not in _RESERVED_ACTION_KEYS and isinstance(v, (str, int, float, bool, type(None))):
+                safe_payload[k] = v
 
     # Insert into store
     store = _ensure_action_store(phase_norm)

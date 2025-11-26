@@ -28,11 +28,9 @@ class Status:
     stack_policy: str = "refresh"   # none|refresh|add|multiple
     default_duration: int = 1       # ticks (phases)
     blocks: Dict[str, bool] = {}    # e.g. {"vote": True, "day_action": True}
-    # vote_weight_delta: used by buffs/debuffs that modify voting (Sanctioned/DoubleVote)
-    # If set, engine will compute weight from all active statuses
-    # Example: +1 for DoubleVote (base 1 -> 2), -0.5 for Sanctioned
     vote_weight_delta: float = 0.0
-
+    decrement_on: str = "always"
+    
     # lifecycle hooks
     def on_apply(self, game, uid: str, entry: dict) -> Optional[str]: return None
     def on_tick(self, game, uid: str, entry: dict, phase: str) -> Optional[str]: return None

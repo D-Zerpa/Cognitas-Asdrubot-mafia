@@ -6,7 +6,7 @@ from .engine import pick_random_alive
 @register("Paralyzed")
 class Paralyzed(Status):
     name = "Paralyzed"; type = "debuff"; visibility = "private"
-    stack_policy = "refresh"; default_duration = 2
+    stack_policy = "refresh"; default_duration = 1; decrement_on = "night"
     # blocks day ability; your /act can pass action_kind="day_action"
     blocks = {"day_action": True}
 
@@ -17,7 +17,7 @@ class Paralyzed(Status):
 @register("Drowsiness")
 class Drowsiness(Status):
     name = "Drowsiness"; type = "debuff"; visibility = "private"
-    stack_policy = "refresh"; default_duration = 2
+    stack_policy = "refresh"; default_duration = 1; decrement_on = "day"
     blocks = {"night_action": True}
 
     def on_apply(self, game, uid, entry): return f"<@{uid}> You've been affected by Drowsiness!"
@@ -27,7 +27,7 @@ class Drowsiness(Status):
 @register("Confusion")
 class Confusion(Status):
     name = "Confusion"; type = "debuff"; visibility = "private"
-    stack_policy = "refresh"; default_duration = 2
+    stack_policy = "refresh"; default_duration = 2; decrement_on = "always"
 
     def on_apply(self, game, uid, entry): return f"<@{uid}> You've been Confused!"
     def on_expire(self, game, uid, entry): return f"<@{uid}> You recovered from confusion."
@@ -50,7 +50,7 @@ class Confusion(Status):
 @register("Jailed")
 class Jailed(Status):
     name = "Jailed"; type = "debuff"; visibility = "private"
-    stack_policy = "refresh"; default_duration = 1
+    stack_policy = "refresh"; default_duration = 2; decrement_on = "always"
     blocks = {"day_action": True, "night_action": True, "vote": True, "day_talk": True}
 
     def on_apply(self, game, uid, entry): return f"<@{uid}> You've been Jailed!"
@@ -60,7 +60,7 @@ class Jailed(Status):
 @register("Silenced")
 class Silenced(Status):
     name = "Silenced"; type = "debuff"; visibility = "private"
-    stack_policy = "refresh"; default_duration = 2
+    stack_policy = "refresh"; default_duration = 1; decrement_on = "night"
     # talking in day channel is policy-enforced in your cog; we flag a block here:
     blocks = {"day_talk": True}
 
@@ -71,8 +71,8 @@ class Silenced(Status):
 @register("DoubleVote")
 class DoubleVote(Status):
     name = "Double vote"; type = "buff"; visibility = "private"
-    stack_policy = "multiple"; default_duration = 2
-    vote_weight_delta = +1.0  # base 1 -> 2; stacking adds more
+    stack_policy = "multiple"; default_duration = 1; decrement_on = "night"
+    vote_weight_multiplier = 2.0  # base 1 -> 2; stacking adds more
 
     def on_apply(self, game, uid, entry): return f"<@{uid}> You've been blessed with double vote!"
     def on_expire(self, game, uid, entry): return f"<@{uid}> Your double vote expired."
@@ -83,8 +83,8 @@ class Sanctioned(Status):
     name = "Sanctioned"; type = "debuff"; visibility = "private"
     # stacks should accumulate to affect vote twice -> 0.0
     stack_policy = "multiple"
-    default_duration = 2
-    vote_weight_delta = -0.5
+    default_duration = 1 ; decrement_on = "night"
+    vote_weight_multiplier = 0.5
 
     def on_apply(self, game, uid, entry):
         stacks = entry.get("stacks", 1)
@@ -98,7 +98,7 @@ class Sanctioned(Status):
 @register("Wounded")
 class Wounded(Status):
     name = "Wounded"; type = "debuff"; visibility = "private"
-    stack_policy = "add"; default_duration = 2
+    stack_policy = "add"; default_duration = 2; decrement_on = "always"
     # Policy from spec:
     #  - one stack: can't vote
     #  - two stacks: die immediately
@@ -125,7 +125,7 @@ class Wounded(Status):
 @register("Poisoned")
 class Poisoned(Status):
     name = "Poisoned"; type = "debuff"; visibility = "private"
-    stack_policy = "add"; default_duration = 1
+    stack_policy = "add"; default_duration = 1 ; decrement_on = "always"
 
     def on_apply(self, game, uid, entry):
         stacks = entry.get("stacks", 1)

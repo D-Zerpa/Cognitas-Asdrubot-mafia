@@ -126,8 +126,6 @@ class ActionsCog(commands.Cog):
             t = players.get(target_uid)
             if not t:
                 return await ctx.reply("Target is not registered.", ephemeral=not public)
-            if not t.get("alive", True):
-                return await ctx.reply("Target is not alive.", ephemeral=not public)
 
 
         # Decide action kind for this phase (day/night)

@@ -8,6 +8,7 @@ from enum import Enum
 
 from .state import game
 from .storage import save_state
+from ..status import engine as SE
 from ..core.infra import get_role_ids
 
 NAME_RX = re.compile(r"\s+")
@@ -42,7 +43,7 @@ def _is_admin(ctx: commands.Context | Any) -> bool:
         return False
 
 
-async def _sanitize_votes_for_uid(uid: str):
+async def sanitize_votes_for_uid(uid: str):
     """
     Remove the player's active vote and end-day request when they die.
     Best-effort; ignores errors.
@@ -166,40 +167,7 @@ async def register(ctx, member: discord.Member | None = None, *, name: str | Non
         pass
 
     # --- Create or reuse player's private role channel ---
-    # If already has one and channel exists, keep it. Else create.
-    existing_ch_id = game.players[uid].get("role_channel_id")
-    existing_ch = guild.get_channel(existing_ch_id) if existing_ch_id else None
-
-    if existing_ch is None:
-        # Build overwrites: @everyone = no view, player+bot = view/send
-        overwrites = {
-            guild.default_role: discord.PermissionOverwrite(view_channel=False),
-            target: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True),
-            guild.me: discord.PermissionOverwrite(view_channel=True, send_messages=True, manage_messages=True),
-        }
-
-        # Optional: place under the same category as the Day channel if you want grouping
-        parent = None
-        try:
-            day_id = getattr(game, "day_channel_id", None)
-            if day_id:
-                day_ch = guild.get_channel(day_id)
-                parent = getattr(day_ch, "category", None)
-        except Exception:
-            parent = None
-
-        ch_name = f"role-{_slug(display)}"
-        try:
-            role_ch = await guild.create_text_channel(
-                ch_name, overwrites=overwrites, category=parent, reason="Asdrubot: player role channel"
-            )
-            game.players[uid]["role_channel_id"] = role_ch.id
-        except Exception as e:
-            # Soft fail: just skip channel creation
-            game.players[uid]["role_channel_id"] = None
-    else:
-        # Keep existing
-        game.players[uid]["role_channel_id"] = existing_ch.id
+    game.players[uid]["role_channel_id"] = None
 
     await save_state()
 
@@ -213,7 +181,7 @@ async def register(ctx, member: discord.Member | None = None, *, name: str | Non
     except Exception:
         pass
 
-    await ctx.reply(f"✅ Registered: <@{uid}> as **{display}** (alive){ch_mention}.", ephemeral=True)
+    await ctx.reply(f"✅ Registered: <@{uid}> as **{display}** (alive).", ephemeral=True)
 
     # Optional: greet in private role channel
     try:
@@ -231,9 +199,21 @@ async def unregister(ctx, member: discord.Member):
         return await ctx.reply("Admins only.", ephemeral=True)
     uid = str(member.id)
     if uid in game.players:
+        p_data = game.players[uid]
+        chan_id = p_data.get("role_channel_id")
+        if chan_id:
+            guild = ctx.guild
+            channel = guild.get_channel(chan_id)
+            if channel:
+                try:
+                    await channel.set_permissions(member, overwrite=None, reason="Unregister player")
+                except Exception:
+                    pass
+
         del game.players[uid]
         await save_state()
-        return await ctx.reply(f"🗑️ Unregistered <@{uid}>.", ephemeral=True)
+        return await ctx.reply(f"🗑️ Unregistered <@{uid}> and removed channel access.", ephemeral=True)
+        
     await ctx.reply("Player was not registered.", ephemeral=True)
 
 
@@ -477,16 +457,55 @@ async def remove_effect(ctx, member: discord.Member, effect: str):
 async def set_alive(ctx, member: discord.Member, alive: bool):
     if not _is_admin(ctx):
         return await ctx.reply("Admins only.", ephemeral=True)
+    
     uid = str(member.id)
     if uid not in game.players:
         return await ctx.reply("Player not registered.", ephemeral=True)
-    game.players[uid]["alive"] = bool(alive)
+
     if not alive:
-        await _sanitize_votes_for_uid(uid)
-    await save_state()
-    emoji = "☠️" if not alive else "💚"
+        # Unified death path
+        await process_death(ctx, member.id, reason="Admin /kill")
+        emoji = "☠️"
+    else:
+        # Unified revive path
+        game.players[uid]["alive"] = True
+        # IMPORTANT: Cleanse old statuses when reviving to prevent bugs
+        SE.heal(game, uid, all_=True)
+        
+        from ..core.infra import apply_alive_dead_role
+        await apply_alive_dead_role(ctx.guild, member.id, alive=True)
+        await save_state()
+        emoji = "💚"
+
     await ctx.reply(f"{emoji} Set `alive` = `{alive}` for <@{uid}>.", ephemeral=True)
 
+
+async def process_death(ctx_or_guild, member_id: int | str, reason: str = "Unknown"):
+    """
+    Handle all side-effects of a player dying:
+    - Set alive=False
+    - Clear active votes/requests
+    - Heal all statuses (poison, silence, etc)
+    - Update Discord roles (Alive -> Dead)
+    """
+    uid = str(member_id)
+    if uid not in game.players:
+        return
+
+    # a) Update state
+    game.players[uid]["alive"] = False
+    game.players[uid]["death_reason"] = reason
+    
+    # b) Clean up game mechanics
+    await sanitize_votes_for_uid(uid)  
+    SE.heal(game, uid, all_=True)      
+    
+    # c) Discord Roles
+    guild = getattr(ctx_or_guild, "guild", ctx_or_guild)
+    if guild:
+        await apply_alive_dead_role(guild, int(member_id), alive=False)
+    
+    await save_state()
 
 async def kill(ctx, member: discord.Member):
     guild: discord.Guild = ctx.guild

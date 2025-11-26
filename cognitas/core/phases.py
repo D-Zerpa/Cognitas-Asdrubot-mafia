@@ -13,6 +13,7 @@ from .logs import log_event
 from .johnbotjovi import lynch as make_lynch_poster
 from .infra import ensure_day_channel, rename_day_channel, set_day_channel_posting, get_infra, apply_alive_dead_role
 from .. import config as cfg
+from .players import process_death
 from .reminders import (
     parse_duration_to_seconds,
     start_day_timer,
@@ -308,12 +309,9 @@ async def end_day(
 
         # Mark player as dead if tracked
         try:
-            uid = str(lynch_target_id)
-            if hasattr(game, "players") and uid in game.players:
-                game.players[uid]["alive"] = False
-                await apply_alive_dead_role(ctx.guild, int(lynch_target_id), alive=False)
-        except Exception:
-            pass
+            await process_death(ctx.guild, lynch_target_id, reason="Lynched")
+        except Exception as e:
+            log.info(f"[phases] Error processing lynch death: {e!r}")
 
         # Try to generate and send lynch poster
         if lynch_member is not None:

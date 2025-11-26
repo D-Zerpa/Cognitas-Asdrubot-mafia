@@ -92,8 +92,8 @@ def _ensure_defaults():
     # Ensure a concrete expansion object exists (safe fallback to base)
     try:
         if not hasattr(game, "expansion") or game.expansion is None:
-            from .game import _load_expansion_for
-            game.expansion = _load_expansion_for(getattr(game, "profile", "default"))
+            from ..expansions import load_expansion_instance
+            game.expansion = load_expansion_instance(getattr(game, "profile", "default"))
 
         # Status system containers
         if not hasattr(game, "status_map"): game.status_map = {}
@@ -130,13 +130,17 @@ def load_state(path: str | Path | None = None) -> Dict[str, Any]:
     try:
         with open(eff_path, "r", encoding="utf-8") as f:
             data = json.load(f)
-    except Exception:
+    except Exception as e_main:
         # Try backup
         try:
             with open(eff_path + ".bak", "r", encoding="utf-8") as f:
                 data = json.load(f)
-        except Exception:
-            data = {}
+            log.warning("[storage] Main state file failed, loaded from backup.")
+        except Exception as e_bak:
+            # Do not return empty dict on total failure.
+            # Fail hard to prevent overwriting data with an empty state.
+            log.critical(f"[storage] FATAL: Could not load state or backup. {e_main} | {e_bak}")
+            raise RuntimeError("State load failed. Check state.json integrity manually.")
 
     # --- Hydrate 'game' from data (keep keys consistent with save_state) ---
     game.players = data.get("players", {})

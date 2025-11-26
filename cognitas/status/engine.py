@@ -115,7 +115,15 @@ def tick(game, phase: str) -> List[Tuple[str, str]]:
                 if tb:
                     banners.append((uid, tb))
             # decrement
-            entry["remaining"] = max(0, int(entry.get("remaining", 0)) - 1)
+            should_decay = True
+            if state:
+                policy = getattr(state, "decrement_on", "always")
+                if policy in ("day", "night") and policy != phase:
+                    should_decay = False
+            
+            if should_decay:
+                entry["remaining"] = max(0, int(entry.get("remaining", 0)) - 1)
+
             if entry["remaining"] == 0:
                 # expire
                 eb = state.on_expire(game, uid, entry) if state else None

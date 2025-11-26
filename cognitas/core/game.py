@@ -4,6 +4,7 @@ from .state import game       # tu GameState existente
 from .roles import load_roles
 from .storage import save_state
 from .logs import log_event
+from .infra import get_infra
 import unicodedata
 
 
@@ -103,16 +104,19 @@ async def start(ctx, *, profile: str = "default", day_channel: discord.TextChann
     - Reset basic counters
     - Set day/admin channels if provided
     """
+    from ..expansions import load_expansion_instance
     
     game.profile = profile.lower()
     game.roles_def = load_roles(game.profile)
     game.roles = _build_roles_index(game.roles_def)
-    game.expansion = _load_expansion_for(game.profile)  # new
+    game.expansion = load_expansion_instance(game.profile)
 
 
     # Minimal non-destructive resets of players
     game.votes = {}
     game.end_day_votes = set()
+    game.status_map = {} 
+    game.status_log = []
     game.game_over = False
     game.current_day_number = 0
     game.phase = "day"
@@ -213,36 +217,67 @@ async def who(ctx, member: discord.Member | None = None):
 
 async def assign_role(ctx, member: discord.Member, role_name: str):
     """
-    Assign a role to a player and apply defaults (SMT: 'flags').
+    Assign a role to a player and link them to their pre-created private channel.
     """
     uid = str(member.id)
     if uid not in game.players:
         return await ctx.reply("Player not registered.")
 
+    # 1. Look up role definition
     role_def = _lookup_role(role_name, getattr(game, "roles", {}) or {}, getattr(game, "roles_def", {}))
     if not role_def:
         return await ctx.reply(f"Unknown role: `{role_name}`")
 
-    game.players[uid]["role"] = role_name
+    # Use the canonical name from the definition (e.g., "Makoto Yuki")
+    canonical_name = role_def.get("name")
+    game.players[uid]["role"] = canonical_name
 
-    # Merge defaults/flags without overwriting existing values
+    # 2. Merge defaults/flags (Existing logic)
     defaults = _extract_role_defaults(role_def)
-    if defaults:
-        flags = game.players[uid].setdefault("flags", {})
-        for k, v in defaults.items():
-            flags.setdefault(k, v)
+    game.players[uid]["flags"] = defaults.copy() if defaults else {}
+
+    # 3. CHANNEL LINKING LOGIC
+    guild = getattr(ctx, "guild", None) or member.guild
+    infra = get_infra(guild.id)
+    
+    # Retrieve the map created by bootstrap: { "Role Name": channel_id }
+    role_channels = infra.get("role_channels", {})
+    chan_id = role_channels.get(canonical_name)
+    
+    feedback_extra = ""
+    
+    if chan_id:
+        channel = guild.get_channel(chan_id)
+        if channel:
+            try:
+                # a) Grant permissions to the member
+                await channel.set_permissions(
+                    member, 
+                    view_channel=True, 
+                    send_messages=True, 
+                    read_message_history=True
+                )
+                
+                # b) Link player to this channel in state
+                game.players[uid]["role_channel_id"] = chan_id
+                
+                # c) Send welcome/notification
+                await channel.send(
+                    f"👋 Welcome, {member.mention}. You have been assigned the role **{canonical_name}**.\n"
+                    f"This is your private channel for actions and system notifications."
+                )
+                feedback_extra = f" | 📺 Linked to {channel.mention}"
+            except Exception as e:
+                feedback_extra = f" | ⚠️ Link failed: {e}"
+        else:
+            # Channel ID exists in infra but channel is gone from Discord
+            game.players[uid]["role_channel_id"] = None
+            feedback_extra = " | ⚠️ Role channel missing (deleted?)"
+    else:
+        # No pre-created channel found for this role
+        game.players[uid]["role_channel_id"] = None
 
     await save_state()
-    await ctx.reply(f"🎭 Role **{role_name}** assigned to <@{uid}>.")
-    await log_event(ctx.bot, ctx.guild.id, "ASSIGN", user_id=str(member.id), role=role_name)
-
-
-def _load_expansion_for(profile: str):
-    from ..expansions import get_registered
-    cls = get_registered(profile)
-    if not cls:
-        # Fallback al perfil por defecto registrado
-        cls = get_registered("default") or get_registered("base")
-    return cls() if cls else None
-
+    await ctx.reply(f"🎭 Role **{canonical_name}** assigned to <@{uid}>{feedback_extra}.")
+    await log_event(ctx.bot, ctx.guild.id, "ASSIGN", user_id=str(member.id), role=canonical_name)
 
