@@ -8,8 +8,7 @@ from discord.ext import commands
 
 from ..core.infra import (
     get_infra, set_infra, ensure_category, ensure_text_channel,
-    ensure_day_channel, as_overwrites_for_private, ASDRU_TAG
-)
+    ensure_day_channel, as_overwrites_for_private, ASDRU_TAG, ensure_role, set_roles)
 from ..core.storage import save_state
 from ..core.state import game
 from ..expansions import get_registered, list_registered_keys
@@ -223,6 +222,13 @@ class SetupView(discord.ui.View):
         ch_admin = await ensure_text_channel(guild, "asdrubot-admin", category=admin_cat, overwrites=overw_admin, topic="Private admin control. " + ASDRU_TAG)
         ch_logs  = await ensure_text_channel(guild, "asdrubot-logs", category=logs_cat, overwrites=as_overwrites_for_private(bot_member, self.invoker), topic="System logs. " + ASDRU_TAG)
         ch_day   = await ensure_text_channel(guild, "day-chat", category=public_cat, topic="Day chat. " + ASDRU_TAG)
+
+        # 3) Alive/Dead roles (names per your request)
+        alive_role = await ensure_role(guild, "Alive", colour=discord.Colour.green(), mentionable=True, hoist=False)
+        dead_role  = await ensure_role(guild, "Dead", colour=discord.Colour.red(), mentionable=False, hoist=False)
+
+        set_roles(guild.id, alive=alive_role.id, dead=dead_role.id)
+
 
         # 3) Role channels (private, one per role name)
         chosen = (self.expansion_choice or "base").strip()

@@ -11,7 +11,7 @@ from .state import game
 from .storage import save_state
 from .logs import log_event
 from .johnbotjovi import lynch as make_lynch_poster
-from .infra import ensure_day_channel, rename_day_channel, set_day_channel_posting, get_infra
+from .infra import ensure_day_channel, rename_day_channel, set_day_channel_posting, get_infra, apply_alive_dead_role
 from .. import config as cfg
 from .reminders import (
     parse_duration_to_seconds,
@@ -311,6 +311,7 @@ async def end_day(
             uid = str(lynch_target_id)
             if hasattr(game, "players") and uid in game.players:
                 game.players[uid]["alive"] = False
+                await apply_alive_dead_role(ctx.guild, int(lynch_target_id), alive=False)
         except Exception:
             pass
 

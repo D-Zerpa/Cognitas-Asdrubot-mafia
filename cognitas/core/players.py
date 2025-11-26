@@ -8,6 +8,7 @@ from enum import Enum
 
 from .state import game
 from .storage import save_state
+from ..core.infra import get_role_ids
 
 NAME_RX = re.compile(r"\s+")
 
@@ -149,6 +150,20 @@ async def register(ctx, member: discord.Member | None = None, *, name: str | Non
     _ensure_player(uid, display)
     game.players[uid]["name"] = display
     game.players[uid]["alive"] = True
+
+    # Assign "Alive" role.
+
+    ids = get_role_ids(guild.id)
+    r_alive = guild.get_role(ids.get("alive")) if ids.get("alive") else None
+    r_dead  = guild.get_role(ids.get("dead"))  if ids.get("dead")  else None
+
+    try:
+        if r_dead and r_dead in member.roles:
+            await member.remove_roles(r_dead, reason="Asdrubot: registration -> Alive")
+        if r_alive and r_alive not in member.roles:
+            await member.add_roles(r_alive, reason="Asdrubot: registration -> Alive")
+    except Exception:
+        pass
 
     # --- Create or reuse player's private role channel ---
     # If already has one and channel exists, keep it. Else create.
@@ -474,8 +489,12 @@ async def set_alive(ctx, member: discord.Member, alive: bool):
 
 
 async def kill(ctx, member: discord.Member):
+    guild: discord.Guild = ctx.guild
     await set_alive(ctx, member, False)
+    await apply_alive_dead_role(ctx.guild, int(member.id), alive=False)
 
 
 async def revive(ctx, member: discord.Member):
+    guild: discord.Guild = ctx.guild
     await set_alive(ctx, member, True)
+    await apply_alive_dead_role(ctx.guild, int(member.id), alive=True)

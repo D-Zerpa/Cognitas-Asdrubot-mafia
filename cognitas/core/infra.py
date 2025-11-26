@@ -148,3 +148,76 @@ async def set_day_channel_posting(guild: discord.Guild, *, allow: bool) -> None:
         await ch.set_permissions(guild.default_role, overwrite=ow, reason="Asdrubot phase posting toggle")
     except Exception:
         pass
+
+# ---- Alive/Dead roles infra ----
+
+def get_role_ids(guild_id: int) -> Dict[str, int]:
+    infra = get_infra(guild_id)
+    roles = (infra.get("roles") or {})
+    out = {}
+    if "alive" in roles:
+        out["alive"] = int(roles["alive"])
+    if "dead" in roles:
+        out["dead"] = int(roles["dead"])
+    return out
+
+def set_roles(guild_id: int, *, alive: Optional[int] = None, dead: Optional[int] = None) -> None:
+    infra = get_infra(guild_id)
+    roles = infra.setdefault("roles", {})
+    if alive is not None:
+        roles["alive"] = int(alive)
+    if dead is not None:
+        roles["dead"] = int(dead)
+
+async def ensure_role(
+    guild: discord.Guild,
+    name: str,
+    *,
+    colour: Optional[discord.Colour] = None,
+    mentionable: bool = False,
+    hoist: bool = False) -> discord.Role:
+    
+    # Case-insensitive lookup by name
+    for r in guild.roles:
+        if r.name.lower() == name.lower():
+            return r
+    # Create if missing (requires Manage Roles)
+    role = await guild.create_role(
+        name=name,
+        colour=colour or discord.Colour.default(),
+        mentionable=mentionable,
+        hoist=hoist,
+        reason="Asdrubot: ensure role",
+    )
+    return role
+
+async def apply_alive_dead_role(
+    guild: discord.Guild,
+    member_id: int,
+    *,
+    alive: bool) -> None:
+    try:
+        member = guild.get_member(member_id) or await guild.fetch_member(member_id)
+    except Exception:
+        return
+
+    ids = get_role_ids(guild.id)
+    r_alive = guild.get_role(ids.get("alive")) if ids.get("alive") else None
+    r_dead  = guild.get_role(ids.get("dead"))  if ids.get("dead")  else None
+    if not (r_alive or r_dead):
+        return  # roles not configured yet
+
+    try:
+        if alive:
+            add = [r_alive] if r_alive and r_alive not in member.roles else []
+            rem = [r_dead]  if r_dead  and r_dead  in member.roles else []
+        else:
+            add = [r_dead]  if r_dead  and r_dead  not in member.roles else []
+            rem = [r_alive] if r_alive and r_alive in member.roles else []
+
+        if add:
+            await member.add_roles(*add, reason="Asdrubot: alive/dead role swap")
+        if rem:
+            await member.remove_roles(*rem, reason="Asdrubot: alive/dead role swap")
+    except Exception:
+        pass
