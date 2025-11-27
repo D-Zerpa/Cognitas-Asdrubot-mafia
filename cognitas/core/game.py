@@ -92,7 +92,7 @@ def _lookup_role(role_name: str, roles_index: dict, roles_def) -> dict | None:
 
 async def set_channels(*, day: discord.TextChannel | None = None, admin: discord.TextChannel | None = None):
     if day is not None:
-        game.day_channel_id = day.id
+        game.game_channel_id = day.id
     if admin is not None:
         game.admin_channel_id = admin.id
     await save_state()

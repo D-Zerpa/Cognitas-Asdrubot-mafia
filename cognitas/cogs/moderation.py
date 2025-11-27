@@ -7,38 +7,35 @@ from ..core.game import set_channels
 from ..core.logs import set_log_channel as set_log_channel_core
 
 from ..core.storage import save_state
-from ..core.game import _load_expansion_for
+from ..expansions import load_expansion_instance
 from typing import Literal
 
 class ModerationCog(commands.Cog):
     def __init__(self, bot): self.bot = bot
 
-    @app_commands.command(name="bc", description="Broadcast to the Day channel (admin)")
+    @app_commands.command(name="bc", description="Broadcast to the Game channel (admin)")
     @app_commands.default_permissions(administrator=True)
     async def bc(self, interaction: discord.Interaction, text: str):
-        if not game.day_channel_id:
-            return await interaction.response.send_message("No Day channel configured.", ephemeral=True)
-        chan = interaction.guild.get_channel(game.day_channel_id)
+        if not game.game_channel_id:
+            return await interaction.response.send_message("No Game channel configured.", ephemeral=True)
+        chan = interaction.guild.get_channel(game.game_channel_id)
         if not chan:
             return await interaction.response.send_message("Day channel not found.", ephemeral=True)
         await chan.send(text)
         await interaction.response.send_message("✅ Broadcast sent.", ephemeral=True)
 
-    @app_commands.command(name="set_channels", description="Bind Day/Night/Admin channels for the game.")
+    @app_commands.command(name="set_channels", description="Bind Game and Admin channels.")
     @app_commands.describe(
-        day="Day channel",
-        night="Night channel",
+        game_channel="The main game channel (renamed for day/night)",
         admin="Admin control channel",
     )
-    @app_commands.default_permissions(administrator=True)
     async def set_channels_cmd(
         self,
         interaction: discord.Interaction,
-        day: discord.TextChannel | None = None,
-        night: discord.TextChannel | None = None,
+        game_channel: discord.TextChannel | None = None,
         admin: discord.TextChannel | None = None,
     ):
-        await set_channels(day or interaction.channel, night, admin)
+        await set_channels(game_ch=game_channel or interaction.channel, admin=admin)
         await interaction.response.send_message("✅ Channels configured.", ephemeral=True)
 
     @app_commands.command(name="set_log_channel", description="Set the logs channel.")
@@ -67,7 +64,7 @@ class ModerationCog(commands.Cog):
             )
         prof = (profile or "").strip().lower() or "default"
         try:
-            exp = _load_expansion_for(prof)
+            exp = load_expansion_instance(prof)
         except Exception as e:
             return await interaction.response.send_message(f"❌ Could not resolve expansion `{profile}`: {e}", ephemeral=True)
         game.profile = prof
@@ -135,8 +132,7 @@ class ModerationCog(commands.Cog):
         msg = (
             f"**Profile:** `{profile}`  •  **Expansion:** `{exp}`\n"
             f"**Phase:** `{phase}`  •  **Day #:** `{day_no}`\n"
-            f"**Channels:** Day={_m(getattr(game,'day_channel_id',None))}  •  "
-            f"Night={_m(getattr(game,'night_channel_id',None))}  •  "
+            f"**Channels:** Day={_m(getattr(game,'game_channel_id',None))}  •  "
             f"Admin={_m(getattr(game,'admin_channel_id',None))}  •  "
             f"Logs={_m(getattr(game,'admin_log_channel_id',None))}\n"
             f"{('**Banner preview:** ' + str(banner_preview)) if banner_preview else ''}"

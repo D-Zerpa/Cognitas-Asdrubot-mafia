@@ -124,7 +124,6 @@ class VotingAdminCog(commands.Cog):
         ctx = InteractionCtx(interaction)
 
         await votes_core.clearvotes(ctx)
-        await interaction.followup.send("🧹 Votes cleared.", ephemeral=False)
 
 
 class VoteCog(commands.GroupCog, name="vote", description="Votes"):

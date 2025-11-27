@@ -9,7 +9,7 @@ from enum import Enum
 from .state import game
 from .storage import save_state
 from ..status import engine as SE
-from ..core.infra import get_role_ids
+from ..core.infra import get_role_ids, apply_alive_dead_role
 
 NAME_RX = re.compile(r"\s+")
 
@@ -82,10 +82,10 @@ def get_player_snapshot(user_id: str) -> dict:
     role = p.get("role")
     voting_boost = p.get("voting_boost")
     vote_weight_field = p.get("vote_weight")
-    hidden_vote = bool(flags.get("hidden_vote", False))
     aliases = list(p.get("aliases", []))
     effects = list(p.get("effects", []))
     flags = dict(p.get("flags", {}))
+    hidden_vote = bool(flags.get("hidden_vote", False))
 
     #Role private channel id
     role_channel_id = p.get("role_channel_id")
@@ -450,6 +450,35 @@ async def remove_effect(ctx, member: discord.Member, effect: str):
     await ctx.reply(f"🧹 Effect `{effect}` removed from <@{uid}>.", ephemeral=True)
 
 
+async def send_to_player(guild: discord.Guild, uid: str, text: str):
+    """
+    Send a message to the player's private role channel if available.
+    Falls back to DM if the channel is missing or inaccessible.
+    """
+    if not text:
+        return
+
+    # 1. Try Role Channel
+    p = game.players.get(uid)
+    if p and p.get("role_channel_id"):
+        chan_id = p["role_channel_id"]
+        ch = guild.get_channel(chan_id)
+        if ch:
+            try:
+                await ch.send(text)
+                return
+            except Exception:
+                pass  # Fallback to DM
+
+    # 2. Fallback to DM
+    try:
+        member = guild.get_member(int(uid)) or await guild.fetch_member(int(uid))
+        if member:
+            await member.send(text)
+    except Exception:
+        pass
+
+
 # ----------------------------
 # Alive / Kill / Revive
 # ----------------------------
@@ -508,12 +537,8 @@ async def process_death(ctx_or_guild, member_id: int | str, reason: str = "Unkno
     await save_state()
 
 async def kill(ctx, member: discord.Member):
-    guild: discord.Guild = ctx.guild
     await set_alive(ctx, member, False)
-    await apply_alive_dead_role(ctx.guild, int(member.id), alive=False)
 
 
 async def revive(ctx, member: discord.Member):
-    guild: discord.Guild = ctx.guild
     await set_alive(ctx, member, True)
-    await apply_alive_dead_role(ctx.guild, int(member.id), alive=True)

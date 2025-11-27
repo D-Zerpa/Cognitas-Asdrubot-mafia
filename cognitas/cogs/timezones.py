@@ -21,6 +21,9 @@ except Exception:  # pragma: no cover
 from ..core.state import game
 from ..core.storage import save_state
 
+import logging
+log = logging.getLogger(__name__)
+
 
 # -----------------------------
 # Data model (persisted in state)
@@ -95,6 +98,22 @@ def _now_in_tz(tzname: str) -> datetime:
         except Exception:
             tz = pytz.UTC
         return datetime.now(tz)
+
+def _is_valid_tz(tzname: str) -> bool:
+    if _HAS_ZONEINFO:
+        from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+        try:
+            ZoneInfo(tzname)
+            return True
+        except ZoneInfoNotFoundError:
+            return False
+    else:
+        import pytz
+        try:
+            pytz.timezone(tzname)
+            return True
+        except pytz.UnknownTimeZoneError:
+            return False
 
 def _format_time(dt: datetime, fmt: str) -> str:
     # tokens: {HH} 24h, {MM} zero-padded, {abbr} TZ short name
@@ -180,21 +199,28 @@ class TimezonesCog(commands.Cog, name="Timezones"):
             await self._update_guild(guild, cfg)
 
     async def _update_guild(self, guild: discord.Guild, cfg: GuildTZConfig):
+        if not guild.me.guild_permissions.manage_channels:
+            return
+
         for entry in list(cfg.entries or []):
             ch = guild.get_channel(entry.channel_id)
             if not isinstance(ch, discord.VoiceChannel):
-                continue  # ignore missing or wrong type
+                continue
 
             now_dt = _now_in_tz(entry.tz)
             time_str = _format_time(now_dt, entry.fmt)
             new_name = f"{entry.label}: {time_str}"
 
-            # Only rename if changed (saves rate limit)
             if ch.name != new_name:
                 try:
                     await ch.edit(name=new_name, reason="Timezone clock update")
-                except (discord.Forbidden, discord.HTTPException):
-                    continue  # skip silently if no perms
+                    log.info(f"[timezones] Updated {ch.id} to '{new_name}'")
+                    # IMPORTANT: Sleep to prevent rate limit (Discord allows ~2 renames per 10 min per channel, 
+                    # but hitting many channels at once can trigger global limits).
+                    await asyncio.sleep(1.5) 
+                except (discord.Forbidden, discord.HTTPException) as e:
+                    log.warning(f"[timezones] Failed to update {ch.id}: {e}")
+                    continue
 
     # ------------- Commands -------------
     # Group under /tz for cleanliness
@@ -216,6 +242,13 @@ class TimezonesCog(commands.Cog, name="Timezones"):
         label: str,
         fmt: Optional[str] = None,
     ):
+
+
+        if not _is_valid_tz(tz):
+            return await interaction.response.send_message(
+                f"❌ Unknown timezone `{tz}`. Use IANA format (e.g. `Europe/Madrid`).", 
+                ephemeral=True)
+
         guild = interaction.guild
         if not guild:
             return await interaction.response.send_message("Guild context required.", ephemeral=True)
@@ -235,6 +268,7 @@ class TimezonesCog(commands.Cog, name="Timezones"):
         cfg.entries.append(TZEntry(channel_id=channel.id, tz=tz, label=label, fmt=fmt or "{HH}:{MM} {abbr}"))
         _state_save_guild(guild.id, cfg)
         await _persist()
+        asyncio.create_task(self._update_guild(guild, cfg))
         await interaction.response.send_message(
             f"✅ Added TZ clock on {channel.mention}: `{label}` @ `{tz}`.", ephemeral=True
         )
@@ -253,6 +287,7 @@ class TimezonesCog(commands.Cog, name="Timezones"):
         _state_save_guild(guild.id, cfg)
         await _persist()
 
+        asyncio.create_task(self._update_guild(guild, cfg))
         if len(cfg.entries or []) < before:
             await interaction.response.send_message(f"✅ Removed TZ clock from {channel.mention}.", ephemeral=True)
         else:
@@ -329,6 +364,10 @@ class TimezonesCog(commands.Cog, name="Timezones"):
         label: Optional[str] = None,
         fmt: Optional[str] = None,
     ):
+
+        if tz and not _is_valid_tz(tz):
+            return await interaction.response.send_message(f"❌ Unknown timezone `{tz}`. Use IANA format (e.g. `Europe/Madrid`).", ephemeral=True)
+
         guild = interaction.guild
         if not guild:
             return await interaction.response.send_message("Guild context required.", ephemeral=True)
@@ -349,6 +388,7 @@ class TimezonesCog(commands.Cog, name="Timezones"):
 
         _state_save_guild(guild.id, cfg)
         await _persist()
+        asyncio.create_task(self._update_guild(guild, cfg))
         await interaction.response.send_message("✅ Entry updated.", ephemeral=True)
 
 

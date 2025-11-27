@@ -7,8 +7,10 @@ from discord.ext import commands
 
 from ..core.state import game
 from ..core.storage import save_state
+from ..core.players import send_to_player
 from ..status import list_registered, get_state_cls
 from ..status import engine as SE
+from ..status import builtin
 
 class StatusCog(commands.Cog, name="Status"):
     def __init__(self, bot): self.bot = bot
@@ -20,7 +22,7 @@ class StatusCog(commands.Cog, name="Status"):
         return [app_commands.Choice(name=n, value=n)
                 for n in names if current_l in n.lower()][:20]
 
-    group = app_commands.Group(name="status", description="Altered states tools (GM)")
+    group = app_commands.Group(name="effects", description="Altered states tools (GM)")
 
     @group.command(name="apply", description="Apply a status to a player (GM only).")
     @app_commands.autocomplete(name=_status_autocomplete)
@@ -54,11 +56,9 @@ class StatusCog(commands.Cog, name="Status"):
 
         # deliver banner per visibility (night -> DM; day -> public) is handled by your policy;
         # here: send DM to user always; you can also post public depending on status.
+
         if banner:
-            try:
-                await user.send(banner)
-            except Exception:
-                pass
+            await send_to_player(interaction.guild, str(user.id), banner)
 
         await interaction.response.send_message(f"✅ Applied **{name}** to {user.mention}.", ephemeral=True)
 
@@ -82,8 +82,7 @@ class StatusCog(commands.Cog, name="Status"):
 
         # DM banners to the user
         for b in banners:
-            try: await user.send(b)
-            except Exception: pass
+            await send_to_player(interaction.guild, str(user.id), b)
 
         detail = f"all statuses" if all else (f"`{name}`" if name else "nothing")
         await interaction.response.send_message(f"✅ Cleansed {detail} from {user.mention}.", ephemeral=True)

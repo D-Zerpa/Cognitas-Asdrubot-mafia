@@ -11,9 +11,9 @@ from .state import game
 from .storage import save_state
 from .logs import log_event
 from .johnbotjovi import lynch as make_lynch_poster
-from .infra import ensure_day_channel, rename_day_channel, set_day_channel_posting, get_infra, apply_alive_dead_role
+from .infra import ensure_game_channel, rename_game_channel, set_game_channel_posting, get_infra, apply_alive_dead_role
 from .. import config as cfg
-from .players import process_death
+from .players import process_death, send_to_player
 from .reminders import (
     parse_duration_to_seconds,
     start_day_timer,
@@ -81,12 +81,12 @@ def _get_channel_or_none(guild: discord.Guild, chan_id: int | None) -> discord.a
     return ch if isinstance(ch, (discord.abc.GuildChannel, discord.Thread)) else None
 
 
-def _ensure_day_channel(ctx) -> discord.TextChannel:
+def _ensure_game_channel(ctx) -> discord.TextChannel:
     """Ensure day channel is configured and exists; raise RuntimeError if not."""
     guild: discord.Guild = ctx.guild
-    ch = _get_channel_or_none(guild, getattr(game, "day_channel_id", None))
+    ch = _get_channel_or_none(guild, getattr(game, "game_channel_id", None))
     if not ch:
-        raise RuntimeError("Day channel is not configured or no longer exists. Set it with `/set_day_channel`.")
+        raise RuntimeError("Day channel is not configured or no longer exists. Set it with `/set_game_channel`.")
     return ch
 
 
@@ -111,13 +111,13 @@ async def start_day(
    # Resolve the target channel (explicit > game > infra > ctx.channel)
     infra_day_id = None
     try:
-        infra_day_id = (get_infra(ctx.guild.id).get("channels", {}) or {}).get("day")
+        infra_day_id = (get_infra(ctx.guild.id).get("channels", {}) or {}).get("game")
     except Exception:
         infra_day_id = None
 
     ch = (
         target_channel
-        or _get_channel_or_none(ctx.guild, getattr(game, "day_channel_id", None))
+        or _get_channel_or_none(ctx.guild, getattr(game, "game_channel_id", None))
         or _get_channel_or_none(ctx.guild, infra_day_id)
         or ctx.channel
     )
@@ -129,7 +129,7 @@ async def start_day(
 
     # If there's an active Day and not forcing, inform and exit
     if hasattr(game, "day_deadline_epoch") and game.day_deadline_epoch and not force:
-        chan = ctx.guild.get_channel(getattr(game, "day_channel_id", None))
+        chan = ctx.guild.get_channel(getattr(game, "game_channel_id", None))
         when = f"<t:{game.day_deadline_epoch}:R>"
         return await ctx.reply(
             f"There is already an active Day in {chan.mention if chan else '#?'} (ends {when}). "
@@ -169,11 +169,9 @@ async def start_day(
     if ctx and getattr(ctx, "guild", None):
         guild = ctx.guild
         try:
-            # Make sure the channel exists under the intended category (optional)
-            # If you keep the public category id in infra, you can pass it to ensure_day_channel
-            await ensure_day_channel(guild)
-            await rename_day_channel(guild, phase="day", number=game.current_day_number)
-            await set_day_channel_posting(guild, allow=True)  # allow talking during day
+            await ensure_game_channel(guild)
+            await rename_game_channel(guild, phase="day", number=game.current_day_number)
+            await set_game_channel_posting(guild, allow=True)  # allow talking during day
         except Exception:
             pass
 
@@ -197,7 +195,7 @@ async def start_day(
     await save_state()
     # Decide Day channel (explicit > configured > current)
     target: discord.abc.Messageable = ch
-    game.day_channel_id = ch.id
+    game.game_channel_id = ch.id
 
     
     # Compute and store deadline
@@ -225,23 +223,8 @@ async def start_day(
     try:
         banners = SE.tick(game, "day")
         for uid, text in banners:
-            if not text:
-                continue
-            member = None
-            try:
-                member = guild.get_member(int(uid)) or await guild.fetch_member(int(uid))
-            except Exception:
-                member = None
-            # Day: announce in Day channel by default (your spec says day messages are public)
-            try:
-                await ch.send(text if isinstance(text, str) else str(text))
-            except Exception:
-                # fallback to DM if channel send fails
-                if member:
-                    try:
-                        await member.send(text if isinstance(text, str) else str(text))
-                    except Exception:
-                        pass
+            if not text: continue
+            await send_to_player(guild, uid, str(text))
         await save_state()
     except Exception:
         pass
@@ -288,7 +271,7 @@ async def end_day(
     - Clear deadline and cancel timer
     """
     guild: discord.Guild = ctx.guild
-    ch = _get_channel_or_none(guild, getattr(game, "day_channel_id", None))
+    ch = _get_channel_or_none(guild, getattr(game, "game_channel_id", None))
     if not ch:
         return await ctx.reply("No Day channel configured.")
 
@@ -394,8 +377,8 @@ async def start_night(
     guild: discord.Guild = ctx.guild
 
     # Resolve channel
-    ch = target_channel or _get_channel_or_none(guild, getattr(game, "night_channel_id", None)) or ctx.channel
-    game.night_channel_id = ch.id
+    ch = target_channel or _get_channel_or_none(guild, getattr(game, "game_channel_id", None)) or ctx.channel
+    game.game_channel_id = ch.id
     if not isinstance(ch, (discord.TextChannel, discord.Thread)):
         return await ctx.reply("Night channel must be a text channel or a thread.")
 
@@ -404,7 +387,7 @@ async def start_night(
 
     # Prevent overlapping Nights unless forced
     if hasattr(game, "night_deadline_epoch") and game.night_deadline_epoch and not force:
-        chan = ctx.guild.get_channel(getattr(game, "night_channel_id", None))
+        chan = ctx.guild.get_channel(getattr(game, "game_channel_id", None))
         when = f"<t:{game.night_deadline_epoch}:R>"
         return await ctx.reply(
             f"There is already an active Night in {chan.mention if chan else '#?'} (ends {when}). "
@@ -425,7 +408,7 @@ async def start_night(
     game.day_deadline_epoch = None
 
     # Store channel & phase
-    game.night_channel_id = ch.id
+    game.game_channel_id = ch.id
     game.phase = "night"
 
 
@@ -433,9 +416,9 @@ async def start_night(
     if ctx and getattr(ctx, "guild", None):
         guild = ctx.guild
         try:
-            await ensure_day_channel(guild)  # ensure exists
-            await rename_day_channel(guild, phase="night", number=game.current_day_number)
-            await set_day_channel_posting(guild, allow=False)  # lock during night
+            await ensure_game_channel(guild)  # ensure exists
+            await rename_game_channel(guild, phase="night", number=game.current_day_number)
+            await set_game_channel_posting(guild, allow=False)  # lock during night
         except Exception:
             pass
 
@@ -450,18 +433,8 @@ async def start_night(
     try:
         banners = SE.tick(game, "night")
         for uid, text in banners:
-            if not text:
-                continue
-            try:
-                member = guild.get_member(int(uid)) or await guild.fetch_member(int(uid))
-            except Exception:
-                member = None
-            if member:
-                try:
-                    # Night: DM only (your spec)
-                    await member.send(text if isinstance(text, str) else str(text))
-                except Exception:
-                    pass
+            if not text: continue
+            await send_to_player(guild, uid, str(text))
         await save_state()
     except Exception:
         pass
@@ -512,7 +485,7 @@ async def end_night(ctx):
     - Clear deadline and cancel timer
     """
     guild: discord.Guild = ctx.guild
-    ch = _get_channel_or_none(guild, getattr(game, "night_channel_id", None))
+    ch = _get_channel_or_none(guild, getattr(game, "game_channel_id", None))
     if not ch:
         return await ctx.reply("No Night channel configured.")
 
@@ -553,7 +526,7 @@ async def _autoclose_after(bot: discord.Client, guild_id: int, phase: str, unix_
             return
 
         # Resolve channel by phase
-        chan_id = getattr(game, f"{phase}_channel_id", None)
+        chan_id = getattr(game, "game_channel_id", None)
         channel = guild.get_channel(chan_id) if chan_id else None
 
         # Send timeout message
@@ -605,7 +578,7 @@ async def rehydrate_timers(bot: discord.Client, guild: discord.Guild):
         chan_id = getattr(game, f"{phase}_channel_id", None)
         if not chan_id:
             # If Night has no dedicated channel id, fallback to Day channel id
-            chan_id = getattr(game, "day_channel_id", None)
+            chan_id = getattr(game, "game_channel_id", None)
         try:
             ch = guild.get_channel_or_thread(chan_id) if chan_id else None
         except AttributeError:

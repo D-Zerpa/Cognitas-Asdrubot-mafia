@@ -80,35 +80,41 @@ async def ensure_text_channel(
         except Exception:
             pass
         return ch
+
+    final_overwrites = overwrites if overwrites is not None else {}
+
     ch = await guild.create_text_channel(
         name=name,
         category=category,
-        overwrites=overwrites,
+        overwrites=final_overwrites,
         topic=mark_topic(topic or ""),
         reason="Asdrubot terraform",
     )
     return ch
 
-# ---------- Day channel helpers (single public channel) ----------
+# ---------- Game channel helpers (single public channel) ----------
 
-def _resolve_day_channel(guild: discord.Guild) -> Optional[discord.TextChannel]:
-    infra = get_infra(guild.id)
-    ch_id = (infra.get("channels") or {}).get("day")
+def _resolve_game_channel(guild: discord.Guild) -> Optional[discord.TextChannel]:
+    ch_id = (infra.get("channels") or {}).get("game") or (infra.get("channels") or {}).get("day")
     ch = guild.get_channel(ch_id) if ch_id else None
     if isinstance(ch, discord.TextChannel):
         return ch
-    # fallback: try by name
-    ch = discord.utils.get(guild.text_channels, name="day-chat")
+    # Fallback 
+    ch = discord.utils.get(guild.text_channels, name="game-chat")
     return ch if isinstance(ch, discord.TextChannel) else None
 
-async def ensure_day_channel(guild: discord.Guild, *, category: Optional[discord.CategoryChannel] = None) -> discord.TextChannel:
+async def ensure_game_channel(guild: discord.Guild, *, category: Optional[discord.CategoryChannel] = None) -> discord.TextChannel:
     infra = get_infra(guild.id)
-    ch = _resolve_day_channel(guild)
+    ch = _resolve_game_channel(guild)
     if ch:
+        if "game" not in (infra.get("channels") or {}):
+            infra.setdefault("channels", {})["game"] = ch.id
+            set_infra(guild.id, infra)
         return ch
-    # Create if missing
-    ch = await ensure_text_channel(guild, "day-chat", category=category, topic="Main game channel. " + ASDRU_TAG)
-    infra.setdefault("channels", {})["day"] = ch.id
+    
+    # Create if doesn't exist
+    ch = await ensure_text_channel(guild, "game-chat", category=category, topic="Main game channel. " + ASDRU_TAG)
+    infra.setdefault("channels", {})["game"] = ch.id
     set_infra(guild.id, infra)
     return ch
 
@@ -123,8 +129,8 @@ def _phase_channel_topic(phase: str, number: int) -> str:
     title = f"{phase.title()} {max(1, int(number or 1))}"
     return mark_topic(title)
 
-async def rename_day_channel(guild: discord.Guild, *, phase: str, number: int) -> None:
-    ch = _resolve_day_channel(guild)
+async def rename_game_channel(guild: discord.Guild, *, phase: str, number: int) -> None:
+    ch = _resolve_game_channel(guild)
     if not ch:
         return
     try:
@@ -136,9 +142,8 @@ async def rename_day_channel(guild: discord.Guild, *, phase: str, number: int) -
     except Exception:
         pass
 
-async def set_day_channel_posting(guild: discord.Guild, *, allow: bool) -> None:
-    """Toggle @everyone send_messages in the day channel."""
-    ch = _resolve_day_channel(guild)
+async def set_game_channel_posting(guild: discord.Guild, *, allow: bool) -> None:
+    ch = _resolve_game_channel(guild)
     if not ch:
         return
     try:
@@ -196,16 +201,23 @@ async def apply_alive_dead_role(
     member_id: int,
     *,
     alive: bool) -> None:
+    
     try:
         member = guild.get_member(member_id) or await guild.fetch_member(member_id)
     except Exception:
         return
 
     ids = get_role_ids(guild.id)
-    r_alive = guild.get_role(ids.get("alive")) if ids.get("alive") else None
-    r_dead  = guild.get_role(ids.get("dead"))  if ids.get("dead")  else None
+    # Buscar IDs guardados
+    id_alive = ids.get("alive")
+    id_dead = ids.get("dead")
+    
+    # Resolver objetos Role
+    r_alive = guild.get_role(id_alive) if id_alive else None
+    r_dead  = guild.get_role(id_dead)  if id_dead  else None
+
     if not (r_alive or r_dead):
-        return  # roles not configured yet
+        return
 
     try:
         if alive:

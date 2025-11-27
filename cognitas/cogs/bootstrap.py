@@ -8,7 +8,7 @@ from discord.ext import commands
 
 from ..core.infra import (
     get_infra, set_infra, ensure_category, ensure_text_channel,
-    ensure_day_channel, as_overwrites_for_private, ASDRU_TAG, ensure_role, set_roles)
+    ensure_day_channel, as_overwrites_for_private, ASDRU_TAG, ensure_role, set_roles, is_asdrubot_channel)
 from ..core.storage import save_state
 from ..core.state import game
 from ..expansions import get_registered, list_registered_keys
@@ -146,7 +146,7 @@ class SetupView(discord.ui.View):
         self.bot = bot
         self.expansion_choice: Optional[str] = None
 
-        # dynamic select for expansions
+        # Dynamic select for expansions (Keep this in __init__)
         self.expansion_select = discord.ui.Select(
             placeholder="Select expansion profile",
             min_values=1, max_values=1,
@@ -157,36 +157,34 @@ class SetupView(discord.ui.View):
         self.expansion_select.callback = self.on_select
         self.add_item(self.expansion_select)
 
-        # action buttons
-        self.add_item(discord.ui.Button(label="Create Structure", style=discord.ButtonStyle.success, custom_id="as_create"))
-        self.add_item(discord.ui.Button(label="Wipe Game Channels", style=discord.ButtonStyle.danger, custom_id="as_wipe"))
-        self.add_item(discord.ui.Button(label="Help / Mechanics", style=discord.ButtonStyle.secondary, custom_id="as_help"))
+        # NOTE: Buttons are now handled via decorators below, removing duplicates and manual add_item calls.
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        # Only admins or the invoker can use the setup controls
         if interaction.user.id == self.invoker.id:
             return True
         perms = interaction.user.guild_permissions
         return perms.administrator or perms.manage_guild
 
     async def on_select(self, interaction: discord.Interaction):
+        # Callback for the dropdown
         self.expansion_choice = self.expansion_select.values[0]
         await interaction.response.send_message(f"Expansion selected: **{self.expansion_choice}**", ephemeral=True)
 
-    @discord.ui.button(label="Create Structure", style=discord.ButtonStyle.success, custom_id="create_btn_hidden", row=1, disabled=True)
-    async def _hidden(self, *_):  # never used; present just to reserve row alignment in some clients
-        pass
+    # --- Buttons defined natively (Auto-wired callbacks) ---
 
-    async def on_timeout(self):
-        for child in self.children:
-            if hasattr(child, "disabled"):
-                child.disabled = True
+    @discord.ui.button(label="Create Structure", style=discord.ButtonStyle.success, row=1)
+    async def create_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not self.expansion_choice:
+            return await interaction.response.send_message("⚠️ Please select an expansion profile first.", ephemeral=True)
+        await self._handle_create(interaction)
 
-    async def on_error(self, error: Exception, item: discord.ui.Item, interaction: discord.Interaction) -> None:
-        try:
-            await interaction.response.send_message(f"Setup error: {error}", ephemeral=True)
-        except Exception:
-            pass
+    @discord.ui.button(label="Wipe Game Channels", style=discord.ButtonStyle.danger, row=1)
+    async def wipe_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self._handle_wipe(interaction)
+
+    @discord.ui.button(label="Help / Mechanics", style=discord.ButtonStyle.secondary, row=1)
+    async def help_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message(_short_mechanics(), ephemeral=True)
 
     # dispatch component custom_ids
     async def interaction_handle(self, interaction: discord.Interaction):
@@ -240,7 +238,7 @@ class SetupView(discord.ui.View):
             overw_private = as_overwrites_for_private(bot_member, self.invoker)
 
             for rn in role_names:
-                safe_name = f"role-{_slugify_channel(rn)}"
+                safe_name = f"{_slugify_channel(rn)}"
                 ch = await ensure_text_channel(
                     guild,
                     safe_name,
@@ -267,7 +265,7 @@ class SetupView(discord.ui.View):
         infra["channels"] = {
             "admin": ch_admin.id,
             "logs": ch_logs.id,
-            "day": ch_day.id,
+            "game": ch_game.id,
         }
         infra["roles_category_id"] = roles_cat.id
         infra["role_channels"] = role_channels              # <— aquí guardamos el mapping
@@ -377,21 +375,6 @@ class BootstrapCog(commands.Cog):
             view=view,
             ephemeral=True,
         )
-
-    
-
-    # global component router (ensures buttons fire on mobile/web)
-    @commands.Cog.listener()
-    async def on_interaction(self, interaction: discord.Interaction):
-        if not interaction.type.name.startswith("component".upper()):
-            # For discord.py, type checks can vary; route by custom_id presence
-            pass
-        if interaction.data and isinstance(interaction.data, dict) and interaction.data.get("custom_id", "").startswith("as_"):
-            # Find a running view in message if any
-            if interaction.message and interaction.message.components:
-                for v in interaction.client._connection._views:  # internal registry of views
-                    if isinstance(v, SetupView) and v.message and v.message.id == interaction.message.id:
-                        return await v.interaction_handle(interaction)
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(BootstrapCog(bot))
