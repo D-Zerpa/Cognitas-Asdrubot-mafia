@@ -183,13 +183,23 @@ async def start_day(
     except Exception:
         game.votes = {}
 
+        # --- Status engine: 1 tick at Day start (announce day banners publicly) ---
+    try:
+        banners = SE.tick(game, "day")
+        for uid, text in banners:
+            if not text: continue
+            await send_to_player(guild, uid, str(text))
+        await save_state()
+    except Exception:
+        pass
 
         # Notify expansion about phase change into Day
     try:
-        game.expansion.on_phase_change(game, "day")
-
-    except Exception:
-        pass
+        if getattr(game, "expansion", None):
+            # CAMBIO: await y pasar ctx.guild
+            await game.expansion.on_phase_change(ctx.guild, game, "day")
+    except Exception as e:
+        log.error(f"[phases] Expansion hook error (day): {e}")
 
 
     await save_state()
@@ -216,16 +226,6 @@ async def start_day(
         banner = getattr(game, "expansion", None) and game.expansion.banner_for_day(game)
         if banner:
             await ch.send(str(banner))
-    except Exception:
-        pass
-
-        # --- Status engine: 1 tick at Day start (announce day banners publicly) ---
-    try:
-        banners = SE.tick(game, "day")
-        for uid, text in banners:
-            if not text: continue
-            await send_to_player(guild, uid, str(text))
-        await save_state()
     except Exception:
         pass
 
@@ -422,12 +422,6 @@ async def start_night(
         except Exception:
             pass
 
-    # Notify expansion about phase change into Night
-    try:
-        game.expansion.on_phase_change(game, "night")
-    except Exception:
-        pass
-
 
         # --- Status engine: 1 tick at Night start (night messages via DM) ---
     try:
@@ -438,6 +432,14 @@ async def start_night(
         await save_state()
     except Exception:
         pass
+
+    # Notify expansion about phase change into Night
+    try:
+        if getattr(game, "expansion", None):
+            # CAMBIO: await y pasar ctx.guild
+            await game.expansion.on_phase_change(ctx.guild, game, "night")
+    except Exception as e:
+        log.error(f"[phases] Expansion hook error (night): {e}")
 
 
     # Compute and store deadline

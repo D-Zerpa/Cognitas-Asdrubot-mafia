@@ -216,8 +216,15 @@ def compute_vote_weight(game, uid: str, base: float = 1.0) -> float:
     # 4) static role flag 'double_vote' => multiplier x2
     try:
         flags = (getattr(game, "players", {}) or {}).get(uid, {}).get("flags", {}) or {}
+        
+        # FIX: Añadir voting_boost (Aditive)
+        boost = int(flags.get("voting_boost", 0))
+        w += boost
+        
+        # Double Vote (Times)
         if flags.get("double_vote", False):
             mult *= 2.0
+            
     except Exception:
         pass
 

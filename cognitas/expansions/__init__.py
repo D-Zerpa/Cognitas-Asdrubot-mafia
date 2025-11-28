@@ -12,7 +12,7 @@ class Expansion:
     name: str = "base"
 
     # ---- Lifecycle / phase hooks ----
-    def on_phase_change(self, game_state, new_phase: str) -> None: ...
+    async def on_phase_change(self, guild: Any, game_state, new_phase: str) -> None: pass
     def banner_for_day(self, game_state) -> Optional[str]: return None
 
     # Optional hooks
@@ -21,6 +21,14 @@ class Expansion:
     def on_player_death(self, game_state, uid: str, *, cause: str) -> None: ...
     def validate_setup(self, roles_def: Dict[str, Any]) -> None: ...
     def get_status_lines(self, game_state) -> list[str]: return []
+
+    # Specific ability-related hooks
+    async def on_action_commit(self, game_state, actor_uid: str, target_uid: str | None, action_data: dict) -> None:
+        """
+        Called after a player successfully registers an action via /act.
+        Useful for passive reactions like Watchers, Trackers or Oracles.
+        """
+        pass
 
 # ---- Module-level registry ----
 _EXPANSION_REGISTRY: Dict[str, Type[Expansion]] = {}

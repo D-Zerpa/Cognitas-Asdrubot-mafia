@@ -22,7 +22,8 @@ Tú eres la responsable de liberar cada sello y traer el fin a la humanidad.
 
 ## 🕯️ Pasivas
 - **El Velo del Avatar** — Cada vez que intenten investigarte, **aparecerás como Ryoji Mochizuki**.
-- **Conteo Final** — Tu poder crece con cada Arcano muerto. A lo largo de la partida, **recibirás habilidades progresivamente** conforme te acerques a tu objetivo. También, en ocasiones, **se activarán efectos globales** que afectarán a la población.
+- **Conteo Final** — Tu poder crece con cada Arcano muerto. A lo largo de la partida, **recibirás habilidades progresivamente** conforme te acerques a tu objetivo. También, en ocasiones, **se activarán efectos globales** que afectarán a la población. 
+- **La humanidad busca el fin** — Eres **inmune** a los asesinatos nocturnos hasta **la tercera fase** de tu evolución. Si te linchan antes de llegar a la tercera fase, se mostrará la ficha de **Ryoji Mochizuki**, alguien heredará tus poderes y se te abrirá un chat privado con ese jugador, con el que podrás mantener contacto aunque estés muerto (si el jugador gana, tú ganas con él). Si el rol original del jugador es de un Arcano, se cuenta como si estuviese muerto.
 - **Restricciones de uso** — **Solo puedes usar 1 habilidad de asesinato y 1 habilidad activa por noche.**  
   **Inicialmente**, no puedes usar **la misma** habilidad de asesinato en noches consecutivas.
 

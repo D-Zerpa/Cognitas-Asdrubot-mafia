@@ -188,6 +188,19 @@ class ActionsCog(commands.Cog):
 
         await save_state()
 
+        if getattr(game, "expansion", None):
+            try:
+                await game.expansion.on_action_commit(
+                    interaction,
+                    game, 
+                    actor_uid, 
+                    target_uid, 
+                    res.get("record", {})
+                )
+            except Exception as e:
+                log.error(f"Expansion action hook failed: {e}")
+
+
         # Audit log
         try:
             await log_event(

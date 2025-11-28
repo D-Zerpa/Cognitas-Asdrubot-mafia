@@ -5,7 +5,7 @@ from ..core import lunar
 class SMTExpansion(Expansion):
     name = "smt"
 
-    def on_phase_change(self, game_state, new_phase: str):
+    async def on_phase_change(self, guild, game_state, new_phase: str):
         # Advance the lunar cycle at the start of the Night phase
         if new_phase == "night":
             lunar.advance(game_state, steps=1)
