@@ -4,7 +4,7 @@ from .state import game       # tu GameState existente
 from .roles import load_roles
 from .storage import save_state
 from .logs import log_event
-from .infra import get_infra
+from .infra import get_infra, set_roles
 import unicodedata
 
 
@@ -97,12 +97,18 @@ async def set_channels(*, day: discord.TextChannel | None = None, admin: discord
         game.admin_channel_id = admin.id
     await save_state()
 
-async def start(ctx, *, profile: str = "default", day_channel: discord.TextChannel | None = None, admin_channel: discord.TextChannel | None = None):
+async def start(
+    ctx, 
+    *, 
+    profile: str = "default", 
+    game_channel: discord.TextChannel | None = None, 
+    admin_channel: discord.TextChannel | None = None,
+    alive_role_id: int | None = None,
+    dead_role_id: int | None = None):
+
     """
-    Start a game with a roles profile (default, smt, ...).
-    - Load roles_{profile}.json (or fall back to default)
-    - Reset basic counters
-    - Set day/admin channels if provided
+    Start a game with a roles profile.
+    Supports linking existing Alive/Dead roles for manual setups.
     """
     from ..expansions import load_expansion_instance
     
@@ -123,15 +129,25 @@ async def start(ctx, *, profile: str = "default", day_channel: discord.TextChann
     game.day_deadline_epoch = None
     game.night_deadline_epoch = None
 
-    await set_channels(day=day_channel or ctx.channel, admin=admin_channel)
+
+    if ctx.guild and (alive_role_id or dead_role_id):
+        set_roles(ctx.guild.id, alive=alive_role_id, dead=dead_role_id)
+
+
+    await set_channels(day=game_channel or ctx.channel, admin=admin_channel)
     await save_state()
 
-    chan = ctx.guild.get_channel(game.day_channel_id)
+    # Feedback
+    chan = ctx.guild.get_channel(game.game_channel_id)
+    roles_msg = "Roles loaded."
+    if alive_role_id and dead_role_id:
+        roles_msg += " Alive/Dead roles linked."
+
     await ctx.reply(
         f"🟢 **Game started** with profile **{game.profile}**.\n"
-        f"Day channel: {chan.mention if chan else '#?'} | Roles file loaded."
+        f"Game channel: {chan.mention if chan else '#?'} | {roles_msg}"
     )
-    await log_event(ctx.bot, ctx.guild.id, "GAME_START", profile=game.profile, day_channel_id=game.day_channel_id)
+    await log_event(ctx.bot, ctx.guild.id, "GAME_START", profile=game.profile, game_channel_id=game.game_channel_id)
 
 
 async def hard_reset(ctx_or_interaction):
@@ -143,9 +159,8 @@ async def hard_reset(ctx_or_interaction):
     # 1) clear memory
     game.players = {}
     game.votes = {}
-    game.day_channel_id = None
+    game.game_channel_id = None
     game.admin_channel_id = None
-    game.default_day_channel_id = None
     game.current_day_number = 0
     game.day_deadline_epoch = None
     game.night_deadline_epoch = None

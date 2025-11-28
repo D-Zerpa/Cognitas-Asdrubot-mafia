@@ -11,14 +11,7 @@ from .storage import save_state  # async
 from .logs import log_event
 from . import phases
 from ..status import engine as SE
-import importlib
 
-# Optional lunar provider (expansion-defined)
-try:
-    # Import 'cognitas.core.lunar' if present; otherwise disable gracefully.
-    lunar = importlib.import_module(f"{__package__}.lunar")
-except Exception:
-    lunar = None
 
 # ---------- Helpers (names, hidden voters, etc.) ----------
 
@@ -322,13 +315,9 @@ async def status(ctx):
     day_no = int(getattr(game, "current_day_number", 1) or 1)
 
     # Lunar (optional)
-    if lunar and hasattr(lunar, "current"):
-        try:
-            _, lunar_label = lunar.current(game)
-        except Exception:
-            lunar_label = "—"
-    else:
-        lunar_label = "—"
+    extra_lines = []
+    if getattr(game, "expansion", None):
+        extra_lines = game.expansion.get_status_lines(game)
 
     # Deadline
     if phase == "day":
@@ -349,8 +338,8 @@ async def status(ctx):
         f"**Counter:** {('Day' if phase == 'day' else 'Night')} {day_no}",
         f"**Time left:** {time_left}",
     ]
-    if lunar_label and lunar_label != "—":
-        lines.insert(2, f"**Lunar:** {lunar_label}")  # insert after Counter
+    if extra_lines:
+        lines.extend(extra_lines)
 
     embed = discord.Embed(
         title="Game Status",

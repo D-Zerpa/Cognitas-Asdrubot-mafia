@@ -11,7 +11,7 @@ from ..core.infra import (
     ensure_day_channel, as_overwrites_for_private, ASDRU_TAG, ensure_role, set_roles, is_asdrubot_channel)
 from ..core.storage import save_state
 from ..core.state import game
-from ..expansions import get_registered, list_registered_keys
+from ..expansions import get_registered, get_unique_profiles
 
 # ---------- Helpers ----------
 
@@ -24,19 +24,8 @@ def _short_mechanics() -> str:
     )
 
 def _default_expansion_choices() -> list[app_commands.Choice[str]]:
-    keys = []
-    try:
-        keys = list_registered_keys()  # optional helper; if missing, fallback below
-    except Exception:
-        keys = ["base","default","smt","persona","megaten"]
-    # unique / safe
-    seen = set()
-    out = []
-    for k in keys:
-        if k and k not in seen:
-            out.append(app_commands.Choice(name=k, value=k))
-            seen.add(k)
-    return out or [app_commands.Choice(name="base", value="base")]
+    canonical = get_unique_profiles() or ["base"]
+    return [app_commands.Choice(name=name, value=name) for name in canonical]
 
 async def _load_role_names(expansion_key: str) -> List[str]:
     """

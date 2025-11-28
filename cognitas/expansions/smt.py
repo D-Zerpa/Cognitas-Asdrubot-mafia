@@ -2,8 +2,6 @@ from . import Expansion, register
 from ..core import lunar
 
 @register("smt")
-@register("persona")
-@register("megaten")
 class SMTExpansion(Expansion):
     name = "smt"
 
@@ -16,3 +14,7 @@ class SMTExpansion(Expansion):
         # Announce the current lunar phase at dawn
         _code, label = lunar.current(game_state)
         return f"{label}"
+
+    def get_status_lines(self, game_state) -> list[str]:
+        _code, label = lunar.current(game_state)
+        return [f"**Lunar:** {label}"]

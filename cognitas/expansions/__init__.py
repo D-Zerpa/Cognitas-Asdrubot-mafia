@@ -20,6 +20,7 @@ class Expansion:
     def on_game_end(self, game_state, *, reason: Optional[str] = None) -> None: ...
     def on_player_death(self, game_state, uid: str, *, cause: str) -> None: ...
     def validate_setup(self, roles_def: Dict[str, Any]) -> None: ...
+    def get_status_lines(self, game_state) -> list[str]: return []
 
 # ---- Module-level registry ----
 _EXPANSION_REGISTRY: Dict[str, Type[Expansion]] = {}
@@ -35,7 +36,15 @@ def register(name: str) -> Callable[[Type[Expansion]], Type[Expansion]]:
 def get_registered(profile: str):
     return _EXPANSION_REGISTRY.get((profile or "").lower().strip())
 
-
+def get_unique_profiles() -> list[str]:
+    """
+    Returns a list of unique canonical names from registered expansions.
+    Deduplicates aliases by checking the class.
+    """
+    unique_classes = set(_EXPANSION_REGISTRY.values())
+    # Sort by name for consistent UI
+    return sorted([cls.name for cls in unique_classes if hasattr(cls, "name")])
+    
 # ---- Utilities for discovery ----
 def list_registered_keys() -> list[str]:
     """Return registered expansion keys (ensure discovery first)."""
@@ -63,6 +72,9 @@ def load_expansion_instance(profile: str) -> Optional[Expansion]:
     if not cls:
         cls = get_registered("default") or get_registered("base")
     return cls() if cls else None
+
+
+
 
 # Ensure registry is populated on package import
 _auto_import_all()
