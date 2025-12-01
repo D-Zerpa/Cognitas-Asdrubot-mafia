@@ -42,7 +42,7 @@ Te encuentras **dormida**. Lo único que puedes hacer es **observar** pacienteme
 
 ### Umbra — *Fase 1 (1 Arcano muerto)*
 Cuando el primer sello se rompe, el instinto humano **siente que algo va mal**:  
-**Dos jugadores al azar serán paralizados ✶.**
+**Dos jugadores al azar serán paralizados ⚡️.**
 
 **☽ Corrupción Lunar — Activa (Asesinato), Nocturna**  
 - Eliges un jugador; **queda envenenado ✶**.

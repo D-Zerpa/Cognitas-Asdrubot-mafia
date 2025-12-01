@@ -54,8 +54,8 @@ La información se revelará en una de las siguientes categorías:
 Una vez encuentres a **Nyx**, esta habilidad queda **inactiva.**
 
 **Protocolo de Ruina — Activa, Nocturna** *(solo disponible tras encontrar a Nyx)*  
-Elige un jugador y provoca en él uno de los siguientes efectos ✶:  
-**Silencio, Parálisis, Confusión o Letargia.**  
+Elige un jugador y provoca en él uno de los siguientes efectos:  
+**Silencio, Parálisis ⚡️, Confusión o Letargia.**  
 No puedes aplicar esta habilidad dos noches seguidas sobre el mismo jugador,  
 ni repetir el mismo efecto en noches consecutivas.
 

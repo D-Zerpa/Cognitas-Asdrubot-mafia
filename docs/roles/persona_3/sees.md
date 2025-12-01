@@ -66,7 +66,7 @@ Para cada jugador de esa lista, **sabrás en quién actuó**, pero **no** qué h
 **Akihiko Sanada – Sonic Counter (Activa, Nocturna – 2 noches de enfriamiento)**  
 Seleccionas **dos jugadores**.  
 Si alguno de ellos usa su habilidad esta noche, **dicha habilidad será reflejada en su contra ✶**.  
-Si no usa ninguna habilidad, **quedará paralizado ✶**.  
+Si no usa ninguna habilidad, **quedará paralizado ⚡️**.  
 Los jugadores afectados por un reflejo serán **notificados** de que “su acción ha sido devuelta sobre ellos”, pero **no** se informará qué efecto se aplicó ni **cuál** de los dos objetivos fue afectado por cada resultado.  
 **Restricción:** No puede usarse **dos veces consecutivas** sobre el mismo jugador.
 
