@@ -1,11 +1,12 @@
 from __future__ import annotations
 import discord
 from typing import List
-
 from . import Expansion, register
 from ..core.players import send_to_player
 from ..core import actions as act_core
+from ..core.infra import get_infra
 from ..status import Status, register as register_status
+from ..status import engine as SE
 
 
 _daily_nyx_msg: str = ""
@@ -34,13 +35,23 @@ class PersonaExpansion(Expansion):
             # Nyx's effect
             await self._trigger_nyx_effects(guild, game_state)
 
+        # Reaper Logic: Night 4 (Only if Reaper is alive)
         if new_phase == "night" and game_state.current_day_number == 4:
-             infra = get_infra(guild.id)
-             ch_id = (infra.get("channels") or {}).get("game")
-             if ch_id:
-                 ch = guild.get_channel(ch_id)
-                 if ch:
-                     await ch.send("⛓️ **Se escuchan cadenas arrastrándose en la oscuridad...** 💀")
+            # Check for alive Reaper
+            reaper_is_alive = False
+            for p in getattr(game_state, "players", {}).values():
+                # We check the canonical role name "Reaper"
+                if p.get("role") == "Reaper" and p.get("alive", True):
+                    reaper_is_alive = True
+                    break
+            
+            if reaper_is_alive:
+                infra = get_infra(guild.id)
+                ch_id = (infra.get("channels") or {}).get("game")
+                if ch_id:
+                    ch = guild.get_channel(ch_id)
+                    if ch:
+                        await ch.send("⛓️ **Se escuchan cadenas arrastrándose en la oscuridad...** 💀")
 
 
     def banner_for_day(self, game_state):
