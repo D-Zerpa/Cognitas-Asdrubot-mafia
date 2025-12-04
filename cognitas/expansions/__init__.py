@@ -14,6 +14,7 @@ class Expansion:
     # ---- Lifecycle / phase hooks ----
     async def on_phase_change(self, guild: Any, game_state, new_phase: str) -> None: pass
     def banner_for_day(self, game_state) -> Optional[str]: return None
+    def banner_for_night(self, game_state) -> Optional[str]: return None
 
     # Optional hooks
     def on_game_start(self, game_state) -> None: ...
@@ -23,7 +24,7 @@ class Expansion:
     def get_status_lines(self, game_state) -> list[str]: return []
 
     # Specific ability-related hooks
-    async def on_action_commit(self, game_state, actor_uid: str, target_uid: str | None, action_data: dict) -> None:
+    async def on_action_commit(self,interaction: Any, game_state, actor_uid: str, target_uid: str | None, action_data: dict) -> None:
         """
         Called after a player successfully registers an action via /act.
         Useful for passive reactions like Watchers, Trackers or Oracles.
@@ -64,7 +65,7 @@ def _auto_import_all() -> None:
     Import known expansion modules so their @register decorators run.
     You can keep this static list or do pkgutil discovery.
     """
-    for mod in ("philosophers", "smt", "myexp"):
+    for mod in ("philosophers", "smt", "myexp", "persona3"):
         try:
             import_module(f".{mod}", __name__)
         except Exception:

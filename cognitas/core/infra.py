@@ -5,6 +5,9 @@ import discord
 
 from .state import game
 
+import logging
+log = logging.getLogger(__name__)
+
 ASDRU_TAG = "[ASDRUBOT]"  # marker in channel.topic
 INFRA_KEY = "infra"       # game.infra[guild_id] = {...}
 
@@ -95,6 +98,7 @@ async def ensure_text_channel(
 # ---------- Game channel helpers (single public channel) ----------
 
 def _resolve_game_channel(guild: discord.Guild) -> Optional[discord.TextChannel]:
+    infra = get_infra(guild.id)
     ch_id = (infra.get("channels") or {}).get("game") or (infra.get("channels") or {}).get("day")
     ch = guild.get_channel(ch_id) if ch_id else None
     if isinstance(ch, discord.TextChannel):
@@ -132,27 +136,48 @@ def _phase_channel_topic(phase: str, number: int) -> str:
 async def rename_game_channel(guild: discord.Guild, *, phase: str, number: int) -> None:
     ch = _resolve_game_channel(guild)
     if not ch:
+        log.warning(f"[infra] rename_game_channel: Could not resolve game channel for guild {guild.id}.")
         return
+
+    new_name = _phase_channel_name(phase, number)
+    new_topic = _phase_channel_topic(phase, number)
+
+    if ch.name == new_name:
+        log.info(f"[infra] Channel {ch.id} already named '{new_name}'. Skipping.")
+        return
+
     try:
+        log.info(f"[infra] Attempting to rename {ch.name} -> {new_name}...")
         await ch.edit(
-            name=_phase_channel_name(phase, number),
-            topic=_phase_channel_topic(phase, number),
+            name=new_name,
+            topic=new_topic,
             reason="Asdrubot phase rename",
         )
-    except Exception:
-        pass
+        log.info(f"[infra] Success! Renamed to {new_name}.")
+    except discord.Forbidden:
+        log.error(f"[infra] Forbidden: Cannot rename channel {ch.id}. Check 'Manage Channels' permission.")
+    except discord.HTTPException as e:
+        # Aquí es donde sale el error de Rate Limit (código 429 o similar)
+        log.error(f"[infra] Discord API Error renaming channel (Rate Limit?): {e}")
+    except Exception as e:
+        log.error(f"[infra] Unexpected error renaming channel: {e}")
 
 async def set_game_channel_posting(guild: discord.Guild, *, allow: bool) -> None:
     ch = _resolve_game_channel(guild)
     if not ch:
         return
+
     try:
+        # Solo gestionamos permisos, no tocamos el nombre
         ow = ch.overwrites_for(guild.default_role)
-        ow.view_channel = True
-        ow.send_messages = bool(allow)
-        await ch.set_permissions(guild.default_role, overwrite=ow, reason="Asdrubot phase posting toggle")
-    except Exception:
-        pass
+        
+        # Optimizacion: Solo llamar a la API si es necesario cambiar el valor
+        if ow.send_messages != allow:
+            ow.send_messages = bool(allow)
+            await ch.set_permissions(guild.default_role, overwrite=ow, reason="Asdrubot phase posting toggle")
+            
+    except Exception as e:
+        log.error(f"[infra] set_game_channel_posting error: {e}")
 
 # ---- Alive/Dead roles infra ----
 

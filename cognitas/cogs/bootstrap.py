@@ -8,7 +8,7 @@ from discord.ext import commands
 
 from ..core.infra import (
     get_infra, set_infra, ensure_category, ensure_text_channel,
-    ensure_day_channel, as_overwrites_for_private, ASDRU_TAG, ensure_role, set_roles, is_asdrubot_channel)
+    ensure_game_channel, as_overwrites_for_private, ASDRU_TAG, ensure_role, set_roles, is_asdrubot_channel)
 from ..core.storage import save_state
 from ..core.state import game
 from ..expansions import get_registered, get_unique_profiles
@@ -208,7 +208,7 @@ class SetupView(discord.ui.View):
         overw_admin = as_overwrites_for_private(bot_member, self.invoker)
         ch_admin = await ensure_text_channel(guild, "asdrubot-admin", category=admin_cat, overwrites=overw_admin, topic="Private admin control. " + ASDRU_TAG)
         ch_logs  = await ensure_text_channel(guild, "asdrubot-logs", category=logs_cat, overwrites=as_overwrites_for_private(bot_member, self.invoker), topic="System logs. " + ASDRU_TAG)
-        ch_day   = await ensure_text_channel(guild, "day-chat", category=public_cat, topic="Day chat. " + ASDRU_TAG)
+        ch_game   = await ensure_text_channel(guild, "day-chat", category=public_cat, topic="Day chat. " + ASDRU_TAG)
 
         # 3) Alive/Dead roles (names per your request)
         alive_role = await ensure_role(guild, "Alive", colour=discord.Colour.green(), mentionable=True, hoist=False)
@@ -358,7 +358,7 @@ class BootstrapCog(commands.Cog):
     @app_commands.command(name="wipe", description="Clean all [ASDRUBOT] channels (keeps Admin).")
     @app_commands.default_permissions(administrator=True)
     async def wipe(self, interaction: discord.Interaction):
-        view = WipeConfirmView(interaction.user)  # reusa tu view actual
+        view = WipeConfirmView(invoker=interaction.user, bot=self.bot)
         await interaction.response.send_message(
             "⚠️ This will delete all [ASDRUBOT] channels except Admin. Are you sure?",
             view=view,

@@ -8,7 +8,7 @@ from .. import config as cfg
 class GameCog(commands.Cog):
     def __init__(self, bot): self.bot = bot
 
-@app_commands.command(name="game_start", description="Start a new game (Manual Setup friendly).")
+    @app_commands.command(name="game_start", description="Start a new game (Manual Setup friendly).")
     @app_commands.describe(
         profile="Roles profile (default, smt, etc.)",
         alive_role="(Optional) Existing Alive role to link",
@@ -26,7 +26,7 @@ class GameCog(commands.Cog):
         await game_core.start(
             ctx, 
             profile=(profile or cfg.DEFAULT_PROFILE), 
-            day_channel=interaction.channel, 
+            game_channel=interaction.channel, 
             admin_channel=None,
             alive_role_id=alive_role.id if alive_role else None,
             dead_role_id=dead_role.id if dead_role else None)

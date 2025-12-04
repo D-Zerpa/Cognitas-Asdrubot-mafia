@@ -128,6 +128,12 @@ def load_state(path: str | Path | None = None) -> Dict[str, Any]:
     game.day_deadline_epoch = data.get("day_deadline_epoch")
     game.night_deadline_epoch = data.get("night_deadline_epoch")
     game.profile = data.get("profile", "default")
+    try:
+        game.expansion = load_expansion_instance(game.profile)
+        log.info(f"[storage] Expansion rehydrated: {getattr(game.expansion, 'name', 'None')}")
+    except Exception as e:
+        log.error(f"[storage] Failed to rehydrate expansion '{game.profile}': {e}")
+    
     game.roles_def = data.get("roles_def", {})
     game.night_actions = data.get("night_actions", {})
     game.day_actions = data.get("day_actions", {})
@@ -135,6 +141,7 @@ def load_state(path: str | Path | None = None) -> Dict[str, Any]:
     game.status_log = data.get("status_log", [])
     game.infra = data.get("infra", {})
     game.tzclocks = data.get("tzclocks", {})
+
     # ------------------------------------------
 
     _rehydrate_roles_index()

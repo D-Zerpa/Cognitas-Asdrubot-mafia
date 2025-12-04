@@ -90,9 +90,9 @@ def _lookup_role(role_name: str, roles_index: dict, roles_def) -> dict | None:
     return None
 
 
-async def set_channels(*, day: discord.TextChannel | None = None, admin: discord.TextChannel | None = None):
-    if day is not None:
-        game.game_channel_id = day.id
+async def set_channels(*, game_ch: discord.TextChannel | None = None, admin: discord.TextChannel | None = None):
+    if game_ch is not None:
+        game.game_channel_id = game_ch.id
     if admin is not None:
         game.admin_channel_id = admin.id
     await save_state()
@@ -134,7 +134,7 @@ async def start(
         set_roles(ctx.guild.id, alive=alive_role_id, dead=dead_role_id)
 
 
-    await set_channels(day=game_channel or ctx.channel, admin=admin_channel)
+    await set_channels(game_ch=game_channel or ctx.channel, admin=admin_channel)
     await save_state()
 
     # Feedback
