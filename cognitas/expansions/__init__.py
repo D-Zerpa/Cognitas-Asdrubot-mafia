@@ -11,6 +11,9 @@ class Expansion:
     """
     name: str = "base"
 
+    # ---- Easter Egg message loader ----
+    memes: dict[str, str | list[str]] = {}
+
     # ---- Lifecycle / phase hooks ----
     async def on_phase_change(self, guild: Any, game_state, new_phase: str) -> None: pass
     def banner_for_day(self, game_state) -> Optional[str]: return None

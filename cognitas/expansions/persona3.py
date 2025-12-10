@@ -17,6 +17,23 @@ class PersonaExpansion(Expansion):
     name = "p3"
     
     _daily_nyx_msg: str = ""
+    # --- EASTER EGGS ---
+    
+    memes = {
+        "mass destruction": "🎺 BABY BABY BABY BABY BABY... YEEEEAH! \nhttps://www.youtube.com/watch?v=C9faUEyNfqA",
+        "disturbing the peace": "🎶 LOOK INTO MY EYES! \nhttps://www.youtube.com/watch?v=33yKDWb3Gbg",
+        "disturbing the piece": "🎶 LOOK INTO MY EYES! \nhttps://www.youtube.com/watch?v=33yKDWb3Gbg",
+        "junpei": "Junpei Ace Detective? More like **Stupei Ace Defective**.",
+        "marin karin": "🧊 *Mitsuru intenta usar Marin Karin...* ¡Falló! (Como siempre).",
+        "akihiko": "💪 Did you see that, Shinji?!",
+        "protein": "💪 I've been waiting for this!",
+        "the enemy": "😱 *Gasp!* The enemy!",
+        "toaster": "🤖 No soy una tostadora. Soy un arma anti-sombras de última generación.\n*♪ Burn my bread... ♪*",
+        "tostadora": "🤖 No soy una tostadora. Soy un arma anti-sombras de última generación.\n*♪ Burn my bread... ♪*",
+        "tartarus": "😩 ¿Otra vez a subir escaleras? *Sigh...*",
+        "nyx": "The Arcana is the means by which all is revealed...",
+        "tanaka": "🎶 Anata no, terebi ni, Jika-netto Tanaka~ 🎶\n💰 *¡Amazing Commodities!*",
+    }
 
     # --- NARRATIVE SKELETON ---
     # Map: Alive Arcanas -> Flavor Text
