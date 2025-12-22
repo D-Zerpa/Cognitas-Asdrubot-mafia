@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 import random
+from discord import app_commands
 from ..core.state import game 
 
 class MemesCog(commands.Cog, name="Memes"):
@@ -18,7 +19,7 @@ class MemesCog(commands.Cog, name="Memes"):
         }
 
     @app_commands.command(name="toggle_memes", description="Turn on/off the Easter eggs")
-    @app_commands.describe(estado="True to activate, False to deactivate")
+    @app_commands.describe(state="True to activate, False to deactivate")
     @app_commands.default_permissions(administrator=True)
     async def toggle_memes(self, interaction: discord.Interaction, state: bool):
         self.is_enabled = state
