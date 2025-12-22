@@ -4,19 +4,23 @@ import time
 import asyncio
 import discord
 from typing import Optional
+import logging
 
-from ..config import REMINDER_CHECKPOINTS
+from ..status import engine as SE
 from .state import game
 from .storage import save_state
 from .logs import log_event
-from .johnbotjovi import linchar as make_lynch_poster
-from . import lunar
+from .johnbotjovi import lynch as make_lynch_poster
+from .infra import ensure_game_channel, rename_game_channel, set_game_channel_posting, get_infra, apply_alive_dead_role
 from .. import config as cfg
+from .players import process_death, send_to_player
 from .reminders import (
     parse_duration_to_seconds,
     start_day_timer,
     start_night_timer,
 )
+
+log = logging.getLogger(__name__)
 
 # -------------------------
 # Checkpoints normalization
@@ -77,12 +81,12 @@ def _get_channel_or_none(guild: discord.Guild, chan_id: int | None) -> discord.a
     return ch if isinstance(ch, (discord.abc.GuildChannel, discord.Thread)) else None
 
 
-def _ensure_day_channel(ctx) -> discord.TextChannel:
+def _ensure_game_channel(ctx) -> discord.TextChannel:
     """Ensure day channel is configured and exists; raise RuntimeError if not."""
     guild: discord.Guild = ctx.guild
-    ch = _get_channel_or_none(guild, getattr(game, "day_channel_id", None))
+    ch = _get_channel_or_none(guild, getattr(game, "game_channel_id", None))
     if not ch:
-        raise RuntimeError("Day channel is not configured or no longer exists. Set it with `/set_day_channel`.")
+        raise RuntimeError("Day channel is not configured or no longer exists. Set it with `/set_game_channel`.")
     return ch
 
 
@@ -92,7 +96,7 @@ async def start_day(
     duration_str: str = "24h",
     target_channel: Optional[discord.TextChannel] = None,
     force: bool = False,
-):
+    ):
     """
     Start the Day phase:
     - Resolve Day channel (explicit > configured default) and validate it
@@ -104,8 +108,15 @@ async def start_day(
 
     guild: discord.Guild = ctx.guild
 
-    # Resolve the target channel
-    ch = target_channel or _get_channel_or_none(guild, getattr(game, "day_channel_id", None)) or ctx.channel
+   # Resolve the target channel (explicit > game > infra > ctx.channel)
+    infra_game_id = (get_infra(ctx.guild.id).get("channels", {}) or {}).get("game")
+
+    ch = (
+        target_channel
+        or _get_channel_or_none(ctx.guild, getattr(game, "game_channel_id", None))
+        or _get_channel_or_none(ctx.guild, infra_day_id)
+        or ctx.channel
+    )
     if not isinstance(ch, (discord.TextChannel, discord.Thread)):
         return await ctx.reply("Day channel must be a text channel or a thread.")
 
@@ -114,7 +125,7 @@ async def start_day(
 
     # If there's an active Day and not forcing, inform and exit
     if hasattr(game, "day_deadline_epoch") and game.day_deadline_epoch and not force:
-        chan = ctx.guild.get_channel(getattr(game, "day_channel_id", None))
+        chan = ctx.guild.get_channel(getattr(game, "game_channel_id", None))
         when = f"<t:{game.day_deadline_epoch}:R>"
         return await ctx.reply(
             f"There is already an active Day in {chan.mention if chan else '#?'} (ends {when}). "
@@ -125,6 +136,15 @@ async def start_day(
     if force and getattr(game, "day_timer_task", None) and not game.day_timer_task.done():
         game.day_timer_task.cancel()
         game.day_timer_task = None
+
+    try:
+        # Cancel Night reminders worker
+        if getattr(game, "night_timer_task", None) and not game.night_timer_task.done():
+            game.night_timer_task.cancel()
+    except Exception:
+        pass
+    game.night_timer_task = None
+    game.night_deadline_epoch = None
 
     # Check the Day number, then add one.
     
@@ -137,16 +157,53 @@ async def start_day(
         # optional: reset per-day data here if you keep some
     else:
         # staying in the same day (restart timers only)
-        game.current_day_number = max(1, curr)
-        
-        
+        game.current_day_number = max(1, curr)  
         
     game.phase = "day"
-    
+
+    # Ensure and rename the single public channel, then allow posting
+    if ctx and getattr(ctx, "guild", None):
+        guild = ctx.guild
+        try:
+            await ensure_game_channel(guild)
+            await rename_game_channel(guild, phase="day", number=game.current_day_number)
+            await set_game_channel_posting(guild, allow=True)  # allow talking during day
+        except Exception as e:
+            log.error(f"[phases] Channel setup error (start_day): {e}")
+            import traceback
+            traceback.print_exc()
+
+    try:
+        if hasattr(game, "votes"):
+            game.votes.clear()
+        else:
+            game.votes = {}
+    except Exception:
+        game.votes = {}
+
+        # --- Status engine: 1 tick at Day start (announce day banners publicly) ---
+    try:
+        banners = SE.tick(game, "day")
+        for uid, text in banners:
+            if not text: continue
+            await send_to_player(guild, uid, str(text))
+        await save_state()
+    except Exception:
+        pass
+
+        # Notify expansion about phase change into Day
+    try:
+        if getattr(game, "expansion", None):
+            # CAMBIO: await y pasar ctx.guild
+            await game.expansion.on_phase_change(ctx.guild, game, "day")
+    except Exception as e:
+        log.error(f"[phases] Expansion hook error (day): {e}")
+
+
     await save_state()
     # Decide Day channel (explicit > configured > current)
     target: discord.abc.Messageable = ch
-    game.day_channel_id = ch.id
+    game.game_channel_id = ch.id
 
     
     # Compute and store deadline
@@ -161,6 +218,31 @@ async def start_day(
         await ch.set_permissions(everyone, overwrite=ow)
     except Exception:
         pass
+
+    # Expansion banner logic (Rich support)
+    try:
+        banner_data = getattr(game, "expansion", None) and game.expansion.banner_for_day(game)
+        
+        if banner_data:
+            content = None
+            file = None
+
+            if isinstance(banner_data, str):
+                content = banner_data
+            elif isinstance(banner_data, dict):
+                content = banner_data.get("content")
+                path = banner_data.get("file_path")
+                if path:
+                    try:
+                        file = discord.File(path)
+                    except Exception:
+                        log.error(f"[phases] Could not load banner image at {path}")
+
+            if content or file:
+                await ch.send(content=content, file=file)
+                
+    except Exception as e:
+        log.error(f"[phases] Banner error: {e}")
 
     # Announce
     abs_ts = f"<t:{game.day_deadline_epoch}:F>"
@@ -195,16 +277,16 @@ async def end_day(
     *,
     closed_by_threshold: bool = False,
     lynch_target_id: Optional[int] = None,
-):
+    ):
     """
     Close the Day phase:
     - Close channel for @everyone messages
     - Announce result (with or without lynch)
-    - If lynch: mark player dead and post lynch poster (core/jonbotjovi.linchar)
+    - If lynch: mark player dead and post lynch poster (core/jonbotjovi.lynch)
     - Clear deadline and cancel timer
     """
     guild: discord.Guild = ctx.guild
-    ch = _get_channel_or_none(guild, getattr(game, "day_channel_id", None))
+    ch = _get_channel_or_none(guild, getattr(game, "game_channel_id", None))
     if not ch:
         return await ctx.reply("No Day channel configured.")
 
@@ -225,11 +307,9 @@ async def end_day(
 
         # Mark player as dead if tracked
         try:
-            uid = str(lynch_target_id)
-            if hasattr(game, "players") and uid in game.players:
-                game.players[uid]["alive"] = False
-        except Exception:
-            pass
+            await process_death(ctx.guild, lynch_target_id, reason="Lynched")
+        except Exception as e:
+            log.info(f"[phases] Error processing lynch death: {e!r}")
 
         # Try to generate and send lynch poster
         if lynch_member is not None:
@@ -273,6 +353,17 @@ async def end_day(
         pass
     game.day_timer_task = None
     game.day_deadline_epoch = None
+    
+    # Clear votes at day end to avoid stale tallies carrying over 
+    try:
+        if hasattr(game, "votes"):
+            game.votes.clear()
+        else:
+            game.votes = {}
+    except Exception:
+        game.votes = {}
+
+
 
     # Persist & log
     await save_state()
@@ -290,7 +381,7 @@ async def start_night(
     duration_str: str = "12h",
     target_channel: Optional[discord.TextChannel] = None,
     force: bool = False,
-):
+    ):
     """
     Start the Night phase:
     - Resolve Night channel (explicit > configured default) and validate it
@@ -301,8 +392,8 @@ async def start_night(
     guild: discord.Guild = ctx.guild
 
     # Resolve channel
-    ch = target_channel or _get_channel_or_none(guild, getattr(game, "night_channel_id", None)) or ctx.channel
-    game.night_channel_id = ch.id
+    ch = target_channel or _get_channel_or_none(guild, getattr(game, "game_channel_id", None)) or ctx.channel
+    game.game_channel_id = ch.id
     if not isinstance(ch, (discord.TextChannel, discord.Thread)):
         return await ctx.reply("Night channel must be a text channel or a thread.")
 
@@ -311,7 +402,7 @@ async def start_night(
 
     # Prevent overlapping Nights unless forced
     if hasattr(game, "night_deadline_epoch") and game.night_deadline_epoch and not force:
-        chan = ctx.guild.get_channel(getattr(game, "night_channel_id", None))
+        chan = ctx.guild.get_channel(getattr(game, "game_channel_id", None))
         when = f"<t:{game.night_deadline_epoch}:R>"
         return await ctx.reply(
             f"There is already an active Night in {chan.mention if chan else '#?'} (ends {when}). "
@@ -323,29 +414,50 @@ async def start_night(
         game.night_timer_task.cancel()
         game.night_timer_task = None
 
+    try:
+        if getattr(game, "day_timer_task", None) and not game.day_timer_task.done():
+            game.day_timer_task.cancel()
+    except Exception:
+        pass
+    game.day_timer_task = None
+    game.day_deadline_epoch = None
+
     # Store channel & phase
-    game.night_channel_id = ch.id
+    game.game_channel_id = ch.id
     game.phase = "night"
 
-    # Advance lunar phase at night start
+
+    # Rename to night-N and disable posting for everyone
+    if ctx and getattr(ctx, "guild", None):
+        guild = ctx.guild
+        try:
+            await ensure_game_channel(guild)  # ensure exists
+            await rename_game_channel(guild, phase="night", number=game.current_day_number)
+            await set_game_channel_posting(guild, allow=False)  # lock during night
+        except Exception as e:
+            # CAMBIO: Imprimir el error
+            log.error(f"[phases] Channel setup error (start_night): {e}")
+            import traceback
+            traceback.print_exc()
+
+        # --- Status engine: 1 tick at Night start (night messages via DM) ---
     try:
-        lunar.advance(game, steps=1)
+        banners = SE.tick(game, "night")
+        for uid, text in banners:
+            if not text: continue
+            await send_to_player(guild, uid, str(text))
         await save_state()
     except Exception:
         pass
 
-    # Announce lunar phase
-    idx = int(getattr(game, "lunar_index", 0))
-    msg = lunar.announcement(idx)
-
+    # Notify expansion about phase change into Night
     try:
-        chan_id = getattr(game, "day_channel_id", None)
-        if chan_id and ctx.guild:
-            chan = ctx.guild.get_channel(chan_id)
-            if chan:
-                await chan.send(msg)
-    except Exception:
-        pass
+        if getattr(game, "expansion", None):
+            # CAMBIO: await y pasar ctx.guild
+            await game.expansion.on_phase_change(ctx.guild, game, "night")
+    except Exception as e:
+        log.error(f"[phases] Expansion hook error (night): {e}")
+
 
     # Compute and store deadline
     now = int(time.time())
@@ -367,6 +479,31 @@ async def start_night(
         await ch.send(f"🌙 **Night started.** Deadline: {rel_ts} ({abs_ts}).")
     except Exception:
         pass
+
+    try:
+        # Llamamos al nuevo hook banner_for_night
+        banner_data = getattr(game, "expansion", None) and game.expansion.banner_for_night(game)
+        
+        if banner_data:
+            content = None
+            file = None
+            
+            if isinstance(banner_data, str):
+                content = banner_data
+            elif isinstance(banner_data, dict):
+                content = banner_data.get("content")
+                path = banner_data.get("file_path")
+                if path:
+                    try:
+                        file = discord.File(path)
+                    except Exception as e:
+                        log.error(f"[phases] Could not load night banner image at {path}: {e}")
+
+            if content or file:
+                await ch.send(content=content, file=file)
+                
+    except Exception as e:
+        log.error(f"[phases] Night banner error: {e}")
 
     await save_state()
 
@@ -392,7 +529,7 @@ async def end_night(ctx):
     - Clear deadline and cancel timer
     """
     guild: discord.Guild = ctx.guild
-    ch = _get_channel_or_none(guild, getattr(game, "night_channel_id", None))
+    ch = _get_channel_or_none(guild, getattr(game, "game_channel_id", None))
     if not ch:
         return await ctx.reply("No Night channel configured.")
 
@@ -433,7 +570,7 @@ async def _autoclose_after(bot: discord.Client, guild_id: int, phase: str, unix_
             return
 
         # Resolve channel by phase
-        chan_id = getattr(game, f"{phase}_channel_id", None)
+        chan_id = getattr(game, "game_channel_id", None)
         channel = guild.get_channel(chan_id) if chan_id else None
 
         # Send timeout message
@@ -449,28 +586,33 @@ async def _autoclose_after(bot: discord.Client, guild_id: int, phase: str, unix_
             if phase == "day":
                 from .phases import end_day
                 class _Ctx:
-                    def __init__(self, guild): self.guild = guild
+                    def __init__(self, guild, bot): 
+                        self.guild = guild
+                        self.bot = bot
                     async def reply(self, *a, **k): pass
-                await end_day(_Ctx(guild), closed_by_threshold=False, lynch_target_id=None)
+
+                await end_day(_Ctx(guild, bot), closed_by_threshold=False, lynch_target_id=None)
             elif phase == "night":
                 from .phases import end_night
                 class _Ctx:
-                    def __init__(self, guild): self.guild = guild
+                    def __init__(self, guild, bot): 
+                        self.guild = guild
+                        self.bot = bot
                     async def reply(self, *a, **k): pass
-                await end_night(_Ctx(guild))
+                await end_night(_Ctx(guild, bot))
         except Exception as e:
-            print(f"[phases] autoclose error for {phase}: {e!r}")
+            log.info(f"[phases] autoclose error for {phase}: {e!r}")
     except asyncio.CancelledError:
         pass
     except Exception as e:
-        print(f"[phases] autoclose crash for {phase}: {e!r}")
+        log.info(f"[phases] autoclose crash for {phase}: {e!r}")
 
 
 async def rehydrate_timers(bot: discord.Client, guild: discord.Guild):
     """
     Restore ongoing Day/Night awareness from stored deadlines.
-    - If the deadline is in the future → announce remaining time, relaunch reminders based on remaining time, and arm autoclose.
-    - If the deadline has passed → announce and immediately autoclose.
+    - If the deadline is in the future -> announce restore & relaunch reminders.
+    - If the deadline has passed -> announce and autoclose.
     """
     try:
         phase = getattr(game, "phase", None)
@@ -481,35 +623,45 @@ async def rehydrate_timers(bot: discord.Client, guild: discord.Guild):
         if not deadline:
             return
 
-        # Resolve channel for this phase
-        chan_id = getattr(game, f"{phase}_channel_id", None)
-        if not chan_id:
-            # If Night has no dedicated channel id, fallback to Day channel id
-            chan_id = getattr(game, "day_channel_id", None)
+        # Resolve channel (Unified)
+        chan_id = getattr(game, "game_channel_id", None)
+        
         try:
             ch = guild.get_channel_or_thread(chan_id) if chan_id else None
         except AttributeError:
             ch = guild.get_channel(chan_id) if chan_id else None
+            
         if not ch:
             return
 
         now = int(time.time())
         ts = int(deadline)
+        
         if ts > now:
             # Announce restore
-            await ch.send(f"🔄 Restored **{phase}**. Deadline <t:{ts}:R>.")
+            try:
+                await ch.send(f"🔄 Restored **{phase.title()}**. Deadline <t:{ts}:R>.")
+            except Exception:
+                pass
+                
             # Relaunch reminders using remaining time
             minutes_left = max(0, (ts - now + 59) // 60)
             cp = _minutes_checkpoints_from_config(cfg.REMINDER_CHECKPOINTS, minutes_left=minutes_left)
+            
             if phase == "day":
-                await start_day_timer(bot, guild.id, chan_id, checkpoints=cp)
+                await start_day_timer(bot, guild.id, ch.id, checkpoints=cp)
             else:
-                await start_night_timer(bot, guild.id, checkpoints=cp)
+                await start_night_timer(bot, guild.id, ch.id, checkpoints=cp)
+                
             # Arm autoclose
             asyncio.create_task(_autoclose_after(bot, guild.id, phase, ts))
         else:
             # Deadline already passed — announce and close
-            await ch.send(f"⏰ Stored deadline for **{phase}** has already passed (<t:{ts}:R>). Closing automatically.")
+            try:
+                await ch.send(f"⏰ Stored deadline for **{phase}** has already passed (<t:{ts}:R>). Closing automatically.")
+            except Exception:
+                pass
+                
             try:
                 if phase == "day":
                     from .phases import end_day
@@ -524,6 +676,6 @@ async def rehydrate_timers(bot: discord.Client, guild: discord.Guild):
                         async def reply(self, *a, **k): pass
                     await end_night(_Ctx(guild))
             except Exception as e:
-                print(f"[phases] rehydrate autoclose error for {phase}: {e!r}")
+                log.info(f"[phases] rehydrate autoclose error for {phase}: {e!r}")
     except Exception as e:
-        print(f"[phases] rehydrate_timers error: {e!r}")
+        log.info(f"[phases] rehydrate_timers error: {e!r}")

@@ -5,7 +5,8 @@ from discord import app_commands
 from discord.ext import commands
 
 from ..core import phases, votes as votes_core
-from ..core.logs import log_event
+from ..status import engine as SE
+from ..core.state import game
 
 
 # --- Adapter to bridge slash Interaction <-> legacy ctx-style calls ---
@@ -59,7 +60,7 @@ class VotingAdminCog(commands.Cog):
     # -----------------------
 
     @app_commands.command(name="start_day", description="Starts day (admin)")
-    @app_commands.describe(duration="Ej: 24h, 90m, 1h30m", channel="Canal de Día", force="Reinicia si ya hay un día activo")
+    @app_commands.describe(duration="Ex: 24h, 90m, 1h30m", channel="Day channel", force="Restart if a day is already active")
     @app_commands.default_permissions(administrator=True)
     async def start_day(self, interaction: discord.Interaction, duration: str = "24h", channel: discord.TextChannel | None = None, force: bool = False):
         # Defer once to avoid InteractionResponded errors
@@ -80,7 +81,7 @@ class VotingAdminCog(commands.Cog):
         await interaction.followup.send("☑️ Day finished", ephemeral=True)
 
     @app_commands.command(name="start_night", description="Starts night (admin)")
-    @app_commands.describe(duration="Ej: 12h, 8h, 45m")
+    @app_commands.describe(duration="Ex: 12h, 8h, 45m")
     @app_commands.default_permissions(administrator=True)
     async def start_night(self, interaction: discord.Interaction, duration: str = "12h"):
         await interaction.response.defer(ephemeral=True)
@@ -103,7 +104,7 @@ class VotingAdminCog(commands.Cog):
     # -----------------------
 
     @app_commands.command(name="votes", description="Vote breakdown (embed)")
-    async def votos(self, interaction: discord.Interaction):
+    async def votes(self, interaction: discord.Interaction):
         await interaction.response.defer()
         ctx = InteractionCtx(interaction)
 
@@ -123,7 +124,6 @@ class VotingAdminCog(commands.Cog):
         ctx = InteractionCtx(interaction)
 
         await votes_core.clearvotes(ctx)
-        await interaction.followup.send("🧹 Votes cleared.", ephemeral=True)
 
 
 class VoteCog(commands.GroupCog, name="vote", description="Votes"):
@@ -132,19 +132,29 @@ class VoteCog(commands.GroupCog, name="vote", description="Votes"):
 
     @app_commands.command(name="cast", description="Vote for a player")
     async def cast(self, interaction: discord.Interaction, member: discord.Member):
-        await interaction.response.defer(ephemeral=True)
+        # Defer first to avoid interaction timing issues
+        await interaction.response.defer(ephemeral=False)
         ctx = InteractionCtx(interaction)
 
+        # 1) Gate voting through the Status Engine for clear UX
+        voter_uid = str(interaction.user.id)
+        chk = SE.check_action(game, voter_uid, "vote")
+        if not chk.get("allowed", True):
+            # Map engine reason -> human-friendly message
+            msg = SE.get_block_message(chk.get("reason") or "")
+            return await ctx.reply(msg or "You can't vote right now.", ephemeral=True)
+
+        # 2) Proceed with normal vote
         await votes_core.vote(ctx, member)
-        await interaction.followup.send(f"🗳️ Vote cast for {member.mention}.", ephemeral=False)
+        return 
 
     @app_commands.command(name="clear", description="Unvote")
     async def clear(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=True)
+        await interaction.response.defer(ephemeral=False)
         ctx = InteractionCtx(interaction)
 
         await votes_core.unvote(ctx)
-        await interaction.followup.send("🗑️ Vote cleared.", ephemeral=True)
+        await interaction.followup.send("🗑️ Vote cleared.", ephemeral=False)
 
     @app_commands.command(name="mine", description="See your current vote")
     async def mine(self, interaction: discord.Interaction):

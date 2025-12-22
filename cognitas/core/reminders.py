@@ -5,10 +5,11 @@ import re
 import time
 import asyncio
 from typing import List, Optional
-
 import discord
-
 from .state import game
+import logging
+
+log = logging.getLogger(__name__)
 
 _DURATION_RX = re.compile(r"^\s*(?:(\d+)\s*h)?\s*(?:(\d+)\s*m)?\s*$", re.I)
 
@@ -33,7 +34,7 @@ async def _safe_send(chan: discord.abc.Messageable, content: str):
     try:
         await chan.send(content)
     except Exception as e:
-        print(f"[reminders] send error in #{getattr(chan, 'id', '?')}: {e!r}")
+        log.info(f"[reminders] send error in #{getattr(chan, 'id', '?')}: {e!r}")
 
 def _cancel_task_safe(task: Optional[asyncio.Task]):
     try:
@@ -82,7 +83,7 @@ async def _timer_worker(
                         )
                         sent.add(m)
                     except Exception as e:
-                        print(f"[reminders] checkpoint error {m}m ({phase_label}): {e!r}")
+                        log.info(f"[reminders] checkpoint error {m}m ({phase_label}): {e!r}")
 
             sleep_for = min(20, max(5, secs_left / 6))
             await asyncio.sleep(sleep_for)
@@ -90,7 +91,7 @@ async def _timer_worker(
     except asyncio.CancelledError:
         pass
     except Exception as e:
-        print(f"[reminders] worker crash ({phase_label}): {e!r}")
+        log.info(f"[reminders] worker crash ({phase_label}): {e!r}")
 
 async def start_day_timer(
     bot: discord.Client,
@@ -115,9 +116,9 @@ async def start_day_timer(
             )
         )
         game.day_timer_task = task
-        print(f"[reminders] Day timer started (guild={guild_id}, channel={channel_id}, deadline={deadline}).")
+        log.info(f"[reminders] Day timer started (guild={guild_id}, channel={channel_id}, deadline={deadline}).")
     except Exception as e:
-        print(f"[reminders] start_day_timer error: {e!r}")
+        log.info(f"[reminders] start_day_timer error: {e!r}")
 
 async def start_night_timer(
     bot: discord.Client,
@@ -145,9 +146,9 @@ async def start_night_timer(
             )
         )
         game.night_timer_task = task
-        print(f"[reminders] Night timer started (guild={guild_id}, channel={channel_id}, deadline={deadline}).")
+        log.info(f"[reminders] Night timer started (guild={guild_id}, channel={channel_id}, deadline={deadline}).")
     except Exception as e:
-        print(f"[reminders] start_night_timer error: {e!r}")
+        log.info(f"[reminders] start_night_timer error: {e!r}")
 
 def cancel_all_timers():
     _cancel_task_safe(getattr(game, "day_timer_task", None))

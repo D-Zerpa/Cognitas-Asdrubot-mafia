@@ -1,4 +1,3 @@
-import time
 from math import ceil
 
 class GameState:
@@ -8,27 +7,27 @@ class GameState:
         self.votes = {}                 # { voter_uid: target_uid }
         self.roles = {}                 # loaded from roles.json
         self.phase: str = "day"
+
         # --- Day phase ---
-        self.day_channel_id = None      # int | None
+        self.game_channel_id = None      # int | None
         self.current_day_number = 1     # int
         self.day_deadline_epoch = None  # int | None (epoch seconds)
         self.day_timer_task = None      # asyncio.Task | None
-        self.end_day_votes = set()   # uids (str) de vivos que pidieron cerrar el Día
+        self.end_day_votes = set()   # uids (str) of living players who requested to end the day
         
         # --- Night phase ---
-        self.night_channel_id = None        # where !act is allowed (optional)
         self.night_deadline_epoch = None    # epoch seconds
         self.night_timer_task = None        # asyncio.Task | None
-        self.next_day_channel_id = None     # which channel to open at dawn
 
-        # --- Night action log (append-only) ---
+        # --- Action log (append-only) ---
         # list of dicts: {day, ts_epoch, actor_uid, target_uid, note}
-        self.night_actions = []
-        self.day_actions = []
+        self.night_actions = {}
+        self.day_actions = {}
         
         # --- Server-configurable channels (set via admin cmds) ---
         self.admin_log_channel_id = None    # where admin logs go
-        self.default_day_channel_id = None  # default Day channel
+        self.admin_channel_id = None
+        self.default_game_channel_id = None  # default game channel
         self.log_channel_id = None          # where the game logs go
         self.moon_phase = "New"             # lunar phase
 

@@ -8,12 +8,19 @@ from enum import Enum
 
 from .state import game
 from .storage import save_state
+from ..status import engine as SE
+from ..core.infra import get_role_ids, apply_alive_dead_role
 
 NAME_RX = re.compile(r"\s+")
 
 
 def _norm(name: str) -> str:
     return NAME_RX.sub(" ", (name or "").strip())
+
+
+def _slug(name: str) -> str:
+    s = _norm(name).lower()
+    return re.sub(r"[^a-z0-9\-]+", "-", s.replace(" ", "-")).strip("-") or "player"
 
 
 def _ensure_player(uid: str, display_name: str | None = None):
@@ -36,7 +43,7 @@ def _is_admin(ctx: commands.Context | Any) -> bool:
         return False
 
 
-async def _sanitize_votes_for_uid(uid: str):
+async def sanitize_votes_for_uid(uid: str):
     """
     Remove the player's active vote and end-day request when they die.
     Best-effort; ignores errors.
@@ -75,10 +82,13 @@ def get_player_snapshot(user_id: str) -> dict:
     role = p.get("role")
     voting_boost = p.get("voting_boost")
     vote_weight_field = p.get("vote_weight")
-    hidden_vote = bool(p.get("hidden_vote", False))
     aliases = list(p.get("aliases", []))
     effects = list(p.get("effects", []))
     flags = dict(p.get("flags", {}))
+    hidden_vote = bool(flags.get("hidden_vote", False))
+
+    #Role private channel id
+    role_channel_id = p.get("role_channel_id")
 
     # Computed vote weight (if GameState exposes a helper)
     vote_weight_computed = None
@@ -99,6 +109,7 @@ def get_player_snapshot(user_id: str) -> dict:
         "effects": effects,
         "flags": flags,
         "vote_weight_computed": vote_weight_computed,
+        "role_channel_id": role_channel_id,
     }
 
 
@@ -126,16 +137,61 @@ async def list_players(ctx):
 async def register(ctx, member: discord.Member | None = None, *, name: str | None = None):
     if not _is_admin(ctx):
         return await ctx.reply("Admins only.", ephemeral=True)
+    guild = getattr(ctx, "guild", None)
+    if not guild:
+        return await ctx.reply("Guild context required.", ephemeral=True)
+
     target = member or getattr(ctx, "author", None) or getattr(ctx, "user", None)
     if not target:
         return await ctx.reply("No target user provided.", ephemeral=True)
+
     uid = str(target.id)
     display = (name or getattr(target, "display_name", None) or f"User-{uid}").strip()
+
     _ensure_player(uid, display)
     game.players[uid]["name"] = display
     game.players[uid]["alive"] = True
+
+    # Assign "Alive" role.
+
+    ids = get_role_ids(guild.id)
+    r_alive = guild.get_role(ids.get("alive")) if ids.get("alive") else None
+    r_dead  = guild.get_role(ids.get("dead"))  if ids.get("dead")  else None
+
+    try:
+        if r_dead and r_dead in member.roles:
+            await member.remove_roles(r_dead, reason="Asdrubot: registration -> Alive")
+        if r_alive and r_alive not in member.roles:
+            await member.add_roles(r_alive, reason="Asdrubot: registration -> Alive")
+    except Exception:
+        pass
+
+    # --- Create or reuse player's private role channel ---
+    game.players[uid]["role_channel_id"] = None
+
     await save_state()
+
+    # Friendly confirmation (ephemeral)
+    ch_mention = ""
+    try:
+        rcid = game.players[uid].get("role_channel_id")
+        rch = guild.get_channel(rcid) if rcid else None
+        if rch:
+            ch_mention = f" — channel: {rch.mention}"
+    except Exception:
+        pass
+
     await ctx.reply(f"✅ Registered: <@{uid}> as **{display}** (alive).", ephemeral=True)
+
+    # Optional: greet in private role channel
+    try:
+        rcid = game.players[uid].get("role_channel_id")
+        rch = guild.get_channel(rcid) if rcid else None
+        if rch:
+            await rch.send(f"Welcome, <@{uid}>! This is your private role channel. Use `/act` here to perform your actions.")
+    except Exception:
+        pass
+
 
 
 async def unregister(ctx, member: discord.Member):
@@ -143,9 +199,21 @@ async def unregister(ctx, member: discord.Member):
         return await ctx.reply("Admins only.", ephemeral=True)
     uid = str(member.id)
     if uid in game.players:
+        p_data = game.players[uid]
+        chan_id = p_data.get("role_channel_id")
+        if chan_id:
+            guild = ctx.guild
+            channel = guild.get_channel(chan_id)
+            if channel:
+                try:
+                    await channel.set_permissions(member, overwrite=None, reason="Unregister player")
+                except Exception:
+                    pass
+
         del game.players[uid]
         await save_state()
-        return await ctx.reply(f"🗑️ Unregistered <@{uid}>.", ephemeral=True)
+        return await ctx.reply(f"🗑️ Unregistered <@{uid}> and removed channel access.", ephemeral=True)
+        
     await ctx.reply("Player was not registered.", ephemeral=True)
 
 
@@ -382,6 +450,35 @@ async def remove_effect(ctx, member: discord.Member, effect: str):
     await ctx.reply(f"🧹 Effect `{effect}` removed from <@{uid}>.", ephemeral=True)
 
 
+async def send_to_player(guild: discord.Guild, uid: str, text: str):
+    """
+    Send a message to the player's private role channel if available.
+    Falls back to DM if the channel is missing or inaccessible.
+    """
+    if not text:
+        return
+
+    # 1. Try Role Channel
+    p = game.players.get(uid)
+    if p and p.get("role_channel_id"):
+        chan_id = p["role_channel_id"]
+        ch = guild.get_channel(chan_id)
+        if ch:
+            try:
+                await ch.send(text)
+                return
+            except Exception:
+                pass  # Fallback to DM
+
+    # 2. Fallback to DM
+    try:
+        member = guild.get_member(int(uid)) or await guild.fetch_member(int(uid))
+        if member:
+            await member.send(text)
+    except Exception:
+        pass
+
+
 # ----------------------------
 # Alive / Kill / Revive
 # ----------------------------
@@ -389,16 +486,55 @@ async def remove_effect(ctx, member: discord.Member, effect: str):
 async def set_alive(ctx, member: discord.Member, alive: bool):
     if not _is_admin(ctx):
         return await ctx.reply("Admins only.", ephemeral=True)
+    
     uid = str(member.id)
     if uid not in game.players:
         return await ctx.reply("Player not registered.", ephemeral=True)
-    game.players[uid]["alive"] = bool(alive)
+
     if not alive:
-        await _sanitize_votes_for_uid(uid)
-    await save_state()
-    emoji = "☠️" if not alive else "💚"
+        # Unified death path
+        await process_death(ctx, member.id, reason="Admin /kill")
+        emoji = "☠️"
+    else:
+        # Unified revive path
+        game.players[uid]["alive"] = True
+        # IMPORTANT: Cleanse old statuses when reviving to prevent bugs
+        SE.heal(game, uid, all_=True)
+        
+        from ..core.infra import apply_alive_dead_role
+        await apply_alive_dead_role(ctx.guild, member.id, alive=True)
+        await save_state()
+        emoji = "💚"
+
     await ctx.reply(f"{emoji} Set `alive` = `{alive}` for <@{uid}>.", ephemeral=True)
 
+
+async def process_death(ctx_or_guild, member_id: int | str, reason: str = "Unknown"):
+    """
+    Handle all side-effects of a player dying:
+    - Set alive=False
+    - Clear active votes/requests
+    - Heal all statuses (poison, silence, etc)
+    - Update Discord roles (Alive -> Dead)
+    """
+    uid = str(member_id)
+    if uid not in game.players:
+        return
+
+    # a) Update state
+    game.players[uid]["alive"] = False
+    game.players[uid]["death_reason"] = reason
+    
+    # b) Clean up game mechanics
+    await sanitize_votes_for_uid(uid)  
+    SE.heal(game, uid, all_=True)      
+    
+    # c) Discord Roles
+    guild = getattr(ctx_or_guild, "guild", ctx_or_guild)
+    if guild:
+        await apply_alive_dead_role(guild, int(member_id), alive=False)
+    
+    await save_state()
 
 async def kill(ctx, member: discord.Member):
     await set_alive(ctx, member, False)

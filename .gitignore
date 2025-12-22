@@ -4,3 +4,5 @@
 __pycache__/
 .envlive
 .vscode
+state.json
+state.json.bak

@@ -2,17 +2,34 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from ..core import game as game_core
+from .. import config as cfg
 
 
 class GameCog(commands.Cog):
     def __init__(self, bot): self.bot = bot
 
-    @app_commands.command(name="game_start", description="Iniciar partida con profile (admin)")
-    @app_commands.describe(profile="default | smt | ...")
+    @app_commands.command(name="game_start", description="Start a new game (Manual Setup friendly).")
+    @app_commands.describe(
+        profile="Roles profile (default, smt, etc.)",
+        alive_role="(Optional) Existing Alive role to link",
+        dead_role="(Optional) Existing Dead role to link"
+    )
     @app_commands.default_permissions(administrator=True)
-    async def game_start(self, interaction: discord.Interaction, profile: str = "default"):
+    async def game_start(
+        self, 
+        interaction: discord.Interaction, 
+        profile: str | None = None,
+        alive_role: discord.Role | None = None,
+        dead_role: discord.Role | None = None):
+
         ctx = await commands.Context.from_interaction(interaction)
-        await game_core.start(ctx, profile=profile, day_channel=interaction.channel, admin_channel=None)
+        await game_core.start(
+            ctx, 
+            profile=(profile or cfg.DEFAULT_PROFILE), 
+            game_channel=interaction.channel, 
+            admin_channel=None,
+            alive_role_id=alive_role.id if alive_role else None,
+            dead_role_id=dead_role.id if dead_role else None)
         
     @app_commands.command(name="game_reset", description="Hard reset of game state")
     @app_commands.default_permissions(administrator=True)

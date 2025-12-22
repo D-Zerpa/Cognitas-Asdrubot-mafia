@@ -1,12 +1,14 @@
-# cognitas/core/jonbotjovi.py
+# cognitas/core/johnbotjovi.py
 from __future__ import annotations
 
 import io
 import os
 import random
-from typing import Optional, Tuple
+from typing import Optional
 
 import discord
+import functools
+import asyncio
 
 try:
     from PIL import Image, ImageOps, ImageDraw
@@ -33,11 +35,11 @@ _USED: set[str] = set()
 def _coords_from_filename(fname: str) -> tuple[int | None, int | None]:
     """
     Extract (x, y) from filenames like:
-      linchar02-960-240-.png
+      lynch02-960-240-.png
       whatever-960-240.png
       bg-120-300-extra.jpg
     We split on '-' and only accept tokens that are pure digits,
-    so 'linchar02' is ignored but '960' and '240' are taken.
+    so 'lynch02' is ignored but '960' and '240' are taken.
     """
     name, _ext = os.path.splitext(os.path.basename(fname))
     tokens = name.split("-")
@@ -119,37 +121,23 @@ async def _read_avatar_bytes(member: discord.Member, size: int = 128) -> bytes |
 # Public API
 # ---------------------------------------------------------------------
 
-async def linchar(member: discord.Member) -> Optional[discord.File]:
+def _generate_lynch_image(avatar_bytes: bytes, member_id: int) -> discord.File:
     """
-    Create a lynch poster by pasting the user's circular avatar on a random background.
-    Avatar placement:
-      - Download avatar at 128px
-      - Square-crop
-      - Make circular (diameter = downloaded size)
-      - Paste at (X, Y) from file name *without additional scaling*
-    If coords are not present in the file name, avatar is centered.
-    Returns a discord.File (PNG) or None if Pillow is not available.
+    Synchronous CPU-bound image generation logic.
+    Run this in an executor to avoid blocking the event loop.
     """
-    if not _PIL_OK:
-        return None
-
-    # 1) Read avatar bytes (size=128, no extra scaling later)
-    avatar_bytes = await _read_avatar_bytes(member, size=128)
-    if not avatar_bytes:
-        return None
-
-    # 2) Pick background and read coords from filename
+    # 2) Pick background
     bg_path, (px, py) = _pick_bg()
 
     # 3) Compose
     base = Image.open(bg_path).convert("RGBA")
     av = Image.open(io.BytesIO(avatar_bytes)).convert("RGBA")
 
-    # Square-crop avatar (keep the downloaded size)
+    # Square-crop avatar
     s = min(av.size)
     av_sq = ImageOps.fit(av, (s, s), centering=(0.5, 0.5))
 
-    # Circular mask at exact size (no re-scaling)
+    # Circular mask
     mask = _make_circle_mask(s)
     circle = Image.new("RGBA", (s, s))
     circle.paste(av_sq, (0, 0), mask=mask)
@@ -160,12 +148,38 @@ async def linchar(member: discord.Member) -> Optional[discord.File]:
         px = (bw - s) // 2
         py = (bh - s) // 2
 
-    # Paste onto background
+    # Paste
     base.paste(circle, (int(px), int(py)), circle)
 
-    # 4) Output as PNG
+    # 4) Output
     buf = io.BytesIO()
     base.save(buf, format="PNG", optimize=True)
     buf.seek(0)
-    return discord.File(buf, filename=f"lynch_{member.id}.png")
+    return discord.File(buf, filename=f"lynch_{member_id}.png")
+
+
+async def lynch(member: discord.Member) -> Optional[discord.File]:
+    """
+    Async wrapper that offloads image processing to a thread.
+    """
+    if not _PIL_OK:
+        return None
+
+    # 1) Fetch bytes (Network I/O is async, keep it here)
+    avatar_bytes = await _read_avatar_bytes(member, size=128)
+    if not avatar_bytes:
+        return None
+
+    # 2) Run blocking image manipulation in a separate thread
+    loop = asyncio.get_running_loop()
+    try:
+        # functools.partial is needed to pass arguments properly
+        file = await loop.run_in_executor(
+            None, 
+            functools.partial(_generate_lynch_image, avatar_bytes, member.id)
+        )
+        return file
+    except Exception as e:
+        print(f"[johnbotjovi] Error generating image: {e}")
+        return None
 

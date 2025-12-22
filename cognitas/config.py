@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 
 # -------------------------------------------------------------------
-# Intents config (ajústalo como lo tenías)
+# Intents configuration (adjust as needed)
 # -------------------------------------------------------------------
 INTENTS_KWARGS = {
     "guilds": True,
@@ -15,10 +15,11 @@ INTENTS_KWARGS = {
 # State file location
 # -------------------------------------------------------------------
 
-# Base dir = raíz del repo (donde está bot.py, README, etc.)
-BASE_DIR = Path(__file__).resolve().parents[1]  # sube de cognitas/ a raíz
-# Path absoluto al state.json en raíz
+# Base directory = repository root (where bot.py, README, etc. live)
+BASE_DIR = Path(__file__).resolve().parents[1]  # ascend from cognitas/ to root
+# Absolute path to state.json at root
 STATE_PATH = Path(os.getenv("STATE_PATH", str(BASE_DIR / "state.json")))
+DEFAULT_PROFILE = os.getenv("ASDRUBOT_DEFAULT_PROFILE", "default")
 
 # Reminder mentions
 MENTION_EVERYONE = True          # set False to disable @everyone

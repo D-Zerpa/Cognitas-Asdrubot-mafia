@@ -1,131 +1,116 @@
-# 🧠 **Cognitas** *(a.k.a. Asdrubot)*  - Mafia Game Bot (v2.0)
+# 🧠 **Cognitas** *(a.k.a. Asdrubot)* — Mafia Game Engine (v3.0)
 
-![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python)
-![Discord](https://img.shields.io/badge/Discord-Bot-5865F2?logo=discord&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.11%2B-blue?logo=python)
+![Discord](https://img.shields.io/badge/Discord.py-2.0%2B-5865F2?logo=discord&logoColor=white)
 ![Status](https://img.shields.io/badge/Status-Active-brightgreen)
+![License](https://img.shields.io/badge/License-Private-red)
 
-Asdrubot is a custom **Discord bot** for hosting **Mafia / Werewolf-style games** with advanced mechanics, roleplay depth, and moderator tools.  
-Built for **personal use and supervised hosting** — not for public deployment.
+**Cognitas** is a modular game engine for Discord designed to host complex *Mafia* / *Werewolf* games.
+Unlike traditional moderation bots, Cognitas acts as an **Assisted Game Master**, automating heavy logic (votes, statuses, phases, permissions) while leaving narrative control in the hands of the human host.
+
+> ⚠️ **Note:** Project designed for personal use and supervised hosting. Not intended for massive public deployment.
 
 ---
+
+## ✨ Key Features (v3.0)
+
+### ⚙️ Modular Architecture
+The bot has been rewritten to separate core logic from game content.
+- **Expansion System:** Load different rules and roles (e.g., *Base*, *Persona 3*, *SMT*) without modifying source code.
+- **Status Engine:** A dedicated system to manage *buffs* and *debuffs* (Silence, Paralysis, Poison, Confusion) with automatic decay logic and persistence.
+
+### 🌓 Automated Game Cycle
+- **Day/Night Phases:** Automatic management of channel permissions (open/close) and phase announcements.
+- **Advanced Voting:** Support for hidden votes, double votes, sanctions (fractional voting), and dynamic lynch thresholds.
+- **Night Actions:** Centralized action queue (`/act`) with status validation (e.g., a *Drowsy* player cannot act).
+
+### 🏗️ Intelligent Infrastructure
+- **Dynamic Channels:** The bot creates and manages private channels ("confessionals") automatically linked to player roles.
+- **World Clocks (Timezones):** Automatic renaming of voice channels to display time in multiple countries, facilitating international coordination.
+- **Atomic Persistence:** The entire game state (votes, players, effects) is saved to disk (`state.json`) in real-time, ensuring resilience against restarts.
 
 ## 📂 Project Structure
 
-**Disclaimer:** Cognitas is a one-man project, and that man doesn't have a good documentation practice, so the actual structure might not relate to the following tree. 
+The code is organized to facilitate scalability and maintenance:
 
 ```
 cognitas/
- ├─ bot.py              # Main bot entrypoint
- ├─ core/               # Core game logic, state, storage, roles
- │   ├─ actions.py      # Phase-aware action storage (day/night)
- │   ├─ lunar.py        # Lunar cycle management
- │   ├─ phases.py       # Start/end day & night, reminders
- │   ├─ players.py      # Player management (flags, effects, alive/dead)
- │   └─ storage.py      # Save/load persistent state
- └─ cogs/               # Discord slash command groups
-     ├─ actions.py      # /act (player) and /actions (admin)
-     ├─ game.py         # /game_* and role assignment
-     ├─ players.py      # /player group
-     ├─ voting.py       # /vote group and phase voting
-     ├─ moderation.py   # purge, channel setup, broadcast
-     ├─ maintenance.py  # sync, list, clean commands
-     ├─ role_debug.py   # role debug tools
-     ├─ fun.py          # /dice, /coin
-     └─ help.py         # /help
+ ├── bot.py                 # Entry point (Startup & Cogs loading)
+ ├── config.py              # Global configuration (Intents, Paths)
+ │
+ ├── core/                  # SYSTEM CORE
+ │    ├── actions.py        # Phase-aware action queue & validation
+ │    ├── game.py           # Game orchestrator & role assignment
+ │    ├── infra.py          # Discord API management (Channels/Roles)
+ │    ├── johnbotjovi.py    # Image processing (Lynch posters)
+ │    ├── logs.py           # Logging system
+ │    ├── lunar.py          # Lunar cycle logic
+ │    ├── phases.py         # Day/Night transition logic & Timers
+ │    ├── players.py        # Entity management (Life, Death, Flags)
+ │    ├── reminders.py      # Phase timeout reminders
+ │    ├── roles.py          # Role data loading
+ │    ├── state.py          # Runtime game state definition
+ │    ├── storage.py        # Atomic JSON persistence
+ │    └── votes.py          # Voting engine & tallying
+ │
+ ├── status/                # STATUS ENGINE
+ │    ├── __init__.py       # Registry & Base Status class
+ │    ├── builtin.py        # Standard effects (Paralyzed, Jailed, etc.)
+ │    └── engine.py         # Logic for application, ticking, and cleansing
+ │
+ ├── expansions/            # GAME CONTENT
+ │    ├── __init__.py       # Expansion registry & hooks
+ │    ├── myexp.py          # Template for new expansions
+ │    ├── persona.py        # Persona 3 mechanics (Nyx, SEES, Fuuka)
+ │    ├── philosophers.py   # Base mechanics
+ │    └── smt.py            # SMT mechanics (Law/Chaos)
+ │
+ ├── cogs/                  # INTERFACE (Slash Commands)
+ │    ├── actions.py        # /act, /actions logs
+ │    ├── bootstrap.py      # /setup, /wipe, /link_roles
+ │    ├── fun.py            # /dice, /coin, /lynch
+ │    ├── game.py           # /game_start, /game_reset
+ │    ├── help.py           # /help
+ │    ├── maintenance.py    # /sync_here, /clean_commands
+ │    ├── moderation.py     # /set_channels, /bc
+ │    ├── players.py        # /player register, /view, /set_flag
+ │    ├── role_debug.py     # /debug_roles
+ │    ├── status.py         # /effects apply, /effects list
+ │    ├── timezones.py      # /tz add, /tz list
+ │    └── voting.py         # /vote cast, /status, /votes
+ │
+ └── data/                  # DATA FILES (Roles configuration)
+      ├── roles_default.json
+      ├── roles_p3.json
+      └── roles_smt.json
 ```
 
----
 
-## ✨ Features
+## 🎮 Included Expansions
 
-- 🌓 **Day/Night Phases** — Automatically open/close discussion and action phases.  
-- 🌑 **Lunar Cycle** — 4-step moon cycle (`New → First Quarter → Full → Last Quarter`) with game mechanics attached.  
-- 📊 **Voting System** — Supports votes, hidden votes, weighted votes, and lynch thresholds.  
-- 🎯 **Role Flags** — Player behavior driven by flags:  
-  - `day_act`, `night_act` (can perform actions in that phase)  
-  - `hidden_vote`, `voting_boost`, `no_vote`, `silenced`  
-  - `lynch_plus`, `immune_night`, `protected`, etc.  
-- 📜 **State Persistence** — Full state stored in `state.json`, with auto-backup.  
-- 🛡️ **Moderator Tools** — Clear votes, purge messages, broadcast announcements.  
-- 🎲 **Fun/utility Commands** — Dice rolls and coin flips for roleplay.  
+### 🏛️ Base (Philosopher's Game)
+The classic experience. Standard roles, majority voting, and a day/night cycle without external mechanics.
 
----
+### ⚖️ Shin Megami Tensei (Law & Chaos)
+A conflict of cosmic proportions based on SMT IV. Turning a simple mafia game into a decently-tailored narrative piece.
+- **Dual Mafia:** Two rival factions (Order vs. Chaos) fighting against the Samurai (Town) and each other.
+- **Divine Judgment:** The Order faction performs a ritual each night whose outcome (Kill/Convert).
+- **Transformations:** Samurai can fuse with demons/angels to become Heralds (Mafia recruits) or powerful neutral entities.
+- **YHVH:** A hidden independent role seeking to put all players into eternal Stasis.
+- **Lunar phase mechanics:** Some roles or faction-driven mechanics's effects are buffed/debuffed by the moon. 
 
-## 👥 Player Commands
+### 🌕 Persona 3 (The Dark Hour)
+A complex expansion based on the Atlus JRPG. 
+- **Apocalypse Clock:** Countdown mechanic based on the death of "Arcana" roles.
+- **Nyx Entropy:** Automatic global events (mass paralysis, confusion) as the clock advances.
+- **SEES System:** Group chat with "Radar" abilities (Fuuka) that detect hostile actions in real-time.
+- **Evolving Roles:** Each role has unique perks for following an specific game style, which makes the game an unique experience for each player.
 
-| Command | Description |
-|---------|-------------|
-| `/help` | Show available commands |
-| `/player list` | List all registered players |
-| `/player alias_show @user` | Show aliases of a player |
-| `/votes` | Show current day’s voting breakdown |
-| `/status` | Show phase (day/night), day counter, lunar phase, time left, and alive players |
-| `/vote cast @user` | Cast a vote |
-| `/vote clear` | Remove your vote |
-| `/vote mine` | Show your vote |
-| `/vote end_day` | Request to end the day (needs 2/3 alive players) |
-| `/act [@target] [note]` | Perform your day/night action (if allowed by role) |
-| `/dice [faces]` | Roll a die (default 20) |
-| `/coin` | Flip a coin |
+### 📚 Instructions
 
----
+- All information about the features and the overall use of the bot (Commands, Flag information, etc.) is on `docs/features`.
 
-## 🛡️ Admin / Moderator Commands
 
-### Player Management
-- `/player register @user [name]` — Register a player.  
-- `/player unregister @user` — Remove a player.  
-- `/player rename @user <new_name>` — Change a player’s name.  
-- `/player view @user` — Show detailed player info.  
-- `/player edit @user field value` — Safely edit player fields.  
-- `/player set_flag @user <flag> <value>` — Set a flag (typed).  
-- `/player del_flag @user <flag>` — Remove a flag.  
-- `/player add_effect @user <effect>` — Add an effect.  
-- `/player remove_effect @user <effect>` — Remove an effect.  
-- `/player kill @user` — Mark player as dead.  
-- `/player revive @user` — Mark player as alive.  
+### 📜 License and Credits
 
-### Game Management
-- `/game_start [profile]` — Start a new game.  
-- `/game_reset` — Reset game state.  
-- `/finish_game [reason]` — End the game.  
-- `/who [@user]` — Show info for a user.  
-- `/assign @user <role>` — Assign a role.  
-
-### Phases & Voting
-- `/start_day [duration] [channel] [force]` — Start Day phase.  
-- `/end_day` — End Day phase.  
-- `/start_night [duration]` — Start Night phase.  
-- `/end_night` — End Night phase.  
-- `/clearvotes` — Clear all votes.  
-
-### Actions & Logs
-- `/actions logs [phase=auto|day|night] [number] [user] [public=false]` — Logs of actions per phase.  
-- `/actions breakdown [phase=auto|day|night] [number] [public=false]` — Who can act, who acted, who is missing.  
-
-### Moderation & Utility
-- `/bc <text>` — Broadcast to Day channel.  
-- `/set_day_channel [#channel]` — Set Day channel.  
-- `/set_admin_channel [#channel]` — Set Admin channel.  
-- `/set_log_channel [#channel]` — Set Logs channel.  
-- `/show_channels` — Show configured channels.  
-- `/purge [limit] [user] [contains] …` — Bulk delete messages.  
-
-### Maintenance
-- `/debug_roles` — Show loaded roles.  
-- `/sync_here` — Sync commands in current guild.  
-- `/list_commands [scope]` — List commands (global or guild).  
-- `/clean_commands [scope] [nuke]` — Remove stray commands.  
-
----
-
-## 🚧 Coming Soon
-
-- More expansions, more features for those expansions, more for the **INFINITE MAFIA**.
-
----
-
-## 📜 Notes
-
-- Designed for **manual moderator supervision**.  
-- State auto-saves to `state.json` in repo root.  
+Developed by **D-Zerpa et al.** This project uses `discord.py` and `Pillow`. Assets and images from Persona 3 and SMT are property of ATLUS/SEGA.

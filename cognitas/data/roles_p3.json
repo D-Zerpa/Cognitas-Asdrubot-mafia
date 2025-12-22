@@ -1,0 +1,287 @@
+{
+  "meta": {
+    "expansion": "p3",
+    "version": "3.0-D",
+    "generated_at": "2025-11-10T08:05:32.735366Z"
+  },
+  "roles": [
+    {
+      "id": "nyx",
+      "name": "Nyx",
+      "notes": "NYX – El Fin Inevitable | Antagonista principal; poder escala con Arcanos muertos. Investigación devuelve Ryoji.",
+      "team": "mafia",
+      "flags": {
+        "arcana": false,
+        "sees": false,
+        "day_act": false,
+        "night_act": true
+      }
+    },
+    {
+      "id": "chidori",
+      "name": "Chidori",
+      "notes": "Chidori Yoshino – La Voz del Colgado | Strega; medium con resurrección incompleta y herencia de habilidad.",
+      "team": "third",
+      "flags": {
+        "arcana": true,
+        "sees": false,
+        "day_act": false,
+        "night_act": true
+      }
+    },
+    {
+      "id": "elizabeth",
+      "name": "Elizabeth",
+      "notes": "Elizabeth – La Observadora del Velo | Neutral; investiga tipo+alineamiento y altera la habilidad objetivo; victoria por set de conocimientos.",
+      "team": "third",
+      "flags": {
+        "arcana": false,
+        "sees": false,
+        "day_act": false,
+        "night_act": true
+      }
+    },
+    {
+      "id": "jin",
+      "name": "Jin",
+      "notes": "Jin Shirato – El Analista del Abismo | Strega; análisis de tipo de habilidad y control disruptivo al encontrar a Nyx.",
+      "team": "third",
+      "flags": {
+        "arcana": true,
+        "sees": false,
+        "day_act": false,
+        "night_act": true
+      }
+    },
+    {
+      "id": "kotone",
+      "name": "Kotone",
+      "notes": "Kotone Shiomi – La Visitante del Amanecer | Neutral; chats nocturnos (vínculos), copia de habilidad; hidden vote; victoria al hallar a Makoto y su nombre.",
+      "team": "third",
+      "flags": {
+        "arcana": false,
+        "sees": false,
+        "hidden_vote": true,
+        "day_act": true,
+        "night_act": true
+      }
+    },
+    {
+      "id": "reaper",
+      "name": "Reaper",
+      "notes": "The Reaper – El Eco de la Muerte | Anti-Pueblo; despierta N4; asesinato inevitable hasta lograr 3 muertes para victoria instantánea.",
+      "team": "third",
+      "flags": {
+        "arcana": false,
+        "sees": false,
+        "day_act": false,
+        "night_act": true
+      }
+    },
+    {
+      "id": "shinjiro-b",
+      "name": "Shinjiro_B",
+      "notes": "Shinjiro Aragaki – El Berserker del Crepúsculo | Hierofante; RNG nocturno (kill/herida/nada). Condición con Ken o bajas totales.",
+      "team": "third",
+      "flags": {
+        "arcana": true,
+        "sees": false,
+        "day_act": false,
+        "night_act": true
+      }
+    },
+    {
+      "id": "shinjiro-s",
+      "name": "Shinjiro_S",
+      "notes": "Shinjiro Aragaki – El Escudo del Atardecer | Hierofante; intercepta asesinatos y acumula Redención. Condición con Ken o asesinatos totales.",
+      "team": "third",
+      "flags": {
+        "arcana": true,
+        "sees": false,
+        "day_act": false,
+        "night_act": true
+      }
+    },
+    {
+      "id": "takaya",
+      "name": "Takaya",
+      "notes": "Takaya – El Profeta del Crepúsculo | Strega; killer con 3 balas + robo de habilidad al quedarse sin balas.",
+      "team": "third",
+      "flags": {
+        "arcana": true,
+        "sees": false,
+        "day_act": false,
+        "night_act": true
+      }
+    },
+    {
+      "id": "aigis",
+      "name": "Aigis",
+      "notes": "Aigis – El Corazón Mecánico | SEES; pararrayos, escudo al morir, Orgia Mode.",
+      "team": "town",
+      "flags": {
+        "arcana": false,
+        "sees": true,
+        "day_act": false,
+        "night_act": true
+      }
+    },
+    {
+      "id": "akihiko",
+      "name": "Akihiko",
+      "notes": "Akihiko Sanada – El Puño del Amanecer | SEES; bloqueo reactivo y reflejo 25%.",
+      "team": "town",
+      "flags": {
+        "arcana": false,
+        "sees": true,
+        "day_act": false,
+        "night_act": true
+      }
+    },
+    {
+      "id": "chihiro",
+      "name": "Chihiro",
+      "notes": "Chihiro Fushimi – El Espejo de la Verdad | Arcano civil; juicio moral diurno con resoluciones de confusión; pasiva de equilibrio.",
+      "team": "town",
+      "flags": {
+        "arcana": true,
+        "sees": false,
+        "day_act": true,
+        "night_act": false
+      }
+    },
+    {
+      "id": "fuuka",
+      "name": "Fuuka",
+      "notes": "Fuuka Yamagishi – La Sacerdotisa del Silencio | SEES; oráculo (radar) pasivo y registro táctico nocturno.",
+      "team": "town",
+      "flags": {
+        "arcana": true,
+        "sees": true,
+        "oracle": false,
+        "day_act": false,
+        "night_act": true
+      }
+    },
+    {
+      "id": "hidetoshi",
+      "name": "Hidetoshi",
+      "notes": "Hidetoshi Odagiri – El Legislador del Orden | Arcano civil; sanción de voto y registros de conducta (silencio/auto-fallo).",
+      "team": "town",
+      "flags": {
+        "arcana": true,
+        "sees": false,
+        "day_act": true,
+        "night_act": false
+      }
+    },
+    {
+      "id": "junpei",
+      "name": "Junpei",
+      "notes": "Junpei Iori – El Filo del Caos | SEES; RNG 1-3 con bloque/herida/autolesión y reroll 1/partida.",
+      "team": "town",
+      "flags": {
+        "arcana": false,
+        "sees": true,
+        "day_act": false,
+        "night_act": true
+      }
+    },
+    {
+      "id": "ken",
+      "name": "Ken",
+      "notes": "Ken Amada – El Portador de la Justicia | SEES; lanza letal con costo si es Town; acumula Ira por caídos SEES.",
+      "team": "town",
+      "flags": {
+        "arcana": false,
+        "sees": true,
+        "day_act": false,
+        "night_act": true
+      }
+    },
+    {
+      "id": "kenji",
+      "name": "Kenji",
+      "notes": "Kenji Tomochika – El Impulsivo | Arcano civil; charla privada diurna + revelación mutua si coinciden votos; suerte del 6.",
+      "team": "town",
+      "flags": {
+        "arcana": true,
+        "sees": false,
+        "day_act": true,
+        "night_act": false
+      }
+    },
+    {
+      "id": "koromaru",
+      "name": "Koromaru",
+      "notes": "Koromaru – El Guardián Silencioso | SEES; tracker/visitor + evasión 50%.",
+      "team": "town",
+      "flags": {
+        "arcana": true,
+        "sees": true,
+        "day_act": false,
+        "night_act": true
+      }
+    },
+    {
+      "id": "makoto",
+      "name": "Makoto",
+      "notes": "Makoto Yuki – El Portador del Alma | SEES; Wild Resonance (copia) + Afinidad + Theurgy de prioridad; Social Links nocturno; arcano clave.",
+      "team": "town",
+      "flags": {
+        "arcana": true,
+        "sees": true,
+        "day_act": false,
+        "night_act": true
+      }
+    },
+    {
+      "id": "mitsuru",
+      "name": "Mitsuru",
+      "notes": "Mitsuru Kirijo – La Emperatriz del Invierno | SEES; líder reclutadora (despierta Personas) y habilita Theurgies.",
+      "team": "town",
+      "flags": {
+        "arcana": true,
+        "sees": true,
+        "day_act": false,
+        "night_act": true
+      }
+    },
+    {
+      "id": "rio",
+      "name": "Rio",
+      "notes": "Rio Iwasaki – La Determinación en Marcha | Arcano civil; buff de enfoque/voto doble; momentum acumulable.",
+      "team": "town",
+      "flags": {
+        "arcana": true,
+        "sees": false,
+        "day_act": true,
+        "night_act": false
+      }
+    },
+    {
+      "id": "yukari",
+      "name": "Yukari",
+      "notes": "Yukari Takeba – El Viento del Alba | SEES; protección nocturna, curación diurna, theurgy anti-kill global.",
+      "team": "town",
+      "flags": {
+        "arcana": true,
+        "sees": true,
+        "day_act": true,
+        "night_act": true
+      }
+    },
+    {
+      "id": "yuko",
+      "name": "Yuko",
+      "notes": "Yuko Nishiwaki – La Fortaleza del Corazón | Arcano civil; protección diurna contra estados + moral y cargas extra.",
+      "team": "town",
+      "flags": {
+        "arcana": true,
+        "sees": false,
+        "day_act": true,
+        "night_act": false
+      }
+    }
+  ]
+}

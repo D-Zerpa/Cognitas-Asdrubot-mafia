@@ -54,15 +54,10 @@ FLAG_DEFS: dict[str, dict] = {
         "desc": "Adds to the player's ballot weight (1+boost).",
         "aliases": ["vote_boost", "vote_bonus"],
     },
-    "no_vote": {
+    "double_vote": {
         "type": "bool",
-        "desc": "Player cannot cast votes (0 weight).",
-        "aliases": ["silenced_vote", "mute_vote"],
-    },
-    "silenced": {
-        "type": "bool",
-        "desc": "Player is silenced (treated as 0 voting power).",
-        "aliases": [],
+        "desc": "Multiplier.",
+        "aliases": ["mayor"],
     },
 
     # Lynch threshold modifiers (target extras)
@@ -72,21 +67,34 @@ FLAG_DEFS: dict[str, dict] = {
         "aliases": ["lynch_resistance", "needs_extra_votes"],
     },
 
-    # Night/action examples
-    "immune_night": {
+    # --- Phase actions ---
+    "day_act": {
         "type": "bool",
-        "desc": "Immune to night eliminations.",
-        "aliases": ["night_immune"],
-    },
-    "action_blocked": {
-        "type": "bool",
-        "desc": "Night action is blocked for this player.",
-        "aliases": ["blocked", "role_blocked"],
-    },
-    "protected": {
-        "type": "bool",
-        "desc": "Temporarily protected from kills.",
+        "desc": "Allows the use of /act during DAY.",
         "aliases": [],
+    },
+    "night_act": {
+        "type": "bool",
+        "desc": "Allows the use of /act during NIGHT.",
+        "aliases": [],
+    },
+
+    # ---- P3 Flags -----
+
+    "arcana": {
+        "type": "bool",
+        "desc": "Arcana bearer (is a seal).",
+        "aliases": ["arcano"],
+    },
+    "sees": {
+        "type": "bool",
+        "desc": "SEES member.",
+        "aliases": ["sees_member"],
+    },
+    "oracle": {
+        "type": "bool",
+        "desc": "Radar-like abilities (Fuuka).",
+        "aliases": ["oraculo", "radar"],
     },
 }
 
