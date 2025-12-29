@@ -1,6 +1,6 @@
 import os
 import discord
-from .state import game       # tu GameState existente
+from .state import game      
 from .roles import load_roles
 from .storage import save_state
 from .logs import log_event
@@ -139,13 +139,13 @@ async def start(
 
     # Feedback
     chan = ctx.guild.get_channel(game.game_channel_id)
-    roles_msg = "Roles loaded."
+    roles_msg = "Roles cargados."
     if alive_role_id and dead_role_id:
-        roles_msg += " Alive/Dead roles linked."
+        roles_msg += " Roles Vivo/Muerto vinculados."
 
     await ctx.reply(
-        f"🟢 **Game started** with profile **{game.profile}**.\n"
-        f"Game channel: {chan.mention if chan else '#?'} | {roles_msg}"
+        f"🟢 **Juego iniciado** con perfil **{game.profile}**.\n"
+        f"Canal de juego: {chan.mention if chan else '#?'} | {roles_msg}"
     )
     await log_event(ctx.bot, ctx.guild.id, "GAME_START", profile=game.profile, game_channel_id=game.game_channel_id)
 
@@ -188,12 +188,12 @@ async def hard_reset(ctx_or_interaction):
         if isinstance(ctx_or_interaction, discord.Interaction):
             interaction = ctx_or_interaction
             if not interaction.response.is_done():
-                await interaction.response.send_message("🧹 Game state fully reset.", ephemeral=True)
+                await interaction.response.send_message("🧹 Estado del juego reiniciado.", ephemeral=True)
             else:
-                await interaction.followup.send("🧹 Game state fully reset.", ephemeral=True)
+                await interaction.followup.send("🧹 Estado del juego reiniciado.", ephemeral=True)
         else:
             # commands.Context
-            await ctx_or_interaction.reply("🧹 Game state fully reset.")
+            await ctx_or_interaction.reply("🧹 Estado del juego reiniciado.")
     except Exception:
         pass
 
@@ -210,7 +210,7 @@ async def hard_reset(ctx_or_interaction):
 async def finish(ctx, *, reason: str | None = None):
     game.game_over = True
     await save_state()
-    await ctx.reply(f"🏁 **Game finished.** {('Reason: ' + reason) if reason else ''}".strip())
+    await ctx.reply(f"🏁 **Juego terminado.** {('Razón: ' + reason) if reason else ''}".strip())
     await log_event(ctx.bot, ctx.guild.id, "GAME_FINISH", reason=reason or "-")
 
 
@@ -222,26 +222,27 @@ async def who(ctx, member: discord.Member | None = None):
         uid = str(member.id)
         pdata = game.players.get(uid)
         if not pdata:
-            return await ctx.reply("Player not registered.")
+            return await ctx.reply("Jugador no registrado.")
         role = pdata.get("role") or "—"
         alive = "✅" if pdata.get("alive", True) else "☠️"
         return await ctx.reply(f"<@{uid}> — **{pdata.get('name','?')}** | Role: **{role}** | {alive}")
     # quick list if no member is passed
     alive = [u for u, p in game.players.items() if p.get("alive", True)]
-    await ctx.reply(f"Alive players: {', '.join(f'<@{u}>' for u in alive) if alive else '—'}")
+    await ctx.reply(f"Jugadores Vivos: {', '.join(f'<@{u}>' for u in alive) if alive else '—'}")
 
 async def assign_role(ctx, member: discord.Member, role_name: str):
     """
-    Assign a role to a player and link them to their pre-created private channel.
+    Assign a role to a player and link them to their private channel.
+    AUTO-MAPPING: If the role has no channel in infra, assumes current channel is the one.
     """
     uid = str(member.id)
     if uid not in game.players:
-        return await ctx.reply("Player not registered.")
+        return await ctx.reply("Jugador no registrado.")
 
     # 1. Look up role definition
     role_def = _lookup_role(role_name, getattr(game, "roles", {}) or {}, getattr(game, "roles_def", {}))
     if not role_def:
-        return await ctx.reply(f"Unknown role: `{role_name}`")
+        return await ctx.reply(f"Rol desconocido: `{role_name}`")
 
     # Use the canonical name from the definition (e.g., "Makoto Yuki")
     canonical_name = role_def.get("name")
@@ -260,7 +261,16 @@ async def assign_role(ctx, member: discord.Member, role_name: str):
     chan_id = role_channels.get(canonical_name)
     
     feedback_extra = ""
+    new_mapping_saved = False
     
+    # --- AUTO-MAPPING LOGIC ---
+    if not chan_id:
+        chan_id = ctx.channel.id
+        if "role_channels" not in infra: infra["role_channels"] = {}
+        infra["role_channels"][canonical_name] = chan_id
+        new_mapping_saved = True
+        feedback_extra = " | 💾 Canal mapeado automáticamente."
+
     if chan_id:
         channel = guild.get_channel(chan_id)
         if channel:
@@ -278,21 +288,21 @@ async def assign_role(ctx, member: discord.Member, role_name: str):
                 
                 # c) Send welcome/notification
                 await channel.send(
-                    f"👋 Welcome, {member.mention}. You have been assigned the role **{canonical_name}**.\n"
-                    f"This is your private channel for actions and system notifications."
+                    f"👋 Bienvenido, {member.mention}. Se te ha asignado el rol **{canonical_name}**.\n"
+                    f"Este es tu canal privado para acciones y notificaciones del sistema."
                 )
-                feedback_extra = f" | 📺 Linked to {channel.mention}"
+                feedback_extra += f" | 📺 Vinculado a {channel.mention}"
             except Exception as e:
-                feedback_extra = f" | ⚠️ Link failed: {e}"
+                feedback_extra += f" | ⚠️ Fallo al vincular: {e}"
         else:
             # Channel ID exists in infra but channel is gone from Discord
             game.players[uid]["role_channel_id"] = None
-            feedback_extra = " | ⚠️ Role channel missing (deleted?)"
+            feedback_extra += " | ⚠️ Canal del rol perdido (borrado?)"
     else:
-        # No pre-created channel found for this role
+        # Fallback (no debería ocurrir con auto-mapping, pero por seguridad)
         game.players[uid]["role_channel_id"] = None
 
     await save_state()
-    await ctx.reply(f"🎭 Role **{canonical_name}** assigned to <@{uid}>{feedback_extra}.")
+    await ctx.reply(f"🎭 Rol **{canonical_name}** asignado a <@{uid}>{feedback_extra}.")
     await log_event(ctx.bot, ctx.guild.id, "ASSIGN", user_id=str(member.id), role=canonical_name)
 

@@ -9,7 +9,7 @@ from enum import Enum
 from .state import game
 from .storage import save_state
 from ..status import engine as SE
-from ..core.infra import get_role_ids, apply_alive_dead_role
+from ..core.infra import get_role_ids, apply_alive_dead_role, get_infra
 
 NAME_RX = re.compile(r"\s+")
 
@@ -120,7 +120,7 @@ def get_player_snapshot(user_id: str) -> dict:
 async def list_players(ctx):
     players = getattr(game, "players", {}) or {}
     if not players:
-        return await ctx.reply("No players registered.")
+        return await ctx.reply("No hay jugadores registrados.")
     alive = [p for p in players.values() if p.get("alive", True)]
     dead = [p for p in players.values() if not p.get("alive", True)]
 
@@ -128,22 +128,35 @@ async def list_players(ctx):
         return ", ".join(f"<@{p['uid']}> ({p.get('name','?')})" for p in pl) if pl else "—"
 
     await ctx.reply(
-        f"**Alive**: {fmt(alive)}\n"
-        f"**Dead**: {fmt(dead)}\n"
+        f"**Vivos**: {fmt(alive)}\n"
+        f"**Muertos**: {fmt(dead)}\n"
         f"**Total**: {len(players)}"
     )
+
+def _get_safe_role_ids(guild_id: int):
+    alive = getattr(game, "alive_role_id", None)
+    dead = getattr(game, "dead_role_id", None)
+    
+    if not alive or not dead:
+        infra = get_infra(guild_id)
+        roles_data = infra.get("roles", {})
+        if not alive: alive = roles_data.get("alive")
+        if not dead: dead = roles_data.get("dead")
+        
+    return {"alive": alive, "dead": dead}
 
 
 async def register(ctx, member: discord.Member | None = None, *, name: str | None = None):
     if not _is_admin(ctx):
-        return await ctx.reply("Admins only.", ephemeral=True)
+        return await ctx.reply("Solo administradores.", ephemeral=True)
     guild = getattr(ctx, "guild", None)
     if not guild:
-        return await ctx.reply("Guild context required.", ephemeral=True)
+        return await ctx.reply("Contexto de servidor requerido.", ephemeral=True)
 
+    # Definimos TARGET (El usuario real)
     target = member or getattr(ctx, "author", None) or getattr(ctx, "user", None)
     if not target:
-        return await ctx.reply("No target user provided.", ephemeral=True)
+        return await ctx.reply("No se especificó usuario.", ephemeral=True)
 
     uid = str(target.id)
     display = (name or getattr(target, "display_name", None) or f"User-{uid}").strip()
@@ -152,19 +165,25 @@ async def register(ctx, member: discord.Member | None = None, *, name: str | Non
     game.players[uid]["name"] = display
     game.players[uid]["alive"] = True
 
-    # Assign "Alive" role.
-
-    ids = get_role_ids(guild.id)
-    r_alive = guild.get_role(ids.get("alive")) if ids.get("alive") else None
-    r_dead  = guild.get_role(ids.get("dead"))  if ids.get("dead")  else None
+    # --- CORRECCIÓN: Asignar Rol "Vivo" de forma segura ---
+    # Usamos la función helper que busca en infra si falla la memoria
+    ids = _get_safe_role_ids(guild.id)
+    r_alive_id = ids.get("alive")
+    r_dead_id = ids.get("dead")
+    
+    r_alive = guild.get_role(int(r_alive_id)) if r_alive_id else None
+    r_dead  = guild.get_role(int(r_dead_id))  if r_dead_id  else None
 
     try:
-        if r_dead and r_dead in member.roles:
-            await member.remove_roles(r_dead, reason="Asdrubot: registration -> Alive")
-        if r_alive and r_alive not in member.roles:
-            await member.add_roles(r_alive, reason="Asdrubot: registration -> Alive")
-    except Exception:
-        pass
+        # AQUI ESTABA EL ERROR: Usamos 'target', no 'member' (que podía ser None)
+        if r_dead and r_dead in target.roles:
+            await target.remove_roles(r_dead, reason="Asdrubot: registration -> Alive")
+        
+        if r_alive and r_alive not in target.roles:
+            await target.add_roles(r_alive, reason="Asdrubot: registration -> Alive")
+    except Exception as e:
+        print(f"[Register Error] Fallo al asignar roles a {display}: {e}")
+        # No detenemos el registro, solo logueamos el fallo de rol
 
     # --- Create or reuse player's private role channel ---
     game.players[uid]["role_channel_id"] = None
@@ -181,22 +200,21 @@ async def register(ctx, member: discord.Member | None = None, *, name: str | Non
     except Exception:
         pass
 
-    await ctx.reply(f"✅ Registered: <@{uid}> as **{display}** (alive).", ephemeral=True)
+    await ctx.reply(f"✅ Registrado: {target.mention} como **{display}** (vivo).", ephemeral=True)
 
     # Optional: greet in private role channel
     try:
         rcid = game.players[uid].get("role_channel_id")
         rch = guild.get_channel(rcid) if rcid else None
         if rch:
-            await rch.send(f"Welcome, <@{uid}>! This is your private role channel. Use `/act` here to perform your actions.")
+            await rch.send(f"Bienvenido, {target.mention}! Este es tu canal de rol privado. Usa `/act` aquí para tus acciones.")
     except Exception:
         pass
 
 
-
 async def unregister(ctx, member: discord.Member):
     if not _is_admin(ctx):
-        return await ctx.reply("Admins only.", ephemeral=True)
+        return await ctx.reply("Solo administradores.", ephemeral=True)
     uid = str(member.id)
     if uid in game.players:
         p_data = game.players[uid]
@@ -212,20 +230,20 @@ async def unregister(ctx, member: discord.Member):
 
         del game.players[uid]
         await save_state()
-        return await ctx.reply(f"🗑️ Unregistered <@{uid}> and removed channel access.", ephemeral=True)
+        return await ctx.reply(f"🗑️ Jugador <@{uid}> eliminado y acceso a canal revocado.", ephemeral=True)
         
-    await ctx.reply("Player was not registered.", ephemeral=True)
+    await ctx.reply("Jugador no registrado.", ephemeral=True)
 
 
 async def rename(ctx, member: discord.Member, *, new_name: str):
     if not _is_admin(ctx):
-        return await ctx.reply("Admins only.", ephemeral=True)
+        return await ctx.reply("Solo administradores.", ephemeral=True)
     uid = str(member.id)
     if uid not in game.players:
-        return await ctx.reply("Player not registered.", ephemeral=True)
+        return await ctx.reply("Jugador no registrado.", ephemeral=True)
     game.players[uid]["name"] = _norm(new_name)
     await save_state()
-    await ctx.reply(f"✏️ <@{uid}> is now **{new_name}**.", ephemeral=True)
+    await ctx.reply(f"✏️ <@{uid}> ahora es **{new_name}**.", ephemeral=True)
 
 
 # ----------------------------
@@ -235,41 +253,41 @@ async def rename(ctx, member: discord.Member, *, new_name: str):
 async def alias_show(ctx, member: discord.Member):
     uid = str(member.id)
     if uid not in game.players:
-        return await ctx.reply("Player not registered.", ephemeral=True)
+        return await ctx.reply("Jugador no registrado.", ephemeral=True)
     aliases = game.players[uid].get("aliases", [])
     if not aliases:
-        return await ctx.reply(f"<@{uid}> has no aliases.", ephemeral=True)
-    await ctx.reply(f"Aliases for <@{uid}>: {', '.join('`'+a+'`' for a in aliases)}", ephemeral=True)
+        return await ctx.reply(f"<@{uid}> no tiene alias.", ephemeral=True)
+    await ctx.reply(f"Alias para <@{uid}>: {', '.join('`'+a+'`' for a in aliases)}", ephemeral=True)
 
 
 async def alias_add(ctx, member: discord.Member, *, alias: str):
     if not _is_admin(ctx):
-        return await ctx.reply("Admins only.", ephemeral=True)
+        return await ctx.reply("Solo administradores.", ephemeral=True)
     uid = str(member.id)
     if uid not in game.players:
-        return await ctx.reply("Player not registered.", ephemeral=True)
+        return await ctx.reply("Jugador no registrado.", ephemeral=True)
     alias_n = _norm(alias)
     arr = game.players[uid].setdefault("aliases", [])
     if alias_n in arr:
-        return await ctx.reply("Alias already exists.", ephemeral=True)
+        return await ctx.reply("Ese alias ya existe.", ephemeral=True)
     arr.append(alias_n)
     await save_state()
-    await ctx.reply(f"➕ Added alias to <@{uid}>: `{alias_n}`", ephemeral=True)
+    await ctx.reply(f"➕ Alias añadido a <@{uid}>: `{alias_n}`", ephemeral=True)
 
 
 async def alias_del(ctx, member: discord.Member, *, alias: str):
     if not _is_admin(ctx):
-        return await ctx.reply("Admins only.", ephemeral=True)
+        return await ctx.reply("Solo administradores.", ephemeral=True)
     uid = str(member.id)
     if uid not in game.players:
-        return await ctx.reply("Player not registered.", ephemeral=True)
+        return await ctx.reply("Jugador no registrado.", ephemeral=True)
     alias_n = _norm(alias)
     arr = game.players[uid].get("aliases", [])
     if alias_n not in arr:
-        return await ctx.reply("Alias not found.", ephemeral=True)
+        return await ctx.reply("Alias no encontrado.", ephemeral=True)
     arr.remove(alias_n)
     await save_state()
-    await ctx.reply(f"➖ Removed alias from <@{uid}>: `{alias_n}`", ephemeral=True)
+    await ctx.reply(f"➖ Alias eliminado de <@{uid}>: `{alias_n}`", ephemeral=True)
 
 
 # ----------------------------
@@ -305,7 +323,7 @@ PROTECTED_VOTE_FIELDS = {
 
 def _parse_bool(s: str) -> bool:
     s = (s or "").strip().lower()
-    if s in ("1", "true", "yes", "y", "on"):
+    if s in ("1", "true", "yes", "y", "on", "si"):
         return True
     if s in ("0", "false", "no", "n", "off"):
         return False
@@ -315,7 +333,7 @@ def _parse_bool(s: str) -> bool:
 def _coerce_basic(value: str) -> Any:
     s = (value or "").strip()
     # boolean literals
-    if re.fullmatch(r"(?i)(true|on|yes|y|1)", s):
+    if re.fullmatch(r"(?i)(true|on|yes|y|1|si)", s):
         return True
     if re.fullmatch(r"(?i)(false|off|no|n|0)", s):
         return False
@@ -336,20 +354,20 @@ async def edit_player(ctx, member: discord.Member, field: str, value: str):
       - Coerces bool/int where reasonable; special cases for common fields.
     """
     if not _is_admin(ctx):
-        return await ctx.reply("Admins only.", ephemeral=True)
+        return await ctx.reply("Solo administradores.", ephemeral=True)
     uid = str(member.id)
     players = getattr(game, "players", {}) or {}
     if uid not in players:
-        return await ctx.reply("Player not registered.", ephemeral=True)
+        return await ctx.reply("Jugador no registrado.", ephemeral=True)
 
     f = (field or "").strip()
     if not f:
-        return await ctx.reply("Field name is required.", ephemeral=True)
+        return await ctx.reply("Nombre de campo requerido.", ephemeral=True)
     f_l = f.lower()
 
     # Guard rails: enforce flags path for voting/lynch
     if f_l in PROTECTED_VOTE_FIELDS:
-        return await ctx.reply("Use **/player set_flag** for voting/lynch related fields.", ephemeral=True)
+        return await ctx.reply("Usa **/player set_flag** para campos de votación.", ephemeral=True)
 
     p = players[uid]
     # Friendly typed edits
@@ -364,10 +382,10 @@ async def edit_player(ctx, member: discord.Member, field: str, value: str):
         try:
             alive_val = _parse_bool(value)
         except Exception as e:
-            return await ctx.reply(f"Invalid boolean for `alive`: {e}", ephemeral=True)
+            return await ctx.reply(f"Booleano inválido para `alive`: {e}", ephemeral=True)
         p["alive"] = bool(alive_val)
         if not alive_val:
-            await _sanitize_votes_for_uid(uid)
+            await sanitize_votes_for_uid(uid)
     elif f_l == "effects":
         arr = [seg.strip() for seg in str(value).split(",") if seg.strip()]
         p["effects"] = arr
@@ -378,7 +396,7 @@ async def edit_player(ctx, member: discord.Member, field: str, value: str):
         p[f] = _coerce_basic(value)
 
     await save_state()
-    return await ctx.reply(f"✅ Set `{f}` = `{p.get(f_l, p.get(f, value))}` for <@{uid}>.", ephemeral=True)
+    return await ctx.reply(f"✅ Set `{f}` = `{p.get(f_l, p.get(f, value))}` para <@{uid}>.", ephemeral=True)
 
 
 # ----------------------------
@@ -390,32 +408,32 @@ async def set_flag(ctx, member: discord.Member, key: str, value: Any):
     Set or update a flag key on a player (value already parsed/typed by the cog).
     """
     if not _is_admin(ctx):
-        return await ctx.reply("Admins only.", ephemeral=True)
+        return await ctx.reply("Solo administradores.", ephemeral=True)
     uid = str(member.id)
     if uid not in game.players:
-        return await ctx.reply("Player not registered.", ephemeral=True)
+        return await ctx.reply("Jugador no registrado.", ephemeral=True)
     key = (key or "").strip()
     if not key:
-        return await ctx.reply("Flag key is required.", ephemeral=True)
+        return await ctx.reply("Flag key requerida.", ephemeral=True)
 
     flags = game.players[uid].setdefault("flags", {})
     flags[key] = value
     await save_state()
-    await ctx.reply(f"✅ Flag `{key}` set to `{value}` for <@{uid}>.", ephemeral=True)
+    await ctx.reply(f"✅ Flag `{key}` establecida a `{value}` para <@{uid}>.", ephemeral=True)
 
 
 async def del_flag(ctx, member: discord.Member, key: str):
     if not _is_admin(ctx):
-        return await ctx.reply("Admins only.", ephemeral=True)
+        return await ctx.reply("Solo administradores.", ephemeral=True)
     uid = str(member.id)
     if uid not in game.players:
-        return await ctx.reply("Player not registered.", ephemeral=True)
+        return await ctx.reply("Jugador no registrado.", ephemeral=True)
     flags = game.players[uid].get("flags", {})
     if key not in flags:
-        return await ctx.reply("Flag not found.", ephemeral=True)
+        return await ctx.reply("Flag no encontrada.", ephemeral=True)
     del flags[key]
     await save_state()
-    await ctx.reply(f"🗑️ Flag `{key}` removed for <@{uid}>.", ephemeral=True)
+    await ctx.reply(f"🗑️ Flag `{key}` eliminada de <@{uid}>.", ephemeral=True)
 
 
 # ----------------------------
@@ -424,30 +442,30 @@ async def del_flag(ctx, member: discord.Member, key: str):
 
 async def add_effect(ctx, member: discord.Member, effect: str):
     if not _is_admin(ctx):
-        return await ctx.reply("Admins only.", ephemeral=True)
+        return await ctx.reply("Solo administradores.", ephemeral=True)
     uid = str(member.id)
     if uid not in game.players:
-        return await ctx.reply("Player not registered.", ephemeral=True)
+        return await ctx.reply("Jugador no registrado.", ephemeral=True)
     arr = game.players[uid].setdefault("effects", [])
     if effect in arr:
-        return await ctx.reply("Effect already present.", ephemeral=True)
+        return await ctx.reply("Efecto ya presente.", ephemeral=True)
     arr.append(effect)
     await save_state()
-    await ctx.reply(f"✨ Effect `{effect}` added to <@{uid}>.", ephemeral=True)
+    await ctx.reply(f"✨ Efecto `{effect}` añadido a <@{uid}>.", ephemeral=True)
 
 
 async def remove_effect(ctx, member: discord.Member, effect: str):
     if not _is_admin(ctx):
-        return await ctx.reply("Admins only.", ephemeral=True)
+        return await ctx.reply("Solo administradores.", ephemeral=True)
     uid = str(member.id)
     if uid not in game.players:
-        return await ctx.reply("Player not registered.", ephemeral=True)
+        return await ctx.reply("Jugador no registrado.", ephemeral=True)
     arr = game.players[uid].get("effects", [])
     if effect not in arr:
-        return await ctx.reply("Effect not found.", ephemeral=True)
+        return await ctx.reply("Efecto no encontrado.", ephemeral=True)
     arr.remove(effect)
     await save_state()
-    await ctx.reply(f"🧹 Effect `{effect}` removed from <@{uid}>.", ephemeral=True)
+    await ctx.reply(f"🧹 Efecto `{effect}` eliminado de <@{uid}>.", ephemeral=True)
 
 
 async def send_to_player(guild: discord.Guild, uid: str, text: str):
@@ -485,11 +503,11 @@ async def send_to_player(guild: discord.Guild, uid: str, text: str):
 
 async def set_alive(ctx, member: discord.Member, alive: bool):
     if not _is_admin(ctx):
-        return await ctx.reply("Admins only.", ephemeral=True)
+        return await ctx.reply("Solo administradores.", ephemeral=True)
     
     uid = str(member.id)
     if uid not in game.players:
-        return await ctx.reply("Player not registered.", ephemeral=True)
+        return await ctx.reply("Jugador no registrado.", ephemeral=True)
 
     if not alive:
         # Unified death path
@@ -501,12 +519,19 @@ async def set_alive(ctx, member: discord.Member, alive: bool):
         # IMPORTANT: Cleanse old statuses when reviving to prevent bugs
         SE.heal(game, uid, all_=True)
         
+        # --- Uso seguro de apply_alive_dead_role ---
+        ids = _get_safe_role_ids(ctx.guild.id) # Busca en infra si hace falta
+        
+        if ids["alive"]: game.alive_role_id = ids["alive"]
+        if ids["dead"]:  game.dead_role_id = ids["dead"]
+        
         from ..core.infra import apply_alive_dead_role
         await apply_alive_dead_role(ctx.guild, member.id, alive=True)
+        
         await save_state()
         emoji = "💚"
 
-    await ctx.reply(f"{emoji} Set `alive` = `{alive}` for <@{uid}>.", ephemeral=True)
+    await ctx.reply(f"{emoji} Set `alive` = `{alive}` para <@{uid}>.", ephemeral=True)
 
 
 async def process_death(ctx_or_guild, member_id: int | str, reason: str = "Unknown"):
@@ -532,6 +557,12 @@ async def process_death(ctx_or_guild, member_id: int | str, reason: str = "Unkno
     # c) Discord Roles
     guild = getattr(ctx_or_guild, "guild", ctx_or_guild)
     if guild:
+
+        ids = _get_safe_role_ids(guild.id)
+        if ids["alive"]: game.alive_role_id = ids["alive"]
+        if ids["dead"]:  game.dead_role_id = ids["dead"]
+
+        from ..core.infra import apply_alive_dead_role
         await apply_alive_dead_role(guild, int(member_id), alive=False)
     
     await save_state()
