@@ -6,9 +6,28 @@ from .storage import save_state
 from .infra import get_infra
 
 
+# En cognitas/core/logs.py
+
 async def set_log_channel(channel: discord.TextChannel | None):
-    """Store or remove the log channel in persistent state."""
+    """
+    Sets the log channel, syncing Legacy variables AND Infra.
+    """
+    # 1. Legacy
     game.admin_log_channel_id = channel.id if channel else None
+    
+    # 2. Infra (The Fix)
+    # We need to fetch the guild ID. Since this func might not have context,
+    # we assume the channel belongs to the active guild if provided.
+    if channel:
+        guild_id = channel.guild.id
+        from .infra import get_infra, set_infra # local import to avoid circular dep
+        
+        infra = get_infra(guild_id)
+        if "channels" not in infra: infra["channels"] = {}
+        
+        infra["channels"]["logs"] = channel.id
+        set_infra(guild_id, infra)
+
     await save_state()
 
 def _resolve_logs_channel(bot: discord.Client, guild_id: int) -> discord.abc.Messageable | None:

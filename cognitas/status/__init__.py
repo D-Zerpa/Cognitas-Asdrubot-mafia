@@ -42,21 +42,20 @@ class Status:
         return {"action_allowed": True, "reason": None, "redirect_to": None}
 
 # --- Block messages (UX) and registration API ---
-
 BLOCK_MESSAGES: dict[str, str] = {
-    "blocked_by:Jailed": "You're jailed and can't act right now.",
-    "blocked_by:Paralyzed": "You're paralyzed and can't use day abilities.",
-    "blocked_by:Drowsiness": "You're drowsy and can't use night abilities.",
-    "blocked_by:Silenced": "You're silenced and cannot speak or perform this action here.",
-    "blocked_by:Wounded": "You're too wounded to perform this action right now.",
+    "blocked_by:Jailed": "Estás encarcelado y no puedes actuar ahora.",
+    "blocked_by:Paralyzed": "Estás paralizado y no puedes usar habilidades de día.",
+    "blocked_by:Drowsiness": "Estás letárgico y no puedes usar habilidades de noche.",
+    "blocked_by:Silenced": "Estás silenciado: no puedes hablar ni realizar esta acción.",
+    "blocked_by:Wounded": "Estás herido y no puedes realizar acciones ahora mismo.",
+    "blocked_by:Sanctioned": "Estás sancionado y tienes prohibida esta acción.",
+    "blocked_by:Confusion": "Sufres confusión y no controlas tus acciones."
 }
 
 def get_block_message(reason: str) -> str:
     """Return a user-facing message for a block reason."""
-    return BLOCK_MESSAGES.get(reason or "", "You're affected and can't do that right now.")
+    return BLOCK_MESSAGES.get(reason or "", "Un estado alterado impide esta acción.")
 
-def register_block_messages(extra: dict[str, str]) -> None:
-    """Allow expansions to add/override block messages at import-time or on_register()."""
-    if not isinstance(extra, dict):
-        return
-    BLOCK_MESSAGES.update({str(k): str(v) for k, v in extra.items()})
+def register_block_messages(extra: dict[str, str]):
+    """Allow expansions to add their own localized block messages."""
+    BLOCK_MESSAGES.update(extra)

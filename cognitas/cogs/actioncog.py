@@ -16,7 +16,7 @@ from ..status import engine as SE
 
 log = logging.getLogger(__name__)
 
-# ---------- Visual Helpers (New & Clean) ----------
+# ---------- Visual Helpers (UI in Spanish) ----------
 
 def _label_from_uid(uid: str | None) -> str:
     if not uid:
@@ -33,7 +33,7 @@ def _fmt_action_line(a: dict) -> str:
     if tgt_uid:
         target_label = f"**{_label_from_uid(tgt_uid)}**"
     else:
-        target_label = "*Self / None*"
+        target_label = "*Sí mismo / Ninguno*"
 
     # 2. Note (Only show if present)
     raw_note = (a.get("note") or "").strip()
@@ -47,9 +47,11 @@ def _fmt_action_line(a: dict) -> str:
 
 
 async def _gate_action(ctx, game, actor_uid, action_kind: str, target_uid=None, public=False):
+    """Checks if a status effect blocks the action."""
     chk = SE.check_action(game, actor_uid, action_kind, target_uid)
     if not chk.get("allowed", True):
         reason = (chk.get("reason") or "").strip()
+        # Get localized message from status engine
         msg = SE.get_block_message(reason)
         return {"ok": False, "msg": msg, "ephemeral": not public, "redirect_to": None}
     return {"ok": True, "msg": None, "ephemeral": False, "redirect_to": chk.get("redirect_to")}
@@ -89,11 +91,11 @@ class ActionsCog(commands.Cog):
     def __init__(self, bot): 
         self.bot = bot
 
-    @app_commands.command(name="act", description="Register your action for the current phase (day or night).")
+    @app_commands.command(name="act", description="Registrar tu acción para la fase actual (Día o Noche).")
     @app_commands.describe(
-        target="Target player (optional)",
-        note="Free text note about your action (optional)",
-        public="Post a public acknowledgement instead of ephemeral (default: false)",
+        target="Jugador objetivo (opcional)",
+        note="Nota de texto libre sobre tu acción (opcional)",
+        public="Publicar confirmación visible para todos (default: false)",
     )
     async def act(
         self, 
@@ -105,57 +107,60 @@ class ActionsCog(commands.Cog):
         await interaction.response.defer(ephemeral=not public)
         ctx = InteractionCtx(interaction)
 
-        # Resolve phase automatically
+        # Automatically resolve phase
         phase = (getattr(game, "phase", "day") or "day").lower()
         if phase not in ("day", "night"):
             phase = "day"
 
-        # Phase check (must have deadline)
+        # Phase validation (must have active deadline)
         if phase == "night" and not getattr(game, "night_deadline_epoch", None):
-            return await ctx.reply("It is not **Night** phase.", ephemeral=not public)
+            return await ctx.reply("❌ No es fase de **Noche**.", ephemeral=not public)
         if phase == "day" and not getattr(game, "day_deadline_epoch", None):
-            return await ctx.reply("It is not **Day** phase.", ephemeral=not public)
+            return await ctx.reply("❌ No es fase de **Día**.", ephemeral=not public)
 
         actor_uid = str(interaction.user.id)
         players = getattr(game, "players", {}) or {}
         actor = players.get(actor_uid)
+        
+        # Player validation
         if not actor or not actor.get("alive", True):
-            return await ctx.reply("You are not registered or you are not alive.", ephemeral=not public)
+            return await ctx.reply("❌ No estás registrado o no estás vivo.", ephemeral=not public)
 
-        # Channel check
+        # Channel validation (Infra)
         role_ch_id = (actor.get("role_channel_id") if isinstance(actor, dict) else None)
         if role_ch_id and interaction.channel and interaction.channel.id != role_ch_id:
-            # Allow admins to act from anywhere for testing, users restricted
+            # Allow admins to test from anywhere, restrict users
             if not interaction.user.guild_permissions.administrator:
-                return await ctx.reply("Use your role’s private channel to /act.", ephemeral=not public)
+                return await ctx.reply("⚠️ Usa el canal privado de tu rol para usar `/act`.", ephemeral=not public)
 
-        # Flag check
+        # Flag validation (Role permissions)
         flags = actor.get("flags", {}) or {}
         needed_flag = "day_act" if phase == "day" else "night_act"
         if not bool(flags.get(needed_flag, False)):
-            return await ctx.reply(f"You are not allowed to act during **{phase.title()}**.", ephemeral=not public)
+            phase_lbl = "Día" if phase == "day" else "Noche"
+            return await ctx.reply(f"⛔ No tienes permitido actuar durante el **{phase_lbl}**.", ephemeral=not public)
 
-        # Target check
+        # Target validation
         target_uid = str(target.id) if target else None
         if target_uid:
             t = players.get(target_uid)
             if not t:
-                return await ctx.reply("Target is not registered.", ephemeral=not public)
-            # DEAD TARGET FIX: We allow acting on dead players (e.g. for revivers/mediums).
-            # Status/Role logic handles validity later.
+                return await ctx.reply("❌ El objetivo no está registrado.", ephemeral=not public)
+            # We allow acting on dead players (e.g. revivers), role logic decides validity.
 
-        # Action kind
+        # Action type
         action_kind = "day_action" if phase == "day" else "night_action"
 
-        # Status Gate
+        # Status Gate (Check for Paralysis, etc.)
         gate = await _gate_action(ctx, game, actor_uid, action_kind, target_uid, public=public)
         if not gate["ok"]:
-            return await ctx.reply(gate["msg"], ephemeral=gate["ephemeral"])
+            # Gate msg is already localized by SE.get_block_message
+            return await ctx.reply(f"⛔ {gate['msg']}", ephemeral=gate["ephemeral"])
 
         if gate.get("redirect_to"):
             target_uid = gate["redirect_to"]
             try:
-                await ctx.reply("🌀 You're Confused... your action was redirected.", ephemeral=True)
+                await ctx.reply("🌀 Sufres de Confusión... tu acción ha sido redirigida.", ephemeral=True)
             except Exception:
                 pass
 
@@ -163,12 +168,12 @@ class ActionsCog(commands.Cog):
         phase_norm = "day" if phase == "day" else "night"
         number = act_core.current_cycle_number(phase_norm)
 
-        # Enqueue Action
-        # We print the note to console to verify it arrived
+        # Clean note
         clean_note = (note or "").strip()
         if clean_note:
             log.info(f"[ACT] User {interaction.user} sent note: {clean_note}")
 
+        # Enqueue Action (Core)
         res = act_core.enqueue_action(
             game=game,
             actor_uid=actor_uid,
@@ -184,10 +189,11 @@ class ActionsCog(commands.Cog):
 
         if not res.get("ok", True):
             msg = SE.get_block_message(res.get("reason") or "")
-            return await ctx.reply(msg or "Action rejected.", ephemeral=not public)
+            return await ctx.reply(msg or "❌ Acción rechazada.", ephemeral=not public)
 
         await save_state()
 
+        # Expansion Hooks
         if getattr(game, "expansion", None):
             try:
                 await game.expansion.on_action_commit(
@@ -198,10 +204,9 @@ class ActionsCog(commands.Cog):
                     res.get("record", {})
                 )
             except Exception as e:
-                log.error(f"Expansion action hook failed: {e}")
+                log.error(f"Error in expansion action hook: {e}")
 
-
-        # Audit log
+        # Audit Log (Admin Log)
         try:
             await log_event(
                 self.bot,
@@ -214,12 +219,14 @@ class ActionsCog(commands.Cog):
         except Exception:
             pass
 
-        verb = "updated" if res.get("replaced") else "registered"
-        await ctx.reply(f"✅ Action {verb} for **{phase_norm.title()} {number}**.", ephemeral=not public)
+        # Feedback to User
+        verb = "actualizada" if res.get("replaced") else "registrada"
+        phase_display = "Día" if phase == "day" else "Noche"
+        await ctx.reply(f"✅ Acción {verb} para **{phase_display} {number}**.", ephemeral=not public)
 
 
 # =================================================================
-#  B) ADMIN GROUP: /actions logs | /actions breakdown
+#  B) ADMIN GROUP: /actions logs | /actions list
 # =================================================================
 PHASE_CHOICES = [
     app_commands.Choice(name="auto", value="auto"),
@@ -234,16 +241,16 @@ def _resolve_phase(phase: Optional[str]) -> str:
     return p if p in ("day", "night") else "night"
 
 
-class ActionsAdminCog(commands.GroupCog, name="actions", description="Day/Night actions utilities (admin)"):
+class ActionsAdminCog(commands.GroupCog, name="actions", description="Utilidades de Acciones (Admin)"):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @app_commands.command(name="logs", description="Phase logs: user=all numbers; number=specific Day/Night.")
+    @app_commands.command(name="logs", description="Ver logs: user=historial completo; number=Día/Noche específico.")
     @app_commands.describe(
-        phase="Which phase to inspect (auto/day/night)",
-        number="Day/Night number; omit to use current",
-        user="Filter by user",
-        public="Post publicly (default: false)",
+        phase="Fase a inspeccionar (auto/day/night)",
+        number="Número de Día/Noche (omitir para actual)",
+        user="Filtrar por usuario",
+        public="Hacer visible el reporte (default: false)",
     )
     @app_commands.choices(phase=PHASE_CHOICES)
     @app_commands.default_permissions(administrator=True)
@@ -259,16 +266,17 @@ class ActionsAdminCog(commands.GroupCog, name="actions", description="Day/Night 
         ctx = InteractionCtx(interaction)
 
         p = _resolve_phase(phase.value if phase else None)
+        phase_lbl = "Día" if p == "day" else "Noche"
 
-        # A) User history (all cycles)
+        # A) User History (all cycles)
         if user is not None and number is None:
             uid = str(user.id)
             rows = act_core.get_user_logs_all(p, uid)
-            title = f"{p.title()} Actions — {user.display_name} (History)"
+            title = f"Historial de Acciones ({phase_lbl}) — {user.display_name}"
             embed = discord.Embed(title=title, color=0x8E44AD)
 
             if not rows:
-                embed.description = "No actions recorded."
+                embed.description = "ℹ️ No hay acciones registradas."
                 return await ctx.reply(embed=embed, ephemeral=not public)
 
             by_num: dict[int, list[dict]] = {}
@@ -278,20 +286,20 @@ class ActionsAdminCog(commands.GroupCog, name="actions", description="Day/Night 
             for n in sorted(by_num.keys()):
                 acts = by_num[n]
                 lines = [_fmt_action_line(a) for a in acts]
-                embed.add_field(name=f"{p.title()} {n}", value=("\n".join(lines)[:1024] or "—"), inline=False)
+                embed.add_field(name=f"{phase_lbl} {n}", value=("\n".join(lines)[:1024] or "—"), inline=False)
 
             return await ctx.reply(embed=embed, ephemeral=not public)
 
-        # B) Phase logs (specific cycle)
+        # B) Phase logs (specific or current cycle)
         n = number if number is not None else act_core.current_cycle_number(p)
         uid = str(user.id) if user else None
         rows = act_core.get_logs(p, n, uid)
 
-        title = f"{p.title()} {n} — Logs"
+        title = f"Logs de Acciones — {phase_lbl} {n}"
         embed = discord.Embed(title=title, color=0x8E44AD)
 
         if not rows:
-            embed.description = "No actions recorded."
+            embed.description = "ℹ️ No hay acciones registradas en este ciclo."
             return await ctx.reply(embed=embed, ephemeral=not public)
 
         by_user: dict[str, list[dict]] = {}
@@ -302,15 +310,14 @@ class ActionsAdminCog(commands.GroupCog, name="actions", description="Day/Night 
         for u, acts in by_user.items():
             lines = [_fmt_action_line(a) for a in acts]
             name = _label_from_uid(u)
-            # Clean Title (Emoji + Name only)
             embed.add_field(name=f"👤 {name}", value=("\n".join(lines)[:1024] or "—"), inline=False)
 
         await ctx.reply(embed=embed, ephemeral=not public)
 
-    @app_commands.command(name="breakdown", description="Who can act vs who acted.")
+    @app_commands.command(name="breakdown", description="Resumen de quién ha actuado y quién falta.")
     @app_commands.choices(phase=PHASE_CHOICES)
     @app_commands.default_permissions(administrator=True)
-    async def breakdown_cmd(
+    async def list_cmd(
         self,
         interaction: discord.Interaction,
         phase: Optional[app_commands.Choice[str]] = None,
@@ -323,29 +330,65 @@ class ActionsAdminCog(commands.GroupCog, name="actions", description="Day/Night 
         p = _resolve_phase(phase.value if phase else None)
         n = number if number is not None else act_core.current_cycle_number(p)
 
+        # Get data sets
         can_act = set(act_core.actors_for_phase(p))
         acted = set(act_core.acted_uids(p, n))
 
-        missing = sorted(can_act - acted)
+        # --- STATUS FILTERING ---
+        # Split 'missing' candidates into 'Real Pending' and 'Blocked'
+        candidates_missing = sorted(can_act - acted)
+        
+        pending_real = []
+        blocked = []
+        
+        # Determine the action kind to check (day_action / night_action)
+        action_kind = "day_action" if p == "day" else "night_action"
+
+        for uid in candidates_missing:
+            # Check status without specific target (just ability to act)
+            chk = SE.check_action(game, uid, action_kind, target_uid=None)
+            
+            if not chk.get("allowed", True):
+                # System says they can't act -> Blocked
+                blocked.append(uid)
+            else:
+                # Can act and hasn't yet -> Pending
+                pending_real.append(uid)
+
+        # Those who already acted (simple intersection)
         acted_sorted = sorted(acted & can_act)
 
+        # Format helper
         def fmt_names(uids: List[str]) -> str:
             if not uids: return "—"
             names = []
-            for uid in uids[:24]:
+            for uid in uids[:30]: 
                 pdata = game.players.get(uid, {})
                 label = pdata.get("name") or pdata.get("alias") or f"<@{uid}>"
                 names.append(f"`{label}`")
-            if len(uids) > 24: names.append(f"… (+{len(uids)-24} more)")
+            if len(uids) > 30: names.append(f"… (+{len(uids)-30} más)")
             return ", ".join(names)
 
+        phase_lbl = "Día" if p == "day" else "Noche"
+        
+        # Build Embed
+        desc = (
+            f"**Total Habilitados:** {len(can_act)} | **Listos:** {len(acted_sorted)} | "
+            f"**Pendientes:** {len(pending_real)}"
+        )
+        if blocked:
+            desc += f" | **Bloqueados:** {len(blocked)}"
+
         embed = discord.Embed(
-            title=f"{p.title()} {n} — Breakdown",
-            description=f"**Total:** {len(can_act)} | **Done:** {len(acted_sorted)} | **Waiting:** {len(missing)}",
+            title=f"Resumen de Acciones — {phase_lbl} {n}",
+            description=desc,
             color=0x2C3E50 if p == "night" else 0x3498DB
         )
-        embed.add_field(name="✅ Acted", value=fmt_names(acted_sorted), inline=False)
-        embed.add_field(name="⏳ Pending", value=fmt_names(missing), inline=False)
+        embed.add_field(name=f"✅ Han actuado ({len(acted_sorted)})", value=fmt_names(acted_sorted), inline=False)
+        embed.add_field(name=f"⏳ Pendientes ({len(pending_real)})", value=fmt_names(pending_real), inline=False)
+        
+        if blocked:
+            embed.add_field(name=f"⛔ Bloqueados ({len(blocked)})", value=fmt_names(blocked), inline=False)
 
         await ctx.reply(embed=embed, ephemeral=not public)
 

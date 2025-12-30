@@ -4,7 +4,7 @@ from .state import game
 from .roles import load_roles
 from .storage import save_state
 from .logs import log_event
-from .infra import get_infra, set_roles
+from .infra import get_infra
 import unicodedata
 
 
@@ -90,12 +90,33 @@ def _lookup_role(role_name: str, roles_index: dict, roles_def) -> dict | None:
     return None
 
 
-async def set_channels(*, game_ch: discord.TextChannel | None = None, admin: discord.TextChannel | None = None):
-    if game_ch is not None:
-        game.game_channel_id = game_ch.id
-    if admin is not None:
-        game.admin_channel_id = admin.id
+async def set_channels(ctx, game_channel=None, admin_channel=None):
+    """
+    Sets the game and admin channels, syncing Legacy variables AND Infra.
+    """
+    # 1. Update Legacy State
+    if game_channel:
+        game.game_channel_id = game_channel.id
+    if admin_channel:
+        game.admin_channel_id = admin_channel.id
+
+    # 2. Update Infra (The Fix)
+    guild_id = ctx.guild.id
+    infra = get_infra(guild_id)
+    
+    if "channels" not in infra:
+        infra["channels"] = {}
+        
+    if game_channel:
+        infra["channels"]["game"] = game_channel.id
+    if admin_channel:
+        infra["channels"]["admin"] = admin_channel.id
+        
+    # Persist
+    set_infra(guild_id, infra)
     await save_state()
+    
+    return True
 
 async def start(
     ctx, 
@@ -108,46 +129,87 @@ async def start(
 
     """
     Start a game with a roles profile.
-    Supports linking existing Alive/Dead roles for manual setups.
+    Syncs manual Setup (channels/roles) into Infra to prevent disconnections.
     """
+    # Imports necesarios dentro de la función para evitar ciclos
     from ..expansions import load_expansion_instance
+    from .infra import get_infra, set_infra, set_roles
     
+    # 1. Cargar configuración y expansión
     game.profile = profile.lower()
-    game.roles_def = load_roles(game.profile)
-    game.roles = _build_roles_index(game.roles_def)
-    game.expansion = load_expansion_instance(game.profile)
+    try:
+        game.roles_def = load_roles(game.profile)
+        game.roles = _build_roles_index(game.roles_def)
+        game.expansion = load_expansion_instance(game.profile)
+    except Exception as e:
+        return await ctx.reply(f"❌ Error al cargar perfil '{profile}': {e}")
 
-
-    # Minimal non-destructive resets of players
+    # 2. Reset de estado (Game State)
+    # Usamos listas vacías para colecciones para evitar errores de JSON con sets
     game.votes = {}
-    game.end_day_votes = set()
+    game.end_day_votes = [] 
     game.status_map = {} 
     game.status_log = []
+    game.day_actions = {}
+    game.night_actions = {}
+    
     game.game_over = False
-    game.current_day_number = 0
+    game.current_day_number = 1
     game.phase = "day"
     game.day_deadline_epoch = None
     game.night_deadline_epoch = None
 
+    # 3. Sincronización de Infraestructura (EL FIX)
+    # Guardamos explícitamente la config manual en 'infra' para que el bot no la pierda
+    guild_id = ctx.guild.id
+    infra = get_infra(guild_id)
+    
+    # Aseguramos estructura
+    if "channels" not in infra: infra["channels"] = {}
+    if "roles" not in infra: infra["roles"] = {}
 
-    if ctx.guild and (alive_role_id or dead_role_id):
-        set_roles(ctx.guild.id, alive=alive_role_id, dead=dead_role_id)
+    # -- Sincronizar Canales --
+    # Prioridad: Argumento > Canal actual
+    target_game_ch = game_channel or ctx.channel
+    
+    # Guardamos en ambos sistemas (Legacy + Infra)
+    game.game_channel_id = target_game_ch.id
+    infra["channels"]["game"] = target_game_ch.id
+    
+    if admin_channel:
+        game.admin_channel_id = admin_channel.id
+        infra["channels"]["admin"] = admin_channel.id
 
+    # -- Sincronizar Roles --
+    # Si se pasan IDs manuales, los guardamos en infra inmediatamente
+    if alive_role_id:
+        game.alive_role_id = alive_role_id
+        infra["roles"]["alive"] = alive_role_id
+    
+    if dead_role_id:
+        game.dead_role_id = dead_role_id
+        infra["roles"]["dead"] = dead_role_id
 
-    await set_channels(game_ch=game_channel or ctx.channel, admin=admin_channel)
+    # Guardamos los cambios en Infra
+    set_infra(guild_id, infra)
+
+    # También llamamos al helper set_roles por compatibilidad si se especificaron
+    if alive_role_id or dead_role_id:
+        await set_roles(guild_id, alive=alive_role_id, dead=dead_role_id)
+
+    # 4. Guardado final y Feedback
     await save_state()
 
-    # Feedback
-    chan = ctx.guild.get_channel(game.game_channel_id)
     roles_msg = "Roles cargados."
     if alive_role_id and dead_role_id:
         roles_msg += " Roles Vivo/Muerto vinculados."
 
     await ctx.reply(
         f"🟢 **Juego iniciado** con perfil **{game.profile}**.\n"
-        f"Canal de juego: {chan.mention if chan else '#?'} | {roles_msg}"
+        f"Canal de juego: {target_game_ch.mention} | {roles_msg}"
     )
-    await log_event(ctx.bot, ctx.guild.id, "GAME_START", profile=game.profile, game_channel_id=game.game_channel_id)
+    
+    await log_event(ctx.bot, guild_id, "GAME_START", profile=game.profile, game_channel_id=game.game_channel_id)
 
 
 async def hard_reset(ctx_or_interaction):
@@ -237,7 +299,7 @@ async def assign_role(ctx, member: discord.Member, role_name: str):
     """
     uid = str(member.id)
     if uid not in game.players:
-        return await ctx.reply("Jugador no registrado.")
+        return await ctx.reply("❌ El jugador no está registrado.")
 
     # 1. Look up role definition
     role_def = _lookup_role(role_name, getattr(game, "roles", {}) or {}, getattr(game, "roles_def", {}))
@@ -297,7 +359,7 @@ async def assign_role(ctx, member: discord.Member, role_name: str):
         else:
             # Channel ID exists in infra but channel is gone from Discord
             game.players[uid]["role_channel_id"] = None
-            feedback_extra += " | ⚠️ Canal del rol perdido (borrado?)"
+            feedback_extra += " | ⚠️ Canal del rol perdido (¿borrado?)"
     else:
         # Fallback (no debería ocurrir con auto-mapping, pero por seguridad)
         game.players[uid]["role_channel_id"] = None

@@ -120,18 +120,43 @@ def get_player_snapshot(user_id: str) -> dict:
 async def list_players(ctx):
     players = getattr(game, "players", {}) or {}
     if not players:
-        return await ctx.reply("No hay jugadores registrados.")
-    alive = [p for p in players.values() if p.get("alive", True)]
-    dead = [p for p in players.values() if not p.get("alive", True)]
+        return await ctx.reply("ℹ️ No hay jugadores registrados en la partida.")
+    
+    alive = []
+    dead = []
+    
+    sorted_players = sorted(players.values(), key=lambda x: x.get("name", "").lower())
+    
+    for p in sorted_players:
+        if p.get("alive", True):
+            alive.append(p)
+        else:
+            dead.append(p)
 
-    def fmt(pl):
-        return ", ".join(f"<@{p['uid']}> ({p.get('name','?')})" for p in pl) if pl else "—"
+    def fmt_list(pl_list):
+        if not pl_list: return "*Ninguno*"
 
-    await ctx.reply(
-        f"**Vivos**: {fmt(alive)}\n"
-        f"**Muertos**: {fmt(dead)}\n"
-        f"**Total**: {len(players)}"
+        names = [f"**{p.get('name', '?')}**" for p in pl_list]
+        return ", ".join(names)
+
+    embed = discord.Embed(
+        title=f"👥 Lista de Jugadores ({len(players)})",
+        color=0x2ECC71  # Verde genérico
     )
+    
+    embed.add_field(
+        name=f"💚 Vivos ({len(alive)})",
+        value=fmt_list(alive),
+        inline=False
+    )
+    if dead:
+        embed.add_field(
+            name=f"💀 Muertos ({len(dead)})",
+            value=fmt_list(dead),
+            inline=False
+        )
+
+    await ctx.reply(embed=embed)
 
 def _get_safe_role_ids(guild_id: int):
     alive = getattr(game, "alive_role_id", None)

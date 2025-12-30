@@ -18,15 +18,15 @@ class MemesCog(commands.Cog, name="Memes"):
             "los jueves": "Hasta los Domingos."
         }
 
-    @app_commands.command(name="toggle_memes", description="Turn on/off the Easter eggs")
-    @app_commands.describe(state="True to activate, False to deactivate")
+    @app_commands.command(name="toggle_memes", description="Activar/Desactivar Easter Eggs")
+    @app_commands.describe(state="True para activar, False para desactivar")
     @app_commands.default_permissions(administrator=True)
     async def toggle_memes(self, interaction: discord.Interaction, state: bool):
         self.is_enabled = state
         
-        status_text = "✅ **ACTIVATED**" if state else "zzz **DEACTIVATED**"
+        status_text = "✅ **ACTIVADOS**" if state else "zzz **DESACTIVADOS**"
         await interaction.response.send_message(
-            f"Easter Eggs have been {status_text}.",
+            f"Los Easter Eggs han sido {status_text}.",
             ephemeral=True
         )
 

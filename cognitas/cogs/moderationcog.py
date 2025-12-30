@@ -9,20 +9,23 @@ from ..core.logs import set_log_channel as set_log_channel_core
 from ..core.storage import save_state
 from ..expansions import load_expansion_instance
 from typing import Literal
+import importlib
 
 class ModerationCog(commands.Cog):
     def __init__(self, bot): self.bot = bot
 
-    @app_commands.command(name="bc", description="Broadcast to the Game channel (admin)")
+    @app_commands.command(name="bc", description="Hacer un anuncio oficial en el canal de juego (admin)")
     @app_commands.default_permissions(administrator=True)
     async def bc(self, interaction: discord.Interaction, text: str):
         if not game.game_channel_id:
-            return await interaction.response.send_message("No Game channel configured.", ephemeral=True)
+            return await interaction.response.send_message("❌ No hay canal de juego configurado.", ephemeral=True)
+        
         chan = interaction.guild.get_channel(game.game_channel_id)
         if not chan:
-            return await interaction.response.send_message("Day channel not found.", ephemeral=True)
+            return await interaction.response.send_message("❌ No se encuentra el canal de juego.", ephemeral=True)
+            
         await chan.send(text)
-        await interaction.response.send_message("✅ Broadcast sent.", ephemeral=True)
+        await interaction.response.send_message("✅ Anuncio enviado.", ephemeral=True)
 
     @app_commands.command(name="set_channels", description="Bind Game and Admin channels.")
     @app_commands.describe(
@@ -36,7 +39,7 @@ class ModerationCog(commands.Cog):
         admin: discord.TextChannel | None = None,
     ):
         await set_channels(game_ch=game_channel or interaction.channel, admin=admin)
-        await interaction.response.send_message("✅ Channels configured.", ephemeral=True)
+        await interaction.response.send_message("✅ Canales actualizados.", ephemeral=True)
 
     @app_commands.command(name="set_log_channel", description="Set the logs channel.")
     @app_commands.describe(channel="Logs channel (defaults to current if omitted).")
