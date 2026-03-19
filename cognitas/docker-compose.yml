@@ -1,0 +1,17 @@
+services:
+  asdrubot:
+    build: .
+    container_name: asdrubot_mafia
+    restart: unless-stopped
+    
+    # Variables de entorno
+    environment:
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      - TZ=Europe/Madrid  # Configura la hora local del servidor (útil para logs)
+    
+    # VOLÚMENES (Persistencia)
+    # Mapeamos la carpeta local './cognitas/data' a la carpeta del contenedor.
+    # Así, si borras el contenedor, los JSON de la partida siguen en tu disco duro.
+    volumes:
+      - ./cognitas/data:/app/cognitas/data
+      # Opcional: Si tienes assets/imagenes que cambian, agrégalos aquí también.

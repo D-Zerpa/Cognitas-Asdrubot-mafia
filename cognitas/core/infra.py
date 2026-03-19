@@ -97,15 +97,56 @@ async def ensure_text_channel(
 
 # ---------- Game channel helpers (single public channel) ----------
 
-def _resolve_game_channel(guild: discord.Guild) -> Optional[discord.TextChannel]:
+# En cognitas/core/infra.py
+
+async def ensure_game_channel(guild: discord.Guild):
+    """
+    Resolves the Game Channel.
+    Logic: Infra > Legacy > Create New.
+    Auto-syncs Legacy -> Infra if found.
+    """
     infra = get_infra(guild.id)
-    ch_id = (infra.get("channels") or {}).get("game") or (infra.get("channels") or {}).get("day")
-    ch = guild.get_channel(ch_id) if ch_id else None
-    if isinstance(ch, discord.TextChannel):
-        return ch
-    # Fallback 
-    ch = discord.utils.get(guild.text_channels, name="game-chat")
-    return ch if isinstance(ch, discord.TextChannel) else None
+    channels_map = infra.setdefault("channels", {})
+    
+    # 1. Check Infra
+    cid = channels_map.get("game")
+    
+    # 2. If missing in Infra, Check Legacy (The Fix for your issue)
+    if not cid:
+        cid = getattr(game, "game_channel_id", None)
+        if cid:
+            # Found in legacy! Migrating to infra now...
+            channels_map["game"] = cid
+            log.info(f"[infra] Migrated legacy game_channel_id {cid} to infra.")
+            # We don't save_state here immediately to avoid IO spam, 
+            # but it will be saved next time state is persisted.
+
+    # 3. Resolve Discord Object
+    ch = None
+    if cid:
+        ch = guild.get_channel(cid)
+        if not ch:
+            # ID exists but channel is deleted. Clear it.
+            log.warning(f"[infra] Game channel ID {cid} not found in Discord. Clearing.")
+            channels_map["game"] = None
+            game.game_channel_id = None
+            cid = None
+
+    # 4. If still no channel, Create/Find default
+    if not ch:
+        # Try finding by name "game" or "juego" before creating? 
+        # Or just create. Let's create to be safe, standard behavior.
+        # But for manual servers, maybe they named it "general"? 
+        # Better not to guess. If we are here, we create a specialized one.
+        cat = await ensure_category(guild, "MESA DE JUEGO")
+        ch = await ensure_text_channel(guild, "general-juego", category=cat)
+        
+        # Save new ID to both systems
+        channels_map["game"] = ch.id
+        game.game_channel_id = ch.id
+        await save_state() # Import save_state inside function or use generic save
+
+    return ch
 
 async def ensure_game_channel(guild: discord.Guild, *, category: Optional[discord.CategoryChannel] = None) -> discord.TextChannel:
     infra = get_infra(guild.id)

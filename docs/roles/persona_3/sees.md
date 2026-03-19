@@ -46,14 +46,13 @@ Estas habilidades cuentan como la **habilidad diurna o nocturna** de cada person
 Oculto para los jugadores
 ====================
 
-**Mitsuru Kirijo – Diamond Dust (Activa, Nocturna – 1 noche de enfriamiento)**  
-Durante la noche, seleccionas a un jugador; este **quedará encarcelado ✶ (resolución instantánea)**.  
-Mientras esté encarcelado, **no podrá usar habilidades** esa noche (si ya había usado una habilidad no resuelta instantáneamente, **su acción queda anulada**).  
-Se abrirá un **chat privado** entre Mitsuru y el jugador encarcelado, que podrá mantenerse **hasta el inicio de la siguiente noche**.  
-Puedes **liberarlo** en cualquier momento.  
-Si el jugador continúa encarcelado durante el día, **no podrá hablar** en el chat público **ni votar**.  
+**Mitsuru Kirijo – Empress' Palace (Activa, Nocturna – 3 noches de enfriamiento)**  
+Seleccionas a un jugador; este **quedará encarcelado**. Si el jugador ha usado su habilidad esta noche (y no es de resolución instantánea), esta se verá cancelada. Cualquier habilidad usada en él esa noche (que no se haya resuelto ya) es anulada.
+Se abrirá un **chat privado** entre Mitsuru y el jugador encarcelado, que podrá mantenerse **hasta el inicio de la siguiente noche**. Puede **liberarlo** en cualquier momento:
+- Si el jugador continúa encarcelado durante el día, **no podrá hablar** en el chat público **ni votar**. Tampoco será anunciado públicamente su encarcelamiento.
+- Si el jugador es liberado en la noche, Mitsuru tiene la posibilidad de imponerle **una** regla al recluso para el día siguiente. Esta regla debe ser puntual (solo es válida en el día subsecuente y solo acciones que sean explícitas y específicas) y debe ser posible (no puede involucrar, por ejemplo, dar información que no se tiene o usar habilidades que no posee). 
 Mientras esté encarcelado, **no puede ser atacado ni afectado** por ninguna otra habilidad.  
-**Restricción:** No puede usarse **dos veces consecutivas** sobre el mismo jugador.
+**Restricciónes:** No puede usarse **dos veces consecutivas** sobre el mismo jugador. Y, claramente, las reglas impuestas están dispuestas supervición de moderación.
 
 --
 
@@ -64,10 +63,10 @@ Para cada jugador de esa lista, **sabrás en quién actuó**, pero **no** qué h
 --
 
 **Akihiko Sanada – Sonic Counter (Activa, Nocturna – 2 noches de enfriamiento)**  
-Seleccionas **dos jugadores**.  
-Si alguno de ellos usa su habilidad esta noche, **dicha habilidad será reflejada en su contra ✶**.  
-Si no usa ninguna habilidad, **quedará paralizado ⚡️**.  
-Los jugadores afectados por un reflejo serán **notificados** de que “su acción ha sido devuelta sobre ellos”, pero **no** se informará qué efecto se aplicó ni **cuál** de los dos objetivos fue afectado por cada resultado.  
+Seleccionas **dos jugadores:**  
+- Si solo uno de ellos usa su habilidad esta noche, dicha habilidad será **reflejada** en su contra. Y el que no haya actuado quedará **paralizado**
+- Si ambos usan su habilidad, se **redirigen** entre sí (la habilidad de A afecta a B y viceversa). 
+Los jugadores afectados por un reflejo serán **notificados** de que “su acción ha sido devuelta sobre ellos”. Pero si las habilidades se redirigen, no les avisará. 
 **Restricción:** No puede usarse **dos veces consecutivas** sobre el mismo jugador.
 
 --
@@ -90,16 +89,16 @@ Si pertenece al **Pueblo**, el golpe **falla** y **sales herido** del encuentro.
 **Aigis – Orgia Mode (Activa, Nocturna – 2 noches de enfriamiento)**  
 Activas tu **modo de sobrecarga total**.  
 Durante esta noche:  
-- **Interceptas** todas las habilidades de asesinato o disruptivas que se dirijan hacia **cualquier** miembro de SEES.  
-- Cada habilidad redirigida hacia ti **aumenta tu temperatura interna**.  
-- Si interceptas **más de tres habilidades**, **morirás** al final de la noche.  
+- **Rediriges** a ti misma todas las habilidades de asesinato o disruptivas que se dirijan hacia **cualquier** miembro de SEES.  
+- Cada habilidad redirigida hacia ti **aumenta tu temperatura interna:** 1 por habilidad disruptiva, 2 por habilidad de asesinato.
+- Si tu **temperatura interna** supera los 4 puntos, **morirás** al final de la noche. Si el conteo total es 2 o 3, sales herida. Si es menor a 2, todos los efectos son anulados.
 **Notas:** Mientras *Orgia Mode* esté activo, **no puedes ser curada ni protegida.**
 
 --
 
 **Ken Amada – Final Justice (Activa, Nocturna – 3 noches de enfriamiento)**  
 Invocas el poder de la **Justicia divina**.  
-Elige un jugador muerto. Si el responsable de la muerte del jugador ha sido el **responsable de tres muertes o más** a lo largo de la partida, se te **revelará el nombre del perpetrador**.
+Elige un jugador muerto. Si el responsable de la muerte del jugador ha sido el **responsable de tres muertes o más** a lo largo de la partida, se te **revelará el nombre del perpetrador**. No obstante, no podrás revelarlo (ni a tu equipo, ni al resto del pueblo). Está en tus manos cobrar venganza por las almas caídas.
 
 --
 
@@ -111,12 +110,13 @@ Si alguno de ellos **intenta asesinar o envenenar**, lo **detectarás inmediatam
 
 --
 
-**Makoto Yuki – Messiah’s Blessing (Activa, Nocturna – 3 noches de enfriamiento)**  
-Invocas el poder de los **vínculos** para restaurar la armonía.  
-Durante esta noche:  
-- Todos los miembros de SEES obtienen **prioridad aumentada** en sus habilidades (**no pueden ser bloqueadas ni redirigidas**).  
-- Si alguna habilidad de SEES habría fallado por **probabilidad** o **efecto aleatorio**, **se considera exitosa**.  
-- Además, **todos los estados alterados** activos en SEES se **eliminan al final de la noche**.
+**Makoto Yuki – The Final Seal (Activa, Nocturna –  Solo disponible luego de la noche 7, un solo uso)**  
+Realizas el sacrificio máximo para salvar a la humanidad de la desolación: 
+- Morirás (aplicado instantáneamente).
+- Todos los estados alterados en SEES son curados.
+- Todas las habilidades perjudiciales realizadas esta noche hacia el pueblo, serán bloqueadas.
+- Recibirás una lista de todas las acciones bloqueadas por este efecto.
+- El primer mensaje de todos los que hayan sido bloqueados por esta habilidad, serán marcados con una cruz.
 
 ---
 

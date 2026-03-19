@@ -54,7 +54,7 @@ def _alive_display_names(uids: list[str], *, max_names: int = 24) -> str:
         names.append(f"`{label}`")
     extra = len(uids) - len(names)
     if extra > 0:
-        names.append(f"… (+{extra} more)")
+        names.append(f"… (+{extra} más)") # Translated
     return ", ".join(names) if names else "—"
 
 # ---------- Voting logic (simple majority + boosts & target extras) ----------
@@ -144,21 +144,21 @@ async def vote(ctx: commands.Context | any, member: discord.Member):
 
     # Validations
     if voter_id not in game.players or not game.players[voter_id].get("alive", True):
-        return await ctx.reply("You must be a registered and alive player to vote.", ephemeral=True)
+        return await ctx.reply("❌ Debes estar registrado y vivo para votar.", ephemeral=True)
     if target_id not in game.players or not game.players[target_id].get("alive", True):
-        return await ctx.reply("Target must be a registered and alive player.", ephemeral=True)
+        return await ctx.reply("❌ El objetivo debe ser un jugador registrado y vivo.", ephemeral=True)
     if getattr(game, "phase", "day").lower() != "day":
-        return await ctx.reply("Voting is only available during the **Day**.", ephemeral=True)
+        return await ctx.reply("❌ Solo se puede votar durante el **Día**.", ephemeral=True)
 
     # Status check: can this user vote right now?
     chk = SE.check_action(game, voter_id, "vote")
     if not chk.get("allowed", True):
-        msg = SE.get_block_message(chk)
+        msg = SE.get_block_message(chk) # Translated in status/__init__.py
         return await ctx.reply(msg, ephemeral=True)
 
     # Weight must be > 0 (e.g., Sanctioned x2 -> 0)
     if _voter_vote_value(voter_id) <= 0.0:
-        return await ctx.reply("You can't vote right now.", ephemeral=True)
+        return await ctx.reply("❌ No puedes votar en este momento (Valor de voto nulo).", ephemeral=True)
 
     # Register vote
     if not isinstance(getattr(game, "votes", None), dict):
@@ -173,9 +173,9 @@ async def vote(ctx: commands.Context | any, member: discord.Member):
     incognito = bool(game.players.get(voter_id, {}).get("flags", {}).get("hidden_vote", False))
     if incognito:
         fake_name = _glitch_name()
-        await ctx.reply(f"✅ Vote registered: `{fake_name}` → `{_player_name(target_id)}` (weight={w:g})", ephemeral=True)
+        await ctx.reply(f"✅ Voto registrado: `{fake_name}` → `{_player_name(target_id)}` (poder={w:g})", ephemeral=True)
     else:
-        await ctx.reply(f"✅ Vote registered: `{_player_name(voter_id)}` → `{_player_name(target_id)}` (weight={w:g})", ephemeral=False)
+        await ctx.reply(f"✅ Voto registrado: `{_player_name(voter_id)}` → `{_player_name(target_id)}` (poder={w:g})", ephemeral=False)
 
     # Log (best-effort)
     try:
@@ -209,23 +209,23 @@ async def unvote(ctx: commands.Context | any):
     await save_state()
 
     if existed:
-        return await ctx.reply("✅ Your vote has been cleared.", ephemeral=True)
-    await ctx.reply("You have no active vote.", ephemeral=True)
+        return await ctx.reply("✅ Tu voto ha sido retirado.", ephemeral=True)
+    await ctx.reply("🤷 No tienes ningún voto activo.", ephemeral=True)
 
 
 async def myvote(ctx: commands.Context | any):
     voter = str(getattr(getattr(ctx, "author", None), "id", None) or getattr(getattr(ctx, "user", None), "id", None))
     target = (getattr(game, "votes", {}) or {}).get(voter)
     if not target:
-        return await ctx.reply("You have no active vote.", ephemeral=True)
-    await ctx.reply(f"Your current vote: `{_player_name(voter)}` → `{_player_name(target)}`", ephemeral=True)
+        return await ctx.reply("🤷 No tienes ningún voto activo.", ephemeral=True)
+    await ctx.reply(f"🗳️ Tu voto actual: `{_player_name(voter)}` → `{_player_name(target)}`", ephemeral=True)
 
 
 async def clearvotes(ctx: commands.Context | any):
     if isinstance(getattr(game, "votes", None), dict):
         game.votes.clear()
     await save_state()
-    await ctx.reply("🧹 All votes cleared.", ephemeral=True)
+    await ctx.reply("🧹 Todos los votos han sido limpiados.", ephemeral=True)
 
 
 # ---------- Embeds ----------
@@ -253,6 +253,7 @@ async def votes_breakdown(ctx: commands.Context | any):
     """
     UI: for each target shows current votes and its specific threshold (base + extras),
     plus a progress bar. Anonymous votes hide voter identities.
+    Now includes 'End Day' progress bar if active.
     """
     by_target = _group_votes_by_target()
     totals = _tally_votes_simple_plus_boosts()
@@ -260,14 +261,18 @@ async def votes_breakdown(ctx: commands.Context | any):
     day_no = getattr(game, "current_day_number", None)
     rt = _remaining_time_str()
 
+    title_str = f"Recuento de Votos — Día {day_no}" if day_no else "Recuento de Votos"
+    desc_str = f"Mayoría base necesaria: **{base_needed}**" + (f" • Termina {rt}" if rt else "")
+
     embed = discord.Embed(
-        title=f"Vote Tally — Day {day_no}" if day_no else "Vote Tally",
-        description=f"Base majority needed: **{base_needed}**" + (f" • Ends {rt}" if rt else ""),
+        title=title_str,
+        description=desc_str,
         color=0x3498DB,
     )
 
+    # --- 1. Vote Candidates ---
     if not getattr(game, "votes", None):
-        embed.description += "\n\n*No votes have been cast.*"
+        embed.description += "\n\n*No se han registrado votos aún.*"
     else:
         # Order by relative progress toward each target's own threshold, then by name
         def progress_ratio(tid: str) -> float:
@@ -281,27 +286,51 @@ async def votes_breakdown(ctx: commands.Context | any):
             tname = _player_name(target_id)
             cur = totals.get(target_id, 0)
             need = _needed_for_target(target_id)
-            bar = _progress_bar(cur, need)
+            bar = _progress_bar(math.floor(cur), need)
             voters_fmt = _format_voter_list(voters)
+            
+            # Display score (handle floats)
+            score_disp = f"{int(cur)}" if cur.is_integer() else f"{cur:.1f}"
+
             embed.add_field(
-                name=f"{tname} — **{_fmt_num(cur)} / {need}** {bar}",
+                name=f"{tname} — **{score_disp} / {need}** {bar}",
                 value=voters_fmt,
                 inline=False
             )
 
-    # Non-voters
-    alive = set(_alive_uids())
-    voted = set((getattr(game, "votes", {}) or {}).keys())
-    non_voters = [uid for uid in alive if uid not in voted]
+    # --- 2. End Day Requests (New) ---
+    raw_reqs = getattr(game, "end_day_votes", [])
+    alive_uids = _alive_uids()
+    # Filter valid requests (only alive players count)
+    valid_reqs = [u for u in raw_reqs if u in alive_uids]
+    req_count = len(valid_reqs)
+
+    if req_count > 0:
+        total_alive = len(alive_uids)
+        req_needed = math.ceil((2 * total_alive) / 3)
+        req_bar = _progress_bar(req_count, req_needed)
+        
+        embed.add_field(
+            name=f"🌅 Terminar el Día ({req_count}/{req_needed})",
+            value=f"{req_bar}\n*Solicitudes para finalizar la fase prematuramente.*",
+            inline=False
+        )
+
+    # --- 3. Non-voters ---
+    alive_set = set(alive_uids)
+    voted_set = set((getattr(game, "votes", {}) or {}).keys())
+    non_voters = [uid for uid in alive_set if uid not in voted_set]
+    
     if non_voters:
         embed.add_field(
-            name="Non-voters",
+            name=f"💤 Sin Votar ({len(non_voters)})",
             value=", ".join(_player_name(uid) for uid in sorted(non_voters, key=_player_name)),
             inline=False
         )
 
-    embed.set_footer(text="Asdrubot v3.0 — Voting UI")
+    embed.set_footer(text="Asdrubot v3.0 — Interfaz de Votación")
     await ctx.reply(embed=embed)
+    
 
 async def status(ctx):
     """
@@ -314,10 +343,24 @@ async def status(ctx):
     phase = (getattr(game, "phase", "day") or "day").lower()
     day_no = int(getattr(game, "current_day_number", 1) or 1)
 
-    # Lunar (optional)
+    if getattr(game, "profile", None) and not getattr(game, "expansion", None):
+        try:
+            from ..expansions import load_expansion_instance
+            game.expansion = load_expansion_instance(game.profile)
+        except Exception as e:
+            # Si falla, no bloqueamos el status, solo logueamos error interno
+            print(f"[Status] Error reloading expansion '{game.profile}': {e}")
+
+    # Ahora sí, pedimos las líneas extra
     extra_lines = []
     if getattr(game, "expansion", None):
-        extra_lines = game.expansion.get_status_lines(game)
+        try:
+            # Pasamos 'game' porque algunas expansiones leen el estado
+            lines = game.expansion.get_status_lines(game)
+            if lines:
+                extra_lines = lines
+        except Exception:
+            pass
 
     # Deadline
     if phase == "day":
@@ -329,51 +372,67 @@ async def status(ctx):
     # Alive players
     alive_uids = _alive_uids()
     alive_count = len(alive_uids)
-    alive_list = _alive_display_names(sorted(alive_uids))  # sorted by uid; change if you prefer by name
+    alive_list = _alive_display_names(sorted(alive_uids))  # sorted by uid
 
     # Embed
     color = 0xF1C40F if phase == "day" else 0x2C3E50
+    phase_lbl = '🌞 Día' if phase == 'day' else '🌙 Noche'
+    
     lines = [
-        f"**Phase:** {'🌞 Day' if phase == 'day' else '🌙 Night'}",
-        f"**Counter:** {('Day' if phase == 'day' else 'Night')} {day_no}",
-        f"**Time left:** {time_left}",
+        f"**Fase:** {phase_lbl}",
+        f"**Contador:** {('Día' if phase == 'day' else 'Noche')} {day_no}",
+        f"**Tiempo restante:** {time_left}",
     ]
     if extra_lines:
         lines.extend(extra_lines)
 
     embed = discord.Embed(
-        title="Game Status",
+        title="Estado de la Partida",
         description="\n".join(lines),
         color=color,
     )
-    embed.add_field(name=f"Alive players ({alive_count})", value=alive_list, inline=False)
+    embed.add_field(name=f"Jugadores vivos ({alive_count})", value=alive_list, inline=False)
 
     await ctx.reply(embed=embed)
 
 
-# ---------- End-Day by 2/3 requests (kept as you had it) ----------
+# ---------- End-Day by 2/3 requests ----------
 
 async def request_end_day(ctx: commands.Context | any):
     """
-    A player requests to end the Day early (needs 2/3 of alive players by heads).
-    NOTE: This keeps your original simple set in memory; it is not persisted.
+    A player requests to end the Day early (needs 2/3 of alive players).
+    LOCKED: Only allows usage during Day 1.
     """
     uid = str(getattr(getattr(ctx, "author", None), "id", None) or getattr(getattr(ctx, "user", None), "id", None))
-    if uid not in game.players or not game.players[uid].get("alive", True):
-        return await ctx.reply("You must be a registered and alive player to request end of Day.", ephemeral=True)
 
-    # Keep a local set for operations, persist as list for JSON safety
+    # 1. Day 1 Restriction Check
+    current_day = int(getattr(game, "current_day_number", 1) or 1)
+    if current_day > 1:
+        return await ctx.reply("❌ Esta función solo está disponible durante el **Día 1**.", ephemeral=True)
+
+    # 2. Validation
+    if uid not in game.players or not game.players[uid].get("alive", True):
+        return await ctx.reply("❌ Debes estar registrado y vivo para solicitar terminar el Día.", ephemeral=True)
+
+    # 3. Logic (Load, Add, Save)
     raw = getattr(game, "end_day_votes", [])
     end_set = set(raw if isinstance(raw, (list, set, tuple)) else [])
+    
+    if uid in end_set:
+         return await ctx.reply("ℹ️ Ya has solicitado terminar el día. Esperando a los demás...", ephemeral=True)
+
     end_set.add(uid)
     game.end_day_votes = list(end_set)
     await save_state()
 
-
+    # 4. Calculation
     alive = _alive_uids()
     need = math.ceil((2 * len(alive)) / 3) if alive else 0
     have = len(end_set)
-    await ctx.reply(f"🛎️ End-Day request registered ({have}/{need}).", ephemeral=True)
+    
+    # 5. Feedback
+    await ctx.reply(f"📣 Solicitud de fin de día registrada (**{have}/{need}**).", ephemeral=True)
 
+    # 6. Trigger if threshold met
     if need and have >= need:
         await phases.end_day(ctx, closed_by_threshold=True)

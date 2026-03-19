@@ -6,6 +6,7 @@ from typing import List
 from . import Expansion, register
 from ..status import Status, register as register_status
 from ..status import engine as SE
+import importlib
 
 # ==============================================================================
 #  PERSONA 3 EXPANSION
@@ -20,9 +21,9 @@ class PersonaExpansion(Expansion):
     # --- EASTER EGGS ---
     
     memes = {
-        "mass destruction": "🎺 BABY BABY BABY BABY BABY... YEEEEAH! \nhttps://www.youtube.com/watch?v=C9faUEyNfqA",
-        "disturbing the peace": "🎶 LOOK INTO MY EYES! \nhttps://www.youtube.com/watch?v=33yKDWb3Gbg",
-        "disturbing the piece": "🎶 LOOK INTO MY EYES! \nhttps://www.youtube.com/watch?v=33yKDWb3Gbg",
+        "mass destruction": "🎺 BABY BABY BABY BABY BABY... YEEEEAH!",
+        "disturbing the peace": "🎶 LOOK INTO MY EYES!",
+        "disturbing the piece": "🎶 LOOK INTO MY EYES!",
         "junpei": "Junpei Ace Detective? More like **Stupei Ace Defective**.",
         "marin karin": "🧊 *Mitsuru intenta usar Marin Karin...* ¡Falló! (Como siempre).",
         "akihiko": "💪 Did you see that, Shinji?!",
@@ -88,8 +89,8 @@ class PersonaExpansion(Expansion):
         flavor = self.NYX_TIMELINE.get(count, "El fin se acerca inexorablemente...")
         
         msg = (
-            f"🌑 **La Hora Oscura se aproxima...**\n"
-            f"# ⏳ Faltan **{count}** horas para el Apocalipsis.\n\n"
+            f"🌑 **El Apocalipsis se aproxima...**\n"
+            f"# ⏳ Faltan **{count}** horas.\n\n"
             f"> *\"{flavor}\"*"
         )
         
@@ -131,7 +132,7 @@ class PersonaExpansion(Expansion):
 
     def get_status_lines(self, game_state) -> list[str]:
         c = self._count_arcanas(game_state, alive_only=True)
-        return [f"**Arcana Count:** {c}"]
+        return [f"**Conteo hasta el Apocalipsis:** {c}"]
 
     # --------------------------------------------------------------------------
     #  ACTION HOOKS
@@ -219,42 +220,6 @@ class PersonaExpansion(Expansion):
             f"**{len(victims)}** personas han sucumbido al efecto: **{status_name}**."
         )
 
-    # --------------------------------------------------------------------------
-    #  DEATH HOOKS
-    # --------------------------------------------------------------------------
-
-    async def on_player_death(self, guild: discord.Guild, game_state, uid: str, reason: str):
-        # 1. Nyx Inheritance Logic
-        await self._handle_nyx_death(guild, game_state, uid, reason)
-
-    async def _handle_nyx_death(self, guild: discord.Guild, game_state, uid: str, reason: str):
-        from ..core.infra import get_infra  # Local import
-
-        player = game_state.players.get(uid)
-        if not player: return
-
-        role = player.get("role", "")
-        if role != "Nyx": return
-
-        # Verify Phase (< 3)
-        dead_arcanas = self._count_arcanas(game_state, alive_only=False) - self._count_arcanas(game_state, alive_only=True)
-        
-        # Phase 3 starts at 6 dead. If >= 6, Nyx dies for real.
-        if dead_arcanas >= 6:
-            return 
-
-        # Reveal Ryoji (False Reveal)
-        infra = get_infra(guild.id)
-        game_ch_id = (infra.get("channels") or {}).get("game")
-        if game_ch_id:
-            ch = guild.get_channel(game_ch_id)
-            if ch:
-                await ch.send(
-                    "🎭 **¡Revelación!**\n"
-                    "El cuerpo cae inerte, pero algo no encaja...\n"
-                    "La ficha revela: **Ryoji Mochizuki** (Independiente).\n"
-                    "*La Muerte no puede morir, solo cambiar de envase...*"
-                )
 
     # --------------------------------------------------------------------------
     #  INTERNAL HELPERS

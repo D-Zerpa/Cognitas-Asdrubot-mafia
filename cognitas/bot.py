@@ -39,19 +39,19 @@ def _make_intents() -> discord.Intents:
 
 # List of cog modules to load
 COG_MODULES = [
-    "cognitas.cogs.game",
-    "cognitas.cogs.moderation",
-    "cognitas.cogs.maintenance",
-    "cognitas.cogs.voting",
-    "cognitas.cogs.players",
-    "cognitas.cogs.actions",
-    "cognitas.cogs.role_debug",
-    "cognitas.cogs.fun",
-    "cognitas.cogs.help",
-    "cognitas.cogs.timezones",
-    "cognitas.cogs.status",
-    "cognitas.cogs.bootstrap",
-    "cognitas.cogs.memes"
+    "cognitas.cogs.gamecog",
+    "cognitas.cogs.moderationcog",
+    "cognitas.cogs.maintenancecog",
+    "cognitas.cogs.votingcog",
+    "cognitas.cogs.playerscog",
+    "cognitas.cogs.actioncog",
+    "cognitas.cogs.role_debugcog",
+    "cognitas.cogs.funcog",
+    "cognitas.cogs.helpcog",
+    "cognitas.cogs.timezonescog",
+    "cognitas.cogs.statuscog",
+    "cognitas.cogs.bootstrapcog",
+    "cognitas.cogs.memecog"
 ]
 
 class AsdruBot(commands.Bot):

@@ -152,11 +152,11 @@ async def _flag_value_autocomplete(interaction: discord.Interaction, current: st
     ns = interaction.namespace
     flag_key = _canonical_flag_name(getattr(ns, "flag", "") or "")
     if not flag_key:
-        return [app_commands.Choice(name="(select a flag first)", value=current or "")]
+        return [app_commands.Choice(name="(selecciona una flag primero)", value=current or "")]
     ftype = FLAG_DEFS[flag_key]["type"]
     out: list[app_commands.Choice[str]] = []
     if ftype == "bool":
-        for v in ["true", "false", "on", "off", "yes", "no", "1", "0"]:
+        for v in ["true", "false", "si", "no", "on", "off"]:
             if current.lower() in v:
                 out.append(app_commands.Choice(name=v, value=v))
     elif ftype == "int":
@@ -177,7 +177,7 @@ def _parse_flag_value(flag_key: str, raw: str):
     s = (raw or "").strip()
 
     if ftype == "bool":
-        if re.fullmatch(r"(?i)(true|on|yes|y|1)", s):
+        if re.fullmatch(r"(?i)(true|on|yes|y|1|si)", s):
             return True
         if re.fullmatch(r"(?i)(false|off|no|n|0)", s):
             return False
@@ -193,32 +193,32 @@ def _parse_flag_value(flag_key: str, raw: str):
 # ------------------------------------------------------------
 # Cog
 # ------------------------------------------------------------
-class PlayersCog(commands.GroupCog, name="player", description="Manage players"):
+class PlayersCog(commands.GroupCog, name="player", description="Gestión de jugadores"):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
     # -------------------------
     # List / View
     # -------------------------
-    @app_commands.command(name="list", description="List alive and dead players")
+    @app_commands.command(name="list", description="Listar jugadores vivos y muertos")
     async def list_cmd(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
         ctx = InteractionCtx(interaction)
         await players_core.list_players(ctx)
 
-    @app_commands.command(name="view", description="View a player's full state (admin)")
+    @app_commands.command(name="view", description="Ver estado completo de un jugador (admin)")
     @app_commands.default_permissions(administrator=True)
     async def view_cmd(self, interaction: discord.Interaction, member: discord.Member):
         await interaction.response.defer(ephemeral=True)
 
         data = get_player_snapshot(str(member.id))
         if not data:
-            return await interaction.followup.send("Player not registered.", ephemeral=True)
+            return await interaction.followup.send("❌ El jugador no está registrado.", ephemeral=True)
 
         def fmt_bool(b: bool | None):
             if b is None:
                 return "—"
-            return "✅ True" if b else "❌ False"
+            return "✅ Sí" if b else "❌ No"
 
         def fmt_list(arr):
             return ", ".join(f"`{x}`" for x in arr) if arr else "—"
@@ -232,23 +232,23 @@ class PlayersCog(commands.GroupCog, name="player", description="Manage players")
             return "\n".join(parts)
 
         embed = discord.Embed(
-            title=f"Player: {data.get('name') or data.get('alias') or member.display_name}",
-            description=f"User: <@{data['uid']}>",
+            title=f"Inspector: {data.get('name') or data.get('alias') or member.display_name}",
+            description=f"Usuario: <@{data['uid']}>",
             color=0x3498DB if data.get("alive", True) else 0xC0392B,
         )
-        embed.add_field(name="Alive", value=fmt_bool(data.get("alive")), inline=True)
-        embed.add_field(name="Role", value=data.get("role") or "—", inline=True)
-        embed.add_field(name="Aliases", value=fmt_list(data.get("aliases", [])), inline=False)
-        embed.add_field(name="Effects", value=fmt_list(data.get("effects", [])), inline=False)
+        embed.add_field(name="Vivo", value=fmt_bool(data.get("alive")), inline=True)
+        embed.add_field(name="Rol", value=data.get("role") or "—", inline=True)
+        embed.add_field(name="Alias", value=fmt_list(data.get("aliases", [])), inline=False)
+        embed.add_field(name="Efectos", value=fmt_list(data.get("effects", [])), inline=False)
         embed.add_field(name="Flags", value=fmt_flags(data.get("flags", {})), inline=False)
-        embed.set_footer(text="Asdrubot — Player inspector")
+        embed.set_footer(text="Asdrubot — Inspector de Jugadores")
         await interaction.followup.send(embed=embed, ephemeral=True)
 
     # -------------------------
     # Register / Unregister / Rename
     # -------------------------
-    @app_commands.command(name="register", description="Register a player (admin)")
-    @app_commands.describe(member="Target user to register", name="Optional display name/alias")
+    @app_commands.command(name="register", description="Registrar a un jugador (admin)")
+    @app_commands.describe(member="Usuario objetivo", name="Nombre o alias opcional")
     @app_commands.default_permissions(administrator=True)
     async def register_cmd(
         self,
@@ -260,15 +260,15 @@ class PlayersCog(commands.GroupCog, name="player", description="Manage players")
         ctx = InteractionCtx(interaction)
         await players_core.register(ctx, member, name=name)
 
-    @app_commands.command(name="unregister", description="Unregister a player (admin)")
+    @app_commands.command(name="unregister", description="Eliminar registro de un jugador (admin)")
     @app_commands.default_permissions(administrator=True)
     async def unregister_cmd(self, interaction: discord.Interaction, member: discord.Member):
         await interaction.response.defer(ephemeral=True)
         ctx = InteractionCtx(interaction)
         await players_core.unregister(ctx, member)
 
-    @app_commands.command(name="rename", description="Rename a player (admin)")
-    @app_commands.describe(new_name="New display name")
+    @app_commands.command(name="rename", description="Renombrar a un jugador (admin)")
+    @app_commands.describe(new_name="Nuevo nombre")
     @app_commands.default_permissions(administrator=True)
     async def rename_cmd(self, interaction: discord.Interaction, member: discord.Member, new_name: str):
         await interaction.response.defer(ephemeral=True)
@@ -278,20 +278,20 @@ class PlayersCog(commands.GroupCog, name="player", description="Manage players")
     # -------------------------
     # Aliases
     # -------------------------
-    @app_commands.command(name="alias_show", description="Show a player's aliases")
+    @app_commands.command(name="alias_show", description="Mostrar alias de un jugador")
     async def alias_show_cmd(self, interaction: discord.Interaction, member: discord.Member):
         await interaction.response.defer(ephemeral=True)
         ctx = InteractionCtx(interaction)
         await players_core.alias_show(ctx, member)
 
-    @app_commands.command(name="alias_add", description="Add an alias (admin)")
+    @app_commands.command(name="alias_add", description="Añadir un alias (admin)")
     @app_commands.default_permissions(administrator=True)
     async def alias_add_cmd(self, interaction: discord.Interaction, member: discord.Member, alias: str):
         await interaction.response.defer(ephemeral=True)
         ctx = InteractionCtx(interaction)
         await players_core.alias_add(ctx, member, alias=alias)
 
-    @app_commands.command(name="alias_del", description="Remove an alias (admin)")
+    @app_commands.command(name="alias_del", description="Eliminar un alias (admin)")
     @app_commands.default_permissions(administrator=True)
     async def alias_del_cmd(self, interaction: discord.Interaction, member: discord.Member, alias: str):
         await interaction.response.defer(ephemeral=True)
@@ -301,8 +301,8 @@ class PlayersCog(commands.GroupCog, name="player", description="Manage players")
     # -------------------------
     # Generic edit (NO voting fields suggested)
     # -------------------------
-    @app_commands.command(name="edit", description="Edit stored player fields (safe suggestions)")
-    @app_commands.describe(field="Field name", value="New value")
+    @app_commands.command(name="edit", description="Editar campos de jugador (sugerencias seguras)")
+    @app_commands.describe(field="Nombre del campo", value="Nuevo valor")
     @app_commands.autocomplete(field=_field_name_autocomplete)
     @app_commands.default_permissions(administrator=True)
     async def edit_cmd(self, interaction: discord.Interaction, member: discord.Member, field: str, value: str):
@@ -317,8 +317,8 @@ class PlayersCog(commands.GroupCog, name="player", description="Manage players")
     # -------------------------
     # Flags (autocomplete + parsing)
     # -------------------------
-    @app_commands.command(name="set_flag", description="Set a flag on a player (with suggestions)")
-    @app_commands.describe(flag="Flag key", value="Value (typed: bool/int/str)")
+    @app_commands.command(name="set_flag", description="Establecer flag/marca en jugador")
+    @app_commands.describe(flag="Clave de la flag", value="Valor (bool/int/str)")
     @app_commands.autocomplete(flag=_flag_name_autocomplete, value=_flag_value_autocomplete)
     @app_commands.default_permissions(administrator=True)
     async def set_flag_cmd(self, interaction: discord.Interaction, member: discord.Member, flag: str, value: str):
@@ -330,8 +330,8 @@ class PlayersCog(commands.GroupCog, name="player", description="Manage players")
 
         await players_core.set_flag(ctx, member, canonical, parsed)
 
-    @app_commands.command(name="del_flag", description="Remove a flag from a player")
-    @app_commands.describe(flag="Flag key to remove")
+    @app_commands.command(name="del_flag", description="Eliminar flag/marca de un jugador")
+    @app_commands.describe(flag="Clave de la flag a eliminar")
     @app_commands.autocomplete(flag=_flag_name_autocomplete)
     @app_commands.default_permissions(administrator=True)
     async def del_flag_cmd(self, interaction: discord.Interaction, member: discord.Member, flag: str):
@@ -344,14 +344,14 @@ class PlayersCog(commands.GroupCog, name="player", description="Manage players")
     # -------------------------
     # Effects
     # -------------------------
-    @app_commands.command(name="add_effect", description="Add an effect to a player (admin)")
+    @app_commands.command(name="add_effect", description="Añadir efecto a un jugador (admin)")
     @app_commands.default_permissions(administrator=True)
     async def add_effect_cmd(self, interaction: discord.Interaction, member: discord.Member, effect: str):
         await interaction.response.defer(ephemeral=True)
         ctx = InteractionCtx(interaction)
         await players_core.add_effect(ctx, member, effect)
 
-    @app_commands.command(name="remove_effect", description="Remove an effect from a player (admin)")
+    @app_commands.command(name="remove_effect", description="Eliminar efecto de un jugador (admin)")
     @app_commands.default_permissions(administrator=True)
     async def remove_effect_cmd(self, interaction: discord.Interaction, member: discord.Member, effect: str):
         await interaction.response.defer(ephemeral=True)
@@ -361,14 +361,14 @@ class PlayersCog(commands.GroupCog, name="player", description="Manage players")
     # -------------------------
     # Kill / Revive
     # -------------------------
-    @app_commands.command(name="kill", description="Mark a player as dead (admin)")
+    @app_commands.command(name="kill", description="Marcar jugador como muerto (admin)")
     @app_commands.default_permissions(administrator=True)
     async def kill_cmd(self, interaction: discord.Interaction, member: discord.Member):
         await interaction.response.defer(ephemeral=True)
         ctx = InteractionCtx(interaction)
         await players_core.kill(ctx, member)
 
-    @app_commands.command(name="revive", description="Mark a player as alive (admin)")
+    @app_commands.command(name="revive", description="Marcar jugador como vivo (admin)")
     @app_commands.default_permissions(administrator=True)
     async def revive_cmd(self, interaction: discord.Interaction, member: discord.Member):
         await interaction.response.defer(ephemeral=True)
@@ -378,5 +378,4 @@ class PlayersCog(commands.GroupCog, name="player", description="Manage players")
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(PlayersCog(bot))
-
 
