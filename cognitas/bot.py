@@ -1,129 +1,80 @@
-# cognitas/bot.py
-from __future__ import annotations
-
 import os
 import sys
 import logging
+import asyncio
 import discord
 from discord.ext import commands
-
-from cognitas.core.storage import load_state
-from cognitas.core import phases
-from cognitas.config import INTENTS_KWARGS
 from dotenv import load_dotenv
 
-load_dotenv()  
-
-# -------------------------------------------------
-# Logging
-# -------------------------------------------------
+# Strict, standard logging configuration
 logging.basicConfig(
     level=logging.INFO,
-    format="[%(levelname)s] %(name)s: %(message)s",
+    format="[%(asctime)s] [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
     stream=sys.stdout,
 )
-log = logging.getLogger("asdrubot")
+logger = logging.getLogger("cognitas")
 
-# -------------------------------------------------
-# Discord intents from config
-# -------------------------------------------------
-def _make_intents() -> discord.Intents:
-    intents = discord.Intents.default()
-    # Safely apply toggles from config
-    for k, v in (INTENTS_KWARGS or {}).items():
-        if hasattr(intents, k):
-            setattr(intents, k, bool(v))
-    # Always enable guilds (required for slash commands & rehydrate)
-    intents.guilds = True
-    return intents
-
-# List of cog modules to load
-COG_MODULES = [
-    "cognitas.cogs.gamecog",
-    "cognitas.cogs.moderationcog",
-    "cognitas.cogs.maintenancecog",
-    "cognitas.cogs.votingcog",
-    "cognitas.cogs.playerscog",
-    "cognitas.cogs.actioncog",
-    "cognitas.cogs.role_debugcog",
-    "cognitas.cogs.funcog",
-    "cognitas.cogs.helpcog",
-    "cognitas.cogs.timezonescog",
-    "cognitas.cogs.statuscog",
-    "cognitas.cogs.bootstrapcog",
-    "cognitas.cogs.memecog"
+# The new, condensed architecture for Cogs.
+# Commented out temporarily until we actually create these files.
+INITIAL_EXTENSIONS = [
+    # "cogs.host",
+    # "cogs.gameplay",
+    # "cogs.misc"
 ]
 
-class AsdruBot(commands.Bot):
+class CognitasBot(commands.Bot):
     def __init__(self):
-        super().__init__(command_prefix="!", intents=_make_intents())
-        self._state_loaded = False
-
-    async def setup_hook(self):
-
-        # 1) Load persistent state
-        try:
-            load_state()  # sync
-            self._state_loaded = True
-            log.info("[startup] State loaded.")
-        except Exception:
-            log.exception("[startup] Failed to load state")
-
-        # 2) Load cogs (all commands live there)
-        for mod in COG_MODULES:
-            try:
-                await self.load_extension(mod)
-                log.info(f"[cogs] Loaded: {mod}")
-            except Exception:
-                log.exception(f"[cogs] Failed to load: {mod}")
-
-        # 3) First sync after cogs are loaded (single source of truth)
-        try:
-            await self.tree.sync(guild=None)  # global sync
-            log.info("[startup] Slash commands synced (global).")
-        except Exception:
-            log.exception("[startup] Failed to sync slash commands")
-
-
-    async def on_ready(self):
-        try:
-            user = self.user
-            log.info(f"Logged in as {user} (id={user.id})")  # type: ignore
-        except Exception:
-            log.info("Logged in.")
-
-        try:
-            cmds = self.tree.get_commands()
-            qnames = sorted(c.qualified_name for c in cmds)
-            log.info(f"[commands] Loaded {len(qnames)} local commands:")
-            for q in qnames:
-                log.info(f"  - /{q}")
-        except Exception:
-            pass
-
-        # Rehydrate timers per guild
-        try:
-            if getattr(phases, "rehydrate_timers", None):
-                for guild in self.guilds:
-                    try:
-                        await phases.rehydrate_timers(self, guild)
-                    except Exception as e:
-                        log.warning(f"[rehydrate] Error for guild {getattr(guild,'id','?')}: {e}")
-                log.info("[rehydrate] Timers rehydration attempted for all guilds.")
-        except Exception:
-            log.exception("[rehydrate] Unexpected failure")
-
-def main():
-    token = os.getenv("DISCORD_TOKEN")
-    if not token:
-        raise RuntimeError(
-            "DISCORD_TOKEN (or ASDRUBOT_TOKEN) missing. "
-            "Set it in your environment or a .env at repo root."
+        # We explicitly declare the intents required for a Mafia game
+        intents = discord.Intents.default()
+        intents.guilds = True
+        intents.members = True          # Crucial for role assignments and DM handling
+        intents.message_content = True  # Crucial for reading text commands
+        
+        super().__init__(
+            command_prefix=commands.when_mentioned_or("!"),
+            intents=intents,
+            help_command=None  # We will implement a custom slash-command help later
         )
 
-    bot = AsdruBot()
-    bot.run(token)
+    async def setup_hook(self) -> None:
+        """
+        Executed before the bot connects to the Discord gateway.
+        This is the safest place to load extensions and initialize database/state connections.
+        """
+        logger.info("Initializing setup hook. Loading core modules...")
+        
+        # Strict loading: If a module is corrupted, we crash immediately. No silent failures.
+        for extension in INITIAL_EXTENSIONS:
+            await self.load_extension(extension)
+            logger.info(f"Successfully loaded extension: {extension}")
+            
+        logger.info("Setup hook completed successfully.")
+
+    async def on_ready(self) -> None:
+        """
+        Triggered when the bot establishes a connection with Discord.
+        """
+        logger.info(f"Connection established. Logged in as {self.user} (ID: {self.user.id})")
+
+
+async def main() -> None:
+    # Load environment variables (e.g., DISCORD_TOKEN)
+    load_dotenv()
+    token = os.getenv("DISCORD_TOKEN")
+    
+    if not token:
+        logger.critical("DISCORD_TOKEN environment variable is missing. Halting.")
+        sys.exit(1)
+
+    bot = CognitasBot()
+    
+    # Use an async context manager to ensure safe cleanup of internal HTTP sessions
+    async with bot:
+        await bot.start(token)
 
 if __name__ == "__main__":
-    main()
-
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Shutdown signal received from user. Terminating process.")
