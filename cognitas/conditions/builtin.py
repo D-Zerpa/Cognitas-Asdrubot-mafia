@@ -1,11 +1,12 @@
 import logging
 from typing import TYPE_CHECKING
 from .engine import Condition
-from core.actions import ActionTag
+from cognitas.core.actions import ActionTag
+from typing import Optional, List, Dict, Union, Any
 
 if TYPE_CHECKING:
-    from core.models import Player
-    from core.state import GameState
+    from cognitas.core.models import Player
+    from cognitas.core.state import GameState
 
 logger = logging.getLogger("cognitas.conditions.builtin")
 

@@ -1,8 +1,9 @@
 import logging
 import discord
+from typing import Optional, List, Dict, Union, Any
 
-from core.models import Player
-from core.state import GameState
+from cognitas.core.models import Player
+from cognitas.core.state import GameState
 
 logger = logging.getLogger("cognitas.sync")
 

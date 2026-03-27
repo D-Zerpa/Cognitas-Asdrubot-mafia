@@ -5,14 +5,44 @@ from discord.ext import commands
 from discord import app_commands
 import importlib
 import asyncio
-from data.loader import RoleLoader
-from core.state import 
-from core.time import TimeManager, Phase
-from utils.discord_sync import process_player_death
-from conditions.engine import 
+from typing import Optional, List, Dict, Union, Any
 
+# --- CORE IMPORTS ---
+from cognitas.data.loaders import RoleLoader
+from cognitas.core.state import GameState
+from cognitas.core.time import TimeManager, Phase
+from cognitas.utils.discord_sync import process_player_death
+from cognitas.conditions.engine import ConditionManager
+
+# --- BUILTIN CONDITIONS IMPORTS ---
+from cognitas.conditions.builtin import (
+    ParalyzedCondition, DrowsinessCondition, ConfusionCondition, 
+    JailedCondition, SilencedCondition, DoubleVoteCondition, 
+    SanctionedCondition, WoundedCondition, PoisonedCondition
+)
 
 logger = logging.getLogger("cognitas.cogs.host")
+
+# ---------------------------------------------------------
+# AUTOCOMPLETION FUNCTION
+# ---------------------------------------------------------
+
+CORE_FLAGS = {
+    "vote_weight": "int/float (Multiplicador del voto. Default: 1)",
+    "lynch_weight": "int (Votos extra necesarios para morir. Default: 0)",
+    "hidden_vote": "bool (Oculta la identidad del votante en el resumen)"
+}
+
+async def flag_autocomplete(interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+    expansion_flags = getattr(interaction.client, "recommended_flags", {})
+    all_flags = {**CORE_FLAGS, **expansion_flags}
+    choices = []
+    for flag_name, description in all_flags.items():
+        if current.lower() in flag_name.lower() or current.lower() in description.lower():
+            choices.append(app_commands.Choice(name=f"{flag_name} - {description}", value=flag_name))
+            
+    return choices[:25]
+
 
 class HostCog(commands.Cog):
     """
@@ -21,12 +51,6 @@ class HostCog(commands.Cog):
     """
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-
-    from conditions.builtin import (
-        ParalyzedCondition, DrowsinessCondition, ConfusionCondition, 
-        JailedCondition, SilencedCondition, DoubleVoteCondition, 
-        SanctionedCondition, WoundedCondition, PoisonedCondition
-    )
 
     condition_map = {
         "paralyzed": ParalyzedCondition,
@@ -281,7 +305,7 @@ class HostCog(commands.Cog):
             return
 
         # 4. Engine Registration
-        from core.models import Player
+        from cognitas.core.models import Player
         import copy
         
         new_player = Player(user_id=member.id)
@@ -335,30 +359,31 @@ class HostCog(commands.Cog):
     @app_commands.default_permissions(administrator=True)
     async def set_expansion(self, interaction: discord.Interaction, perfil: str):
         perfil = perfil.lower()
+        filename = f"roles_{perfil}.json" # Asumimos convención de nombres
         
         # 1. Load the Roles JSON
-        filename = f"roles_{perfil}.json"
-        loader = RoleLoader(data_dir="data")
-        loaded_roles = loader.load_roles(filename)
+        loader = RoleLoader()
+        expansion_data = loader.load_expansion_data(filename)
         
-        if not loaded_roles:
+        if not expansion_data["roles"]:
             await interaction.response.send_message(f"❌ Error al cargar los roles de `{filename}`.", ephemeral=True)
             return
             
-        self.bot.role_registry = loaded_roles
+        self.bot.role_registry = expansion_data["roles"]
+        self.bot.temp_registry = expansion_data["temp_abilities"]
+        self.bot.recommended_flags = expansion_data.get("recommended_flags", {})
         
         # 2. Dynamically inject the Python Gimmick Skeleton
         try:
-            # This attempts to import cognitas/expansions/persona.py
-            gimmick_module = importlib.import_module(f"expansions.{perfil}")
+            gimmick_module = importlib.import_module(f"cognitas.expansions.{perfil}")
             # Grabs the ExpansionGimmick class from that file
             GimmickClass = getattr(gimmick_module, "ExpansionGimmick")
             self.bot.active_gimmick = GimmickClass()
             gimmick_name = self.bot.active_gimmick.name
+
         except (ImportError, AttributeError) as e:
-            # Fallback to base expansion if no custom Python file exists
             logger.warning(f"No specific gimmick python file found for {perfil}. Using BaseExpansion. Error: {e}")
-            from expansions.base import BaseExpansion
+            from cognitas.expansions.base import BaseExpansion
             self.bot.active_gimmick = BaseExpansion()
             gimmick_name = "Sin mecánicas especiales"
 
@@ -367,7 +392,7 @@ class HostCog(commands.Cog):
             
         await interaction.response.send_message(
             f"✅ **Expansión Cargada:** {perfil.upper()}\n"
-            f"👥 **Roles en memoria:** {len(loaded_roles)}\n"
+            f"👥 **Roles en memoria:** {len(self.bot.role_registry)}\n"
             f"⚙️ **Mecánica Activa:** {gimmick_name}", 
             ephemeral=True
         )
@@ -409,7 +434,6 @@ class HostCog(commands.Cog):
         guild = interaction.guild
 
         # 1. Process conditions and deaths (Same as Step 26)
-        from conditions.engine import ConditionManager
         cond_manager = ConditionManager(state)
         cond_manager.process_phase_end()
 
@@ -418,11 +442,9 @@ class HostCog(commands.Cog):
             if not player.is_alive:
                 member = guild.get_member(player.user_id)
                 if member and alive_role_id and any(r.id == alive_role_id for r in member.roles):
-                    from utils.discord_sync import process_player_death
                     await process_player_death(self.bot, guild, player, reason="Efectos al final de la fase")
 
         # 2. Advance Clock
-        from core.time import TimeManager, Phase
         gimmick = getattr(self.bot, "active_gimmick", None)
         time_manager = TimeManager(state, gimmick=gimmick)
         gimmick_announcement = time_manager.advance_phase()
@@ -431,7 +453,7 @@ class HostCog(commands.Cog):
         if hasattr(self.bot, "voting_manager"):
             self.bot.voting_manager.clear_all_votes()
         if hasattr(self.bot, "action_manager") and state.phase == Phase.DAY:
-            self.bot.action_manager.clear_queue()
+            self.bot.action_manager.clear_queue(self.state)
 
         # 4. Open/Close Channel
         can_speak = (state.phase == Phase.DAY)
@@ -456,7 +478,6 @@ class HostCog(commands.Cog):
                 except discord.Forbidden:
                     logger.error("Missing permissions to rename the game channel.")
 
-        # Configurar el reloj si se pasó una duración
         end_time_msg = ""
         if duracion > 0:
             end_time = int(time.time()) + (duracion * 60)
@@ -509,8 +530,7 @@ class HostCog(commands.Cog):
             await interaction.response.send_message("❌ El motor no está inicializado.", ephemeral=True)
             return
 
-        from core.time import Phase
-        from core.actions import ActionTag, ResolutionTime
+        from cognitas.core.actions import ActionTag, ResolutionTime
         
         state: GameState = self.bot.game_state
         manager = self.bot.action_manager
@@ -522,12 +542,10 @@ class HostCog(commands.Cog):
         expected_actors = []
         for p in alive_players:
             if p.role and any(ab.tag == expected_tag for ab in p.role.abilities):
-                # Optionally, we could check if they are paralyzed/drowsy here and skip them,
-                # but it's better to show them as "Missing" so the GM knows they are skipping.
                 expected_actors.append(p.user_id)
 
         # 2. Get the submitted actions (Sorted automatically by our ActionManager)
-        submitted_records = manager.get_resolution_report()
+        submitted_records = manager.get_resolution_report(self.state)
         submitted_ids = [record.source_id for record in submitted_records]
 
         # 3. Find the missing ones
@@ -552,28 +570,18 @@ class HostCog(commands.Cog):
         else:
             report_lines = []
             for rec in submitted_records:
-                # Target formatting
                 target_str = f" ➔ <@{rec.target_id}>" if rec.target_id else ""
-                
-                # Accuracy Check Formatting (Hit or Miss)
                 acc_icon = "🎯 ÉXITO" if rec.is_success else "❌ FALLO"
                 acc_detail = f"({rec.roll}/{rec.ability.accuracy})" if not rec.is_success else ""
-                
-                # Resolution Timing Icon
                 res_icon = "⚡" if rec.ability.resolution == ResolutionTime.INSTANT else "⏳"
                 
-                # Build the line
                 line = f"`[{rec.ability.priority:02d}]` {res_icon} <@{rec.source_id}> usó **{rec.ability.name}**{target_str} | {acc_icon} {acc_detail}"
                 
-                # Append notes if they exist
                 if rec.note:
                     line += f"\n   *📝 Nota: {rec.note}*"
                     
                 report_lines.append(line)
 
-            # Discord embeds have a 1024 character limit per field. 
-            # We join them safely (Assuming it won't break 1024 for a standard 15 player game, 
-            # but in production we might need to split chunks).
             embed.add_field(
                 name="Acciones Registradas (Orden de Prioridad)", 
                 value="\n\n".join(report_lines)[:1024], 
@@ -596,24 +604,26 @@ class HostCog(commands.Cog):
         await interaction.response.defer()
         guild = interaction.guild
         expansion = expansion.lower()
+        filename = f"roles_{expansion}.json" # Asumimos convención
 
         # 2. Load Expansion Data (Roles & Gimmicks)
-        filename = f"roles_{expansion}.json"
-        loader = RoleLoader(data_dir="data")
-        loaded_roles = loader.load_roles(filename)
+        loader = RoleLoader()
+        expansion_data = loader.load_expansion_data(filename)
         
-        if not loaded_roles:
-            await interaction.followup.send(f"❌ Error crítico: No se encontró `{filename}`.")
+        if not expansion_data["roles"]:
+            await interaction.followup.send(f"❌ Error al cargar los roles de `{filename}`.")
             return
             
-        self.bot.role_registry = loaded_roles
+        self.bot.role_registry = expansion_data["roles"]
+        self.bot.temp_registry = expansion_data["temp_abilities"]
+        self.bot.recommended_flags = expansion_data.get("recommended_flags", {})
 
         try:
-            gimmick_module = importlib.import_module(f"expansions.{expansion}")
+            gimmick_module = importlib.import_module(f"cognitas.expansions.{expansion}")
             GimmickClass = getattr(gimmick_module, "ExpansionGimmick")
             self.bot.active_gimmick = GimmickClass()
         except (ImportError, AttributeError):
-            from expansions.base import BaseExpansion
+            from cognitas.expansions.base import BaseExpansion
             self.bot.active_gimmick = BaseExpansion()
 
         # 3. Create Discord Roles
@@ -649,7 +659,7 @@ class HostCog(commands.Cog):
         # 6. Create Private Channels for each loaded Role
         # We add a small delay to avoid hitting Discord's rate limits
         created_channels = []
-        for role_key, role_obj in loaded_roles.items():
+        for role_key in self.bot.role_registry.keys():
             ch_name = f"hq-{role_key.replace('_', '-')}"
             priv_ch = await category.create_text_channel(name=ch_name, overwrites=base_overwrites)
             created_channels.append(priv_ch)
@@ -657,7 +667,7 @@ class HostCog(commands.Cog):
 
         # 7. Save everything to GameState
         if not hasattr(self.bot, "game_state"):
-            from core.state import GameState
+            from cognitas.core.state import GameState
             self.bot.game_state = GameState()
             
         state = self.bot.game_state
@@ -718,28 +728,16 @@ class HostCog(commands.Cog):
                     await role.delete(reason="Wipe command")
 
         # 3. Reset GameState (Hard reset of the core)
-        from core.state import GameState
+        from cognitas.core.state import GameState
         self.bot.game_state = GameState()
-        self.bot.action_manager.clear_queue()
+        if hasattr(self.bot, "action_manager"):
+            self.bot.action_manager.clear_queue(self.state)
         if hasattr(self.bot, "voting_manager"):
             self.bot.voting_manager.clear_all_votes()
 
         await interaction.followup.send(f"🧹 **Limpieza absoluta completada.** Se eliminaron {deleted_count} canales/categorías y se reinició la memoria del bot.")
         logger.info("Server wiped clean and core reset.")
 
-        Este es el verdadero cinturón de herramientas de un Game Master. En la teoría del diseño de software, siempre asumimos que el usuario o el sistema se equivocarán en algún momento. Tener una suite de "Comandos de Intervención Divina" para editar el estado del juego sobre la marcha es lo que separa a un bot rígido que arruina partidas de un bot flexible que las salva.
-
-Vamos a agrupar estas herramientas lógicamente. Añadiremos estos comandos a tu archivo cogs/host.py (y el de tiempo, que podemos hacer como un grupo).
-
-Paso 43: Las Herramientas de Intervención (God Tools)
-
-Explicación: Creamos comandos explícitos para forzar la muerte y resurrección (modificando roles de Discord en el proceso), editar las Flags al vuelo interpretando el tipo de dato (booleano, número o texto), sobrescribir la fase actual (y renombrar el canal de juego en el proceso) y ajustar o cancelar el reloj activo.
-
-Líneas: Añadir al archivo cognitas/cogs/host.py (Dentro de HostCog).
-
-Código:
-
-Python
     # ---------------------------------------------------------
     # ERROR CORRECTION & GOD TOOLS
     # ---------------------------------------------------------
@@ -756,7 +754,6 @@ Python
             await interaction.response.send_message("❌ Jugador no encontrado o ya está muerto.", ephemeral=True)
             return
 
-        from utils.discord_sync import process_player_death
         await process_player_death(self.bot, interaction.guild, player, reason=reason)
         await interaction.response.send_message(f"💀 **{target.display_name}** ha sido ejecutado por el Game Master.", ephemeral=True)
 
@@ -812,8 +809,9 @@ Python
         app_commands.Choice(name="Número Entero", value="int"),
         app_commands.Choice(name="Texto", value="str")
     ])
+    @app_commands.autocomplete(flag_name=flag_autocomplete)
     @app_commands.default_permissions(administrator=True)
-    async def set_flag(self, interaction: discord.Interaction, target: discord.Member, flag_name: str, tipo: app_commands.Choice[str], valor: str):
+    async def set_flag(self, interaction: discord.Interaction, target: discord.Member, flag_name: str, tipo: app_commands.Choice[str], value: str):
         state = getattr(self.bot, "game_state", None)
         if not state: return
 
@@ -825,13 +823,13 @@ Python
         # Type casting safely
         try:
             if tipo.value == "bool":
-                parsed_value = valor.lower() in ("true", "1", "si", "yes", "t", "y")
+                parsed_value = value.lower() in ("true", "1", "si", "yes", "t", "y")
             elif tipo.value == "int":
-                parsed_value = int(valor)
+                parsed_value = int(value)
             else:
-                parsed_value = valor
+                parsed_value = value
         except ValueError:
-            await interaction.response.send_message(f"❌ No se pudo convertir `{valor}` a `{tipo.name}`.", ephemeral=True)
+            await interaction.response.send_message(f"❌ No se pudo convertir `{value}` a `{tipo.name}`.", ephemeral=True)
             return
 
         # Apply to engine
@@ -855,7 +853,6 @@ Python
         state = getattr(self.bot, "game_state", None)
         if not state: return
 
-        from core.time import Phase
         new_phase = Phase.DAY if fase.value == "day" else Phase.NIGHT
         
         state.phase = new_phase
@@ -891,7 +888,6 @@ Python
             await interaction.response.send_message("❌ No hay ningún cronómetro activo en esta fase.", ephemeral=True)
             return
 
-        import time
         # Add (or subtract) the seconds
         new_end_time = current_end_time + (minutos * 60)
         
@@ -915,7 +911,7 @@ Python
             return
 
         state.discord_setup["phase_end_time"] = None
-        await interaction.response.send_message("🛑 **Cronómetro cancelado.** La fase ah
+        await interaction.response.send_message("🛑 **Cronómetro cancelado.** La fase ahora no tiene límite de tiempo.")
 
 
 async def setup(bot: commands.Bot) -> None:

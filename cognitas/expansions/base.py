@@ -2,8 +2,8 @@ import abc
 from typing import Optional, List, Dict, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from core.state import GameState
-    from core.models import Player
+    from cognitas.core.state import GameState
+    from cognitas.core.models import Player
 
 class BaseExpansion(abc.ABC):
     """

@@ -6,7 +6,7 @@ import discord
 from discord.ext import commands, tasks
 from discord import app_commands
 
-from core.state import GameState
+from cognitas.core.state import GameState
 
 logger = logging.getLogger("cognitas.cogs.misc")
 

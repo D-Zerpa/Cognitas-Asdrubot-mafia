@@ -1,14 +1,208 @@
 import time
 import logging
+import random
 import discord
 from discord.ext import commands
 from discord import app_commands
+from typing import Optional, List, Dict, Union, Any
 
-from core.state import GameState
-from core.voting import VotingManager
-from core.time import Phase
+from cognitas.core.state import GameState
+from cognitas.core.voting import VotingManager
+from cognitas.core.time import Phase
+from cognitas.core.actions import Ability, ActionTag, TargetType
+
+from typing import List
 
 logger = logging.getLogger("cognitas.cogs.gameplay")
+
+# ---------------------------------------------------------
+# AUXILIARY FUNCTIONS
+# ---------------------------------------------------------
+def _glitch_name(length: int = 6) -> str:
+    """Visual 'glitched' name for anonymous votes (no identity leak)."""
+    base_chars = "█▓▒░▞▚▛▜▟#@$%&"
+    zalgo_marks = ["̴","̵","̶","̷","̸","̹","̺","̻","̼","̽","͜","͝","͞","͟","͠","͢"]
+    out = []
+    for _ in range(length):
+        c = random.choice(base_chars)
+        if random.random() < 0.5:
+            c += "".join(random.choice(zalgo_marks) for _ in range(random.randint(1, 3)))
+        out.append(c)
+    return "".join(out)
+
+# ---------------------------------------------------------
+# UI COMPONENTS (DROPDOWNS & BUTTONS)
+# ---------------------------------------------------------
+
+class TargetDropdown(discord.ui.Select):
+    def __init__(self, state: GameState, guild: discord.Guild):
+        self.state = state
+        options = []
+        
+        # Populate the dropdown with players (Discord limit: 25 options)
+        for player in state.players.values():
+            member = guild.get_member(player.user_id)
+            name = member.display_name if member else f"ID: {player.user_id}"
+            
+            # Visual status indicator for the UI
+            emoji = "🟢" if player.is_alive else "💀"
+            desc = "Vivo" if player.is_alive else "Muerto"
+            
+            options.append(discord.SelectOption(
+                label=name, 
+                value=str(player.user_id), 
+                description=desc, 
+                emoji=emoji
+            ))
+
+        super().__init__(placeholder="👤 Selecciona un objetivo...", min_values=1, max_values=1, options=options[:25])
+
+    async def callback(self, interaction: discord.Interaction):
+        # Save the selected value in the parent view so the buttons can access it later
+        self.view.selected_target_id = int(self.values[0])
+        # Defer the interaction silently to prevent Discord from showing an "interaction failed" error
+        await interaction.response.defer()
+
+
+class ActionButton(discord.ui.Button):
+    def __init__(self, ability: Ability, bot: commands.Bot, state: GameState):
+        super().__init__(label=ability.name, style=discord.ButtonStyle.primary, custom_id=f"act_{ability.identifier}")
+        self.ability = ability
+        self.bot = bot
+        self.state = state
+
+    async def callback(self, interaction: discord.Interaction):
+        # 1. Retrieve the source player who clicked the button
+        source_player = self.state.get_player(interaction.user.id)
+        
+        # 2. Target Logic (Psycho Mode: Smart Targeting)
+        final_target_id = None
+        
+        if self.ability.target_type == TargetType.SINGLE:
+            if not self.view.selected_target_id:
+                await interaction.response.send_message("⚠️ **Debes seleccionar un objetivo en el menú desplegable primero.**", ephemeral=True)
+                return
+            final_target_id = self.view.selected_target_id
+            
+            # Quick alive/dead validation context
+            # (If you want certain abilities not to affect dead players, validate here. 
+            # For now, we delegate to the Game Master when reading the report, 
+            # or you could add a 'targets_dead' flag to the Ability class in the future).
+            target_player = self.state.get_player(final_target_id)
+
+        elif self.ability.target_type == TargetType.SELF:
+            # Overrides any dropdown selection and targets the user
+            final_target_id = source_player.user_id
+            
+        elif self.ability.target_type in (TargetType.NONE, TargetType.ALL):
+            final_target_id = None
+
+        # 3. Submit to ActionManager
+        gimmick = getattr(self.bot, "active_gimmick", None)
+        result = self.bot.action_manager.submit_action(
+            source_player=source_player, 
+            target_id=final_target_id, 
+            ability=self.ability, 
+            state=self.state,
+            gimmick=gimmick
+        )
+
+        # 4. Process secret expansion notifications (e.g., Fuuka's Oracle Radar)
+        secret_notes = result.get("secret_notifications", {})
+        if secret_notes:
+            for uid, msg_text in secret_notes.items():
+                notified_player = self.state.get_player(uid)
+                if notified_player and notified_player.private_channel_id:
+                    priv_channel = interaction.guild.get_channel(notified_player.private_channel_id)
+                    if priv_channel:
+                        await priv_channel.send(msg_text)
+
+        # 5. Visual feedback to the user based on Engine response
+        if result["status"] == "blocked":
+            await interaction.response.send_message(f"🛑 {result['ui_text']}", ephemeral=True)
+        elif result["status"] == "redirected":
+            msg = f"🌀 {result.get('ui_try', 'Intentas actuar...')}\nRedirigido hacia <@{result['new_target']}>."
+            await interaction.response.send_message(msg, ephemeral=True)
+        else:
+            target_str = ""
+            if final_target_id:
+                target_member = interaction.guild.get_member(final_target_id)
+                target_name = target_member.display_name if target_member else "Desconocido"
+                target_str = f" sobre **{target_name}**"
+            
+            # Update the original message embed to confirm the action was locked in
+            embed = self.view.message.embeds[0]
+            embed.color = discord.Color.green()
+            embed.set_footer(text=f"Última acción registrada: {self.ability.name}{target_str}")
+            
+            await interaction.response.edit_message(embed=embed, view=self.view)
+            await interaction.followup.send(f"✅ Has preparado **{self.ability.name}**{target_str}.", ephemeral=False)
+
+class ActionUI(discord.ui.View):
+    def __init__(self, state: GameState, guild: discord.Guild, valid_abilities: List[Ability], bot: commands.Bot):
+        super().__init__(timeout=None)
+        self.selected_target_id: Optional[int] = None
+        self.message: Optional[discord.Message] = None
+
+        # Add the target selection dropdown
+        self.add_item(TargetDropdown(state, guild))
+
+        # Dynamically append a button for each valid ability the user has
+        for ab in valid_abilities:
+            self.add_item(ActionButton(ab, bot, state))
+# ---------------------------------------------------------
+# DYNAMIC AUTOCOMPLETE
+# ---------------------------------------------------------
+async def ability_autocomplete(interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
+    # 1. Check if the game is running
+    if not hasattr(interaction.client, "game_state"):
+        return []
+        
+    state: GameState = interaction.client.game_state
+    player = state.get_player(interaction.user.id)
+    
+    if not player or not player.is_alive or not player.role:
+        return []
+
+    valid_abilities: List[Ability] = []
+    
+    # 2. Add Base Abilities matching the current phase
+    for ab in player.role.abilities:
+        if (state.phase == Phase.DAY and ab.tag == ActionTag.DAY_ACT) or \
+           (state.phase == Phase.NIGHT and ab.tag == ActionTag.NIGHT_ACT):
+            valid_abilities.append(ab)
+
+    # 3. Add Dynamic/Temporary Abilities based on Flags
+    # EJEMPLO: Si el GM le puso el flag "has_gun" (Tiene un arma temporal)
+    if state.phase == Phase.NIGHT and player.role.flags.get("has_gun"):
+        gun_ability = Ability(
+            identifier="temp_shoot", 
+            name="🔫 Disparar Arma (Objeto)", 
+            tag=ActionTag.NIGHT_ACT, 
+            priority=80, 
+            target_type=TargetType.SINGLE
+        )
+        valid_abilities.append(gun_ability)
+        
+    # EJEMPLO 2: Si por un evento global se le dio el flag "can_investigate_today"
+    if state.phase == Phase.DAY and player.role.flags.get("can_investigate_today"):
+        inv_ability = Ability(
+            identifier="temp_investigate", 
+            name="🔍 Investigar (Ventaja Temporal)", 
+            tag=ActionTag.DAY_ACT, 
+            priority=50, 
+            target_type=TargetType.SINGLE
+        )
+        valid_abilities.append(inv_ability)
+
+    # 4. Filter choices based on what the user is typing
+    choices = []
+    for ab in valid_abilities:
+        if current.lower() in ab.name.lower() or current.lower() in ab.identifier.lower():
+            # Mostramos el NOMBRE bonito, pero el bot recibe el IDENTIFICADOR seguro
+            choices.append(app_commands.Choice(name=ab.name, value=ab.identifier))
+
+    return choices[:25]
 
 class GameplayCog(commands.Cog):
     """
@@ -55,28 +249,35 @@ class GameplayCog(commands.Cog):
             return
 
         # Calculate vote weight based on Conditions (e.g., Double Vote, Sanctioned)
-        vote_weight = 1.0
+        vote_weight = float(voter.role.flags.get("vote_weight", 1.0))
 
-        if voter.role and voter.role.flags.get("permanent_double_vote"):
-            vote_weight *= 2.0
-            
-        # Then multiply by active conditions
+        # Multiply by active conditions (Buffs/Debuffs)
         for condition in voter.statuses:
             vote_weight *= condition.get_vote_multiplier()
 
         if vote_weight <= 0:
-            await interaction.response.send_message("❌ Tu derecho a voto ha sido revocado por un estado alterado.", ephemeral=True)
+            await interaction.response.send_message("❌ Tu derecho a voto ha sido revocado.", ephemeral=True)
             return
 
         # Register the vote in the engine
-        self.voting_manager.cast_vote(voter.user_id, target_player.user_id, weight=vote_weight)
+        state = self.bot.game_state
+        self.bot.voting_manager.cast_vote(state, voter.user_id, target_player.user_id, weight=vote_weight)
         
         # UI Feedback
         await interaction.response.send_message(f"🗳️ **{interaction.user.display_name}** ha votado por **{target.display_name}**.")
         
         # Check for absolute majority automatically
-        alive_count = len(state.get_alive_players())
-        majority_target = self.voting_manager.check_majority(alive_count)
+        alive_players = state.get_alive_players()
+        alive_count = len(alive_players)
+
+        vote_modifiers = {}
+        for p in alive_players:
+            if p.role:
+                extra = p.role.flags.get("lynch_weight", 0)
+                if extra > 0:
+                    vote_modifiers[p.user_id] = extra
+
+        majority_target = self.voting_manager.check_majority(alive_count, extra_thresholds=vote_modifiers)
         
         if majority_target:
             await interaction.channel.send(
@@ -91,8 +292,10 @@ class GameplayCog(commands.Cog):
     async def vote_clear(self, interaction: discord.Interaction):
         if not await self._validate_voter(interaction):
             return
-
-        self.voting_manager.unvote(interaction.user.id)
+        state = self.bot.game_state
+        
+        self.voting_manager.unvote(state, interaction.user.id)
+        
         await interaction.response.send_message(f"💨 **{interaction.user.display_name}** ha retirado su voto.")
 
     @vote_group.command(name="mine", description="Revisa por quién estás votando actualmente.")
@@ -132,7 +335,7 @@ class GameplayCog(commands.Cog):
         )
 
         # 6. Check if the 2/3 majority was reached
-    if self.voting_manager.check_end_day_majority(alive_count):
+        if self.voting_manager.check_end_day_majority(alive_count):
             await interaction.channel.send(
                 "🌙 **¡MAYORÍA DE 2/3 ALCANZADA!**\n"
                 "El pueblo ha decidido que no hay nada más que discutir.\n"
@@ -163,12 +366,19 @@ class GameplayCog(commands.Cog):
         # 2. Group voters by their target to show "Who voted for whom"
         voters_by_target = {}
         for voter_id, target in self.voting_manager.votes.items():
+            voter = state.get_player(voter_id)
+            
+            if voter and voter.role and voter.role.flags.get("hidden_vote"):
+                voter_name = f"👁️‍🗨️ **{_glitch_name()}**"
+            else:
+                voter_name = f"<@{voter_id}>"
+
             if target not in voters_by_target:
                 voters_by_target[target] = []
-            voters_by_target[target].append(f"<@{voter_id}>")
+            voters_by_target[target].append(voter_name)
 
         # Absolute majority formula
-        threshold = (alive_count // 2) + 1
+        base_threshold = (alive_count // 2) + 1
 
         # 3. Build the UI
         embed = discord.Embed(
@@ -182,10 +392,16 @@ class GameplayCog(commands.Cog):
             embed.add_field(name="Estado Actual", value="Nadie ha emitido un voto aún.", inline=False)
         else:
             for target_id, weight in tally.items():
+                target_threshold = base_threshold
+
                 if target_id == "NO_LYNCH":
                     target_name = "🛑 Saltar Linchamiento"
                 else:
                     target_name = f"<@{target_id}>"
+                    target_player = state.get_player(target_id)
+                    if target_player and target_player.role:
+                        extra_votes = target_player.role.flags.get("lynch_weight", 0)
+                        target_threshold += extra_votes
                     
                 filled_blocks = int(weight)
                 empty_blocks = max(0, int(threshold - filled_blocks))
@@ -275,118 +491,87 @@ class GameplayCog(commands.Cog):
 
         await interaction.response.send_message(embed=embed)
 
-    @app_commands.command(name="act", description="Usa la habilidad de tu rol para la fase actual.")
-    @app_commands.describe(
-        target="El jugador objetivo de tu habilidad (si aplica).",
-        note="Nota opcional para el Game Master."
-    )
-    async def act(self, interaction: discord.Interaction, target: discord.Member = None, note: str = None):
-        # 1. Base validations
-        if not hasattr(self.bot, "game_state"):
-            await interaction.response.send_message("❌ La partida no está activa.", ephemeral=True)
+    @app_commands.command(name="player_list", description="Muestra la lista de jugadores vivos y muertos.")
+    async def player_list(self, interaction: discord.Interaction):
+        state: GameState = getattr(self.bot, "game_state", None)
+        if not state:
+            await interaction.response.send_message("❌ La partida no ha comenzado.", ephemeral=True)
             return
 
-        state: GameState = self.bot.game_state
-        player = state.get_player(interaction.user.id)
+        alive_players = state.get_alive_players()
+        dead_players = [p for p in state.players.values() if not p.is_alive]
 
-        if not player or not player.is_alive:
-            await interaction.response.send_message("💀 Los muertos no pueden usar habilidades.", ephemeral=True)
-            return
+        # Format the lists using Discord mentions for easy tagging
+        alive_text = "\n".join([f"🟢 <@{p.user_id}>" for p in alive_players])
+        dead_text = "\n".join([f"💀 <@{p.user_id}>" for p in dead_players])
 
-        if not player.role or not player.role.abilities:
-            await interaction.response.send_message("❌ Tu rol no tiene habilidades asignadas.", ephemeral=True)
-            return
+        # Fallbacks in case the lists are empty
+        if not alive_text: alive_text = "*Nadie ha sobrevivido...*"
+        if not dead_text: dead_text = "*Nadie ha muerto (aún).*"
 
-        # 2. Determine the correct ability based on the current Phase
-        from core.time import Phase
-        from core.actions import ActionTag, TargetType
-
-        expected_tag = ActionTag.DAY_ACT if state.phase == Phase.DAY else ActionTag.NIGHT_ACT
-        
-        # Find the first ability that matches the phase
-        # (Assuming 1 active ability per phase for standard SMT/P3 roles)
-        active_ability = next((ab for ab in player.role.abilities if ab.tag == expected_tag), None)
-
-        if not active_ability:
-            fase_str = "el Día" if state.phase == Phase.DAY else "la Noche"
-            await interaction.response.send_message(f"💤 Tu rol no tiene habilidades activas durante {fase_str}.", ephemeral=True)
-            return
-
-        # 3. Target Validation based on Ability Blueprint
-        target_id = target.id if target else None
-
-        if active_ability.target_type == TargetType.SINGLE and not target_id:
-            await interaction.response.send_message(f"🎯 Tu habilidad (**{active_ability.name}**) requiere que selecciones un objetivo.", ephemeral=True)
-            return
-            
-        if active_ability.target_type == TargetType.NONE and target_id:
-            # We ignore the target but warn the user to avoid confusion
-            logger.debug(f"User {player.user_id} provided a target for a NONE target ability. Ignoring target.")
-            target_id = None 
-
-        if target_id:
-            target_player = state.get_player(target_id)
-            if not target_player or not target_player.is_alive:
-                await interaction.response.send_message("❌ El objetivo no es válido o ya está muerto.", ephemeral=True)
-                return
-            
-            # Prevent self-targeting unless explicitly allowed (Future-proofing)
-            if target_id == player.user_id and active_ability.target_type != TargetType.SELF:
-                await interaction.response.send_message("❌ No puedes usar esta habilidad en ti mismo.", ephemeral=True)
-                return
-
-        # 4. Submit to ActionManager
-        if not hasattr(self.bot, "action_manager"):
-            await interaction.response.send_message("⚠️ Error interno: ActionManager no inicializado.", ephemeral=True)
-            return
-
-        gimmick = getattr(self.bot, "active_gimmick", None)
-
-        # The ActionManager returns a payload with the UI text, status, and notifications
-        result = self.bot.action_manager.submit_action(
-            source_player=player, 
-            target_id=target_id, 
-            ability=active_ability, 
-            state=state,           
-            gimmick=gimmick,       
-            note=note              
+        embed = discord.Embed(
+            title="👥 Registro de Supervivientes",
+            description="Lista oficial de jugadores:",
+            color=discord.Color.blue()
         )
+        
+        embed.add_field(name=f"Vivos ({len(alive_players)})", value=alive_text, inline=True)
+        
+        # Only show the graveyard if someone is actually dead
+        if dead_players:
+            embed.add_field(name=f"Muertos ({len(dead_players)})", value=dead_text, inline=True)
 
-        # 5. Process Expansion Gimmick Notifications (e.g., Fuuka's Radar) (NUEVO)
-        secret_notes = result.get("secret_notifications", {})
-        if secret_notes:
-            for uid, msg_text in secret_notes.items():
-                notified_player = state.get_player(uid)
-                if notified_player and notified_player.private_channel_id:
-                    priv_channel = interaction.guild.get_channel(notified_player.private_channel_id)
-                    if priv_channel:
-                        # Mandamos el mensaje silenciosamente al canal del oráculo
-                        await priv_channel.send(msg_text)
+        # Send publicly so everyone in the channel can see the reference
+        await interaction.response.send_message(embed=embed)
 
-        # 6. UI Feedback based on Engine response (ACTUALIZADO)
-        if result["status"] == "blocked":
-            await interaction.response.send_message(f"🛑 {result['ui_text']}", ephemeral=True)
-            
-        elif result["status"] == "redirected" and result.get("condition") == "confusion":
-            msg = f"🌀 {result['ui_try']}\n"
-            msg += result['ui_result'].format(new_target=f"<@{result['new_target']}>")
-            await interaction.response.send_message(msg, ephemeral=True)
-            
-        else:
-            target_str = f" sobre <@{result.get('new_target', target_id)}>" if target_id else ""
-            note_str = f"\n📝 *Nota para el GM: {note}*" if note else ""
-            await interaction.response.send_message(
-                f"✅ Has preparado tu habilidad (**{active_ability.name}**){target_str} para esta fase.{note_str}", 
-                ephemeral=True
-            )
+    @app_commands.command(name="act", description="Abre tu panel de control de habilidades nocturnas/diurnas.")
+    async def act_ui(self, interaction: discord.Interaction):
+        state: GameState = getattr(self.bot, "game_state", None)
+        if not state:
+            await interaction.response.send_message("❌ La partida no ha comenzado.", ephemeral=True)
+            return
 
-        # 6. Silent log for the Game Master
-        log_channel_id = state.discord_setup.get("log_channel_id")
-        if log_channel_id:
-            log_channel = interaction.guild.get_channel(log_channel_id)
-            if log_channel:
-                t_mention = f"<@{target_id}>" if target_id else "Ninguno"
-                await log_channel.send(f"📥 **ACCIÓN REGISTRADA:** {interaction.user.mention} preparó **{active_ability.name}** -> Objetivo: {t_mention}")
+        player = state.get_player(interaction.user.id)
+        if not player or not player.is_alive or not player.role:
+            await interaction.response.send_message("💀 Los muertos no pueden actuar.", ephemeral=True)
+            return
+
+        # 1. Gather valid base abilities for the current phase
+        valid_abilities: List[Ability] = [
+            ab for ab in player.role.abilities 
+            if (state.phase == Phase.DAY and ab.tag == ActionTag.DAY_ACT) or 
+               (state.phase == Phase.NIGHT and ab.tag == ActionTag.NIGHT_ACT)
+        ]
+        
+        # Inject dynamic/temporary abilities based on active Flags
+        temp_registry = getattr(self.bot, "temp_registry", {})
+        for flag_name, temp_ab in temp_registry.items():
+            if player.role.flags.get(flag_name):
+                if (state.phase == Phase.DAY and temp_ab.tag == ActionTag.DAY_ACT) or \
+                   (state.phase == Phase.NIGHT and temp_ab.tag == ActionTag.NIGHT_ACT):
+                    valid_abilities.append(temp_ab)
+
+        if not valid_abilities:
+            await interaction.response.send_message("💤 No tienes habilidades disponibles en esta fase.", ephemeral=True)
+            return
+
+        # 2. Build the visual interface
+        embed = discord.Embed(
+            title="🎮 Panel de Acción",
+            description=(
+                f"Hola {interaction.user.mention}, eres **{player.role.name}**.\n\n"
+                f"**1.** Selecciona un objetivo en el menú desplegable (si tu habilidad lo requiere).\n"
+                f"**2.** Haz clic en el botón de la acción que deseas ejecutar."
+            ),
+            color=discord.Color.blurple()
+        )
+        embed.set_footer(text="Puedes cambiar de opinión seleccionando otra acción. Se guardará la última.")
+
+        view = ActionUI(state, interaction.guild, valid_abilities, self.bot)
+        
+        # Send the UI and store the message reference in the view so we can update it later
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        view.message = await interaction.original_response()
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(GameplayCog(bot))

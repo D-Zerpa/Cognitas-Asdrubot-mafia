@@ -21,7 +21,8 @@ class Role:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Role':
         """Rebuilds a Role instance from a dictionary."""
-            role = cls(
+        
+        role = cls(
             name=data.get("name", "Unknown"),
             alignment=data.get("alignment", "Unknown"),
             flags=data.get("flags", {})
@@ -52,7 +53,7 @@ class Player:
             "role": self.role.to_dict() if self.role else None,
             "is_alive": self.is_alive,
             "private_channel_id": self.private_channel_id,
-            "statuses": []
+            "statuses": [cond.to_dict() for cond in self.statuses]
         }
 
     @classmethod
@@ -65,4 +66,12 @@ class Player:
             
         player.is_alive = data.get("is_alive", True)
         player.private_channel_id = data.get("private_channel_id")
+        
+        from cognitas.conditions.factory import load_condition_from_dict
+        
+        for cond_data in data.get("statuses", []):
+            rebuilt_condition = load_condition_from_dict(cond_data)
+            if rebuilt_condition:
+                player.statuses.append(rebuilt_condition)
+                
         return player

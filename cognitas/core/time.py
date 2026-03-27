@@ -1,8 +1,11 @@
 import logging
 import abc
 from enum import Enum
-from typing import Optional
-from .state import GameState
+from typing import TYPE_CHECKING, Optional, Any
+
+
+if TYPE_CHECKING:
+    from cognitas.core.state import GameState
 
 logger = logging.getLogger("cognitas.time")
 
@@ -17,7 +20,7 @@ class ExpansionGimmick(abc.ABC):
     Abstract base class for all expansion-specific daily events.
     """
     @abc.abstractmethod
-    def process_phase_change(self, state: GameState) -> Optional[str]:
+    def process_phase_change(self, state: "GameState") -> Optional[str]:
         """
         Triggered precisely after the phase or cycle has advanced.
         Should return an announcement string (e.g., "🌕 Luna Llena") if needed,
@@ -29,7 +32,7 @@ class TimeManager:
     """
     Handles the raw flow of time. Completely decoupled from specific expansions.
     """
-    def __init__(self, state: GameState, gimmick: Optional[ExpansionGimmick] = None):
+    def __init__(self, state: "GameState", gimmick: Optional[ExpansionGimmick] = None):
         self.state = state
         self.gimmick = gimmick  # The injected expansion logic
 
@@ -54,6 +57,6 @@ class TimeManager:
 
         # Execute the specific expansion event/gimmick, if one is active
         if self.gimmick:
-            return self.gimmick.process_phase_change(self.state)
+            return self.gimmick.on_phase_change(self.state)
             
         return None

@@ -3,9 +3,9 @@ import logging
 from typing import List, TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
-    from core.models import Player
-    from core.state import GameState
-    from core.actions import ActionTag
+    from cognitas.core.models import Player
+    from cognitas.core.state import GameState
+    from cognitas.core.actions import ActionTag
 
 logger = logging.getLogger("cognitas.conditions")
 
@@ -66,7 +66,15 @@ class Condition(abc.ABC):
 
     def on_expire(self, player: 'Player', state: 'GameState') -> None:
         pass
-
+        
+    def to_dict(self) -> dict:
+        """Serializes the condition state for saving to disk."""
+        return {
+            "id_name": self.id_name,
+            "duration": self.duration,
+            "stacks": self.stacks,
+            "source_id": self.source_id
+        }
 
 class ConditionManager:
     """Handles the lifecycle and stacking logic of conditions."""
