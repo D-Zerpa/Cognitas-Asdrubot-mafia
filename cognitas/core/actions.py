@@ -1,3 +1,43 @@
+import random
+import logging
+from enum import Enum
+from typing import List, Optional, Dict, Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from cognitas.core.models import Player
+    from cognitas.core.state import GameState
+    from cognitas.expansions.base import BaseExpansion
+
+logger = logging.getLogger("cognitas.actions")
+
+class ActionTag(str, Enum):
+    DAY_ACT = "day_act"
+    NIGHT_ACT = "night_act"
+    PASSIVE = "passive"
+
+class TargetType(str, Enum):
+    SINGLE = "single"
+    ALL = "all"
+    NONE = "none"
+    SELF = "self"
+
+class ResolutionTime(str, Enum):
+    """Defines when the payload of the ability is actually executed."""
+    INSTANT = "instant"
+    QUEUED = "queued"
+
+class Ability:
+    def __init__(self, identifier: str, name: str, tag: ActionTag, 
+                 priority: int, accuracy: int = 100, target_type: TargetType = TargetType.SINGLE,
+                 resolution: ResolutionTime = ResolutionTime.QUEUED):
+        self.identifier = identifier
+        self.name = name
+        self.tag = tag
+        self.priority = priority
+        self.accuracy = accuracy
+        self.target_type = target_type
+        self.resolution = resolution
+
 class ActionRecord:
     def __init__(self, source_id: int, target_id: Optional[int], ability: Ability, note: Optional[str] = None, roll: Optional[int] = None):
         self.source_id = source_id
@@ -5,6 +45,7 @@ class ActionRecord:
         self.ability = ability
         self.note = note
         
+        # RNG lock-in: Si ya tiramos el dado (viene del JSON), lo usamos. Si no, tiramos uno nuevo.
         self.roll = roll if roll is not None else random.randint(1, 100)
         self.is_success = self.roll <= self.ability.accuracy
 
