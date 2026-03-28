@@ -4,14 +4,12 @@ import random
 import discord
 from discord.ext import commands
 from discord import app_commands
-from typing import Optional, List, Dict, Union, Any
+from typing import Optional, List
 
 from cognitas.core.state import GameState
-from cognitas.core.voting import VotingManager
 from cognitas.core.time import Phase
 from cognitas.core.actions import Ability, ActionTag, TargetType
-
-from typing import List
+from cognitas.utils.discord_sync import process_player_death
 
 logger = logging.getLogger("cognitas.cogs.gameplay")
 
@@ -150,59 +148,7 @@ class ActionUI(discord.ui.View):
         # Dynamically append a button for each valid ability the user has
         for ab in valid_abilities:
             self.add_item(ActionButton(ab, bot, state))
-# ---------------------------------------------------------
-# DYNAMIC AUTOCOMPLETE
-# ---------------------------------------------------------
-async def ability_autocomplete(interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
-    # 1. Check if the game is running
-    if not hasattr(interaction.client, "game_state"):
-        return []
-        
-    state: GameState = interaction.client.game_state
-    player = state.get_player(interaction.user.id)
-    
-    if not player or not player.is_alive or not player.role:
-        return []
 
-    valid_abilities: List[Ability] = []
-    
-    # 2. Add Base Abilities matching the current phase
-    for ab in player.role.abilities:
-        if (state.phase == Phase.DAY and ab.tag == ActionTag.DAY_ACT) or \
-           (state.phase == Phase.NIGHT and ab.tag == ActionTag.NIGHT_ACT):
-            valid_abilities.append(ab)
-
-    # 3. Add Dynamic/Temporary Abilities based on Flags
-    # EJEMPLO: Si el GM le puso el flag "has_gun" (Tiene un arma temporal)
-    if state.phase == Phase.NIGHT and player.role.flags.get("has_gun"):
-        gun_ability = Ability(
-            identifier="temp_shoot", 
-            name="🔫 Disparar Arma (Objeto)", 
-            tag=ActionTag.NIGHT_ACT, 
-            priority=80, 
-            target_type=TargetType.SINGLE
-        )
-        valid_abilities.append(gun_ability)
-        
-    # EJEMPLO 2: Si por un evento global se le dio el flag "can_investigate_today"
-    if state.phase == Phase.DAY and player.role.flags.get("can_investigate_today"):
-        inv_ability = Ability(
-            identifier="temp_investigate", 
-            name="🔍 Investigar (Ventaja Temporal)", 
-            tag=ActionTag.DAY_ACT, 
-            priority=50, 
-            target_type=TargetType.SINGLE
-        )
-        valid_abilities.append(inv_ability)
-
-    # 4. Filter choices based on what the user is typing
-    choices = []
-    for ab in valid_abilities:
-        if current.lower() in ab.name.lower() or current.lower() in ab.identifier.lower():
-            # Mostramos el NOMBRE bonito, pero el bot recibe el IDENTIFICADOR seguro
-            choices.append(app_commands.Choice(name=ab.name, value=ab.identifier))
-
-    return choices[:25]
 
 class GameplayCog(commands.Cog):
     """
@@ -210,8 +156,6 @@ class GameplayCog(commands.Cog):
     """
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        # The voting manager handles the math. We keep an instance here.
-        self.voting_manager = VotingManager()
 
     # Create a Slash Command Group for all /vote commands
     vote_group = app_commands.Group(name="vote", description="Comandos de votación para la fase de Día.")
@@ -242,6 +186,10 @@ class GameplayCog(commands.Cog):
 
         state: GameState = self.bot.game_state
         voter = state.get_player(interaction.user.id)
+        
+        if not voter.is_alive:
+            return await interaction.response.send_message("💀 Los muertos no pueden realizar esta acción.", ephemeral=True)
+        
         target_player = state.get_player(target.id)
 
         if not target_player or not target_player.is_alive:
@@ -273,19 +221,42 @@ class GameplayCog(commands.Cog):
         vote_modifiers = {}
         for p in alive_players:
             if p.role:
-                extra = p.role.flags.get("lynch_weight", 0)
-                if extra > 0:
-                    vote_modifiers[p.user_id] = extra
+                try:
+                    # Forzamos la conversión a float por si viene como string ("3")
+                    extra = float(p.role.flags.get("lynch_weight", 0))
+                    if extra != 0: # Usamos != por si alguien tiene resistencia negativa
+                        vote_modifiers[p.user_id] = extra
+                except (ValueError, TypeError):
+                    pass
 
-        majority_target = self.voting_manager.check_majority(alive_count, extra_thresholds=vote_modifiers)
+        majority_target = self.bot.voting_manager.check_majority(state, alive_count, extra_thresholds=vote_modifiers)
         
         if majority_target:
-            await interaction.channel.send(
-                f"⚖️ **¡MAYORÍA ALCANZADA!** <@{majority_target}> ha sido condenado a la horca.\n"
-                "🔒 *El canal ha sido silenciado a la espera del Game Master.*"
-            )
-            # Lock the channel to prevent post-lynch discussion
-            # Note: This locks it for everyone without explicit admin override.
+            if majority_target == "NO_LYNCH":
+                await interaction.channel.send(
+                    "⚖️ **¡MAYORÍA ALCANZADA!** El pueblo ha decidido **no linchar a nadie** hoy.\n"
+                    "🔒 *El canal ha sido silenciado a la espera del Game Master.*"
+                )
+            else:
+                condemned = state.get_player(majority_target)
+                if condemned:
+                    # Delegate logical death, Discord roles, and Graveyard UI to our robust sync function
+                    await process_player_death(
+                        bot=self.bot,
+                        guild=interaction.guild,
+                        player=condemned,
+                        reason="Lynched by absolute majority during the Day."
+                    )
+                    
+                await interaction.channel.send(
+                    f"⚖️ **¡MAYORÍA ALCANZADA!** <@{majority_target}> ha sido condenado a la horca y ha muerto.\n"
+                    "🔒 *El canal ha sido silenciado a la espera del Game Master.*"
+                )
+                
+            # Limpiamos los votos de inmediato porque el Día de Votación ha concluido
+            self.bot.voting_manager.clear_all_votes(state)
+            
+            # Bloqueamos el canal
             await interaction.channel.set_permissions(interaction.guild.default_role, send_messages=False)
 
     @vote_group.command(name="clear", description="Retira tu voto actual.")
@@ -294,7 +265,7 @@ class GameplayCog(commands.Cog):
             return
         state = self.bot.game_state
         
-        self.voting_manager.unvote(state, interaction.user.id)
+        self.bot.voting_manager.unvote(state, interaction.user.id)
         
         await interaction.response.send_message(f"💨 **{interaction.user.display_name}** ha retirado su voto.")
 
@@ -304,7 +275,7 @@ class GameplayCog(commands.Cog):
             await interaction.response.send_message("❌ La partida no ha comenzado.", ephemeral=True)
             return
 
-        current_target_id = self.voting_manager.votes.get(interaction.user.id)
+        current_target_id = self.bot.game_state.votes.get(interaction.user.id)
         if current_target_id:
             await interaction.response.send_message(f"🔍 Actualmente estás votando por: <@{current_target_id}>.", ephemeral=True)
         else:
@@ -322,10 +293,10 @@ class GameplayCog(commands.Cog):
         alive_count = len(state.get_alive_players())
         
         # 3. Register the vote in the engine
-        self.voting_manager.cast_end_day(interaction.user.id)
+        self.bot.voting_manager.cast_end_day(state, interaction.user.id)
         
         # 4. Calculate threshold for the UI
-        current_votes = len(self.voting_manager.end_day_votes)
+        current_votes = len(self.bot.game_state.end_day_votes)
         threshold = (alive_count * 2 + 2) // 3
 
         # 5. UI Feedback
@@ -335,7 +306,7 @@ class GameplayCog(commands.Cog):
         )
 
         # 6. Check if the 2/3 majority was reached
-        if self.voting_manager.check_end_day_majority(alive_count):
+        if self.bot.voting_manager.check_end_day_majority(state, alive_count):
             await interaction.channel.send(
                 "🌙 **¡MAYORÍA DE 2/3 ALCANZADA!**\n"
                 "El pueblo ha decidido que no hay nada más que discutir.\n"
@@ -356,7 +327,7 @@ class GameplayCog(commands.Cog):
             await interaction.response.send_message("🌙 Las votaciones solo ocurren durante el Día.", ephemeral=True)
             return
 
-        tally = self.voting_manager.get_tally()
+        tally = self.bot.voting_manager.get_tally(self.bot.game_state)
         alive_count = len(state.get_alive_players())
         
         if alive_count == 0:
@@ -365,7 +336,7 @@ class GameplayCog(commands.Cog):
 
         # 2. Group voters by their target to show "Who voted for whom"
         voters_by_target = {}
-        for voter_id, target in self.voting_manager.votes.items():
+        for voter_id, target in self.bot.game_state.votes.items():
             voter = state.get_player(voter_id)
             
             if voter and voter.role and voter.role.flags.get("hidden_vote"):
@@ -378,7 +349,7 @@ class GameplayCog(commands.Cog):
             voters_by_target[target].append(voter_name)
 
         # Absolute majority formula
-        base_threshold = (alive_count // 2) + 1
+        threshold = (alive_count // 2) + 1
 
         # 3. Build the UI
         embed = discord.Embed(
@@ -392,22 +363,25 @@ class GameplayCog(commands.Cog):
             embed.add_field(name="Estado Actual", value="Nadie ha emitido un voto aún.", inline=False)
         else:
             for target_id, weight in tally.items():
-                target_threshold = base_threshold
+                target_threshold = threshold
 
                 if target_id == "NO_LYNCH":
                     target_name = "🛑 Saltar Linchamiento"
                 else:
-                    target_name = f"<@{target_id}>"
+                    target_member = interaction.guild.get_member(int(target_id))
+                    target_name = target_member.display_name if target_member else "Desconocido"
                     target_player = state.get_player(target_id)
-                    if target_player and target_player.role:
-                        extra_votes = target_player.role.flags.get("lynch_weight", 0)
-                        target_threshold += extra_votes
                     
+                    if target_player and target_player.role:
+                        # Safely cast to float/int in case it's stored as a string
+                        extra_votes = float(target_player.role.flags.get("lynch_weight", 0))
+                        target_threshold += extra_votes
+
                 filled_blocks = int(weight)
-                empty_blocks = max(0, int(threshold - filled_blocks))
+                empty_blocks = max(0, int(target_threshold - filled_blocks))
                 
-                if weight >= threshold:
-                    progress_bar = "🟥" * int(threshold) + " 💀 MAYORÍA"
+                if weight >= target_threshold:
+                    progress_bar = "🟥" * int(target_threshold) + " 💀 MAYORÍA"
                 else:
                     progress_bar = "🟥" * filled_blocks + "⬜" * empty_blocks
                 
@@ -423,10 +397,10 @@ class GameplayCog(commands.Cog):
                 )
 
         # 4. End Day Votes summary
-        end_day_count = len(self.voting_manager.end_day_votes)
+        end_day_count = len(self.bot.game_state.end_day_votes)
         if end_day_count > 0:
             end_day_threshold = (alive_count * 2 + 2) // 3
-            end_day_voters = ", ".join([f"<@{v_id}>" for v_id in self.voting_manager.end_day_votes])
+            end_day_voters = ", ".join([f"<@{v_id}>" for v_id in self.bot.game_state.end_day_votes])
             
             embed.add_field(
                 name=f"⏩ Votos para Terminar el Día ({end_day_count}/{end_day_threshold})",

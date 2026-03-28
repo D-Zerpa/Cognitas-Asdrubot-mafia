@@ -451,9 +451,9 @@ class HostCog(commands.Cog):
 
         # 3. Clear Voting/Action Queues
         if hasattr(self.bot, "voting_manager"):
-            self.bot.voting_manager.clear_all_votes()
+            self.bot.voting_manager.clear_all_votes(self.bot.game_state)
         if hasattr(self.bot, "action_manager") and state.phase == Phase.DAY:
-            self.bot.action_manager.clear_queue(self.state)
+            self.bot.action_manager.clear_queue(self.bot.game_state)
 
         # 4. Open/Close Channel
         can_speak = (state.phase == Phase.DAY)
@@ -545,7 +545,7 @@ class HostCog(commands.Cog):
                 expected_actors.append(p.user_id)
 
         # 2. Get the submitted actions (Sorted automatically by our ActionManager)
-        submitted_records = manager.get_resolution_report(self.state)
+        submitted_records = manager.get_resolution_report(self.bot.game_state)
         submitted_ids = [record.source_id for record in submitted_records]
 
         # 3. Find the missing ones
@@ -731,7 +731,7 @@ class HostCog(commands.Cog):
         from cognitas.core.state import GameState
         self.bot.game_state = GameState()
         if hasattr(self.bot, "action_manager"):
-            self.bot.action_manager.clear_queue(self.state)
+            self.bot.action_manager.clear_queue(self.bot.game_state)
         if hasattr(self.bot, "voting_manager"):
             self.bot.voting_manager.clear_all_votes()
 
