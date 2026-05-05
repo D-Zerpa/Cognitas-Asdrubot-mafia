@@ -46,7 +46,7 @@ async def flag_autocomplete(interaction: discord.Interaction, current: str) -> l
 
 class HostCog(commands.Cog):
     """
-    Handles Game Master commands.
+    Handles Mod commands.
     Acts as the UI layer connecting Discord interactions to the Game Engine.
     """
     def __init__(self, bot: commands.Bot):
@@ -353,6 +353,7 @@ class HostCog(commands.Cog):
         )
         await private_channel.send(content=member.mention, embed=embed)
         logger.info(f"Player {member.id} assigned to {role_key} in {private_channel.id}")
+        self.bot.storage.save_state(self.bot.game_state)
 
     @app_commands.command(name="set_expansion", description="GM: Carga los roles (JSON) y las mecánicas (Python) de una expansión.")
     @app_commands.describe(perfil="Nombre de la expansión (ej. 'persona', 'smt', 'vanilla')")
@@ -431,69 +432,34 @@ class HostCog(commands.Cog):
             return
 
         state: GameState = self.bot.game_state
-        guild = interaction.guild
-
-        # 1. Process conditions and deaths (Same as Step 26)
-        cond_manager = ConditionManager(state)
-        cond_manager.process_phase_end()
-
-        alive_role_id = state.discord_setup.get("alive_role_id")
-        for player in state.players.values():
-            if not player.is_alive:
-                member = guild.get_member(player.user_id)
-                if member and alive_role_id and any(r.id == alive_role_id for r in member.roles):
-                    await process_player_death(self.bot, guild, player, reason="Efectos al final de la fase")
-
-        # 2. Advance Clock
+        
+        from cognitas.core.time import TimeManager
         gimmick = getattr(self.bot, "active_gimmick", None)
         time_manager = TimeManager(state, gimmick=gimmick)
+
+        # 1. End current phase properly
+        current_machine = time_manager.get_current_phase_machine()
+        await current_machine.on_end(self.bot, interaction.guild)
+
+        # 2. Advance the cycle in the Engine
         gimmick_announcement = time_manager.advance_phase()
 
-        # 3. Clear Voting/Action Queues
-        if hasattr(self.bot, "voting_manager"):
-            self.bot.voting_manager.clear_all_votes(self.bot.game_state)
-        if hasattr(self.bot, "action_manager") and state.phase == Phase.DAY:
-            self.bot.action_manager.clear_queue(self.bot.game_state)
+        # 3. Start the new phase
+        new_machine = time_manager.get_current_phase_machine()
+        await new_machine.on_start(self.bot, interaction.guild, duration=duracion)
 
-        # 4. Open/Close Channel
-        can_speak = (state.phase == Phase.DAY)
-        game_channel_id = state.discord_setup.get("game_channel_id")
-        
-        if game_channel_id:
-            game_channel = guild.get_channel(game_channel_id)
-            if game_channel:
-                # 4.1 Update talking permissions
-                await game_channel.set_permissions(guild.default_role, send_messages=can_speak)
-
-                # 4.2 Dynamic Channel Renaming
-                fase_url_name = "día" if state.phase == Phase.DAY else "noche"
-                new_channel_name = f"{fase_url_name}-{state.cycle}"
-                
-                try:
-                    if game_channel.name != new_channel_name:
-                        await game_channel.edit(name=new_channel_name, reason="Phase transition rename")
-                        logger.info(f"Game channel renamed to {new_channel_name}")
-                except discord.RateLimited:
-                    logger.warning("Rate limit hit while trying to rename the game channel. Skipping rename.")
-                except discord.Forbidden:
-                    logger.error("Missing permissions to rename the game channel.")
-
-        end_time_msg = ""
-        if duracion > 0:
-            end_time = int(time.time()) + (duracion * 60)
-            state.discord_setup["phase_end_time"] = end_time
-            end_time_msg = f"\n⏳ **Tiempo límite:** <t:{end_time}:R> (a las <t:{end_time}:t>)."
-        else:
-            state.discord_setup["phase_end_time"] = None
-
-        # 5. UI Announcement
+        # 4. UI Announcement
         fase_es = "☀️ DÍA" if state.phase == Phase.DAY else "🌙 NOCHE"
+        end_time = state.discord_setup.get("phase_end_time")
+        end_time_msg = f"\n⏳ **Tiempo límite:** <t:{end_time}:R> (a las <t:{end_time}:t>)." if end_time else ""
+
         msg = f"**¡La fase ha avanzado!** Ahora es **{fase_es} {state.cycle}**.{end_time_msg}"
         
         if gimmick_announcement:
             msg += f"\n\n✨ *{gimmick_announcement}*"
 
         await interaction.followup.send(msg)
+        self.bot.storage.save_state(state)
 
     @app_commands.command(name="lock_channel", description="GM: Cierra el canal de juego prematuramente y detiene el reloj.")
     @app_commands.default_permissions(administrator=True)
@@ -504,23 +470,16 @@ class HostCog(commands.Cog):
             return
 
         state: GameState = self.bot.game_state
+        from cognitas.core.time import TimeManager
+        time_manager = TimeManager(state)
+        current_machine = time_manager.get_current_phase_machine()
         
-        # 1. Stop the clock
-        state.discord_setup["phase_end_time"] = None
+        await current_machine.lock_channel(interaction.guild)
         
-        # 2. Lock the channel
-        game_channel_id = state.discord_setup.get("game_channel_id")
-        if game_channel_id:
-            game_channel = interaction.guild.get_channel(game_channel_id)
-            if game_channel:
-                await game_channel.set_permissions(interaction.guild.default_role, send_messages=False)
-                await interaction.response.send_message(
-                    "🛑 **¡ALTO!**\n"
-                    "🔒 *El Game Master ha detenido el tiempo y cerrado el canal. Por favor, esperen las resoluciones.*"
-                )
-                return
-                
-        await interaction.response.send_message("❌ No se pudo encontrar el canal de juego.", ephemeral=True)
+        await interaction.response.send_message(
+            "🛑 **¡ALTO!**\n"
+            "🔒 *El Mod ha detenido el tiempo y cerrado el canal. Por favor, esperen las resoluciones.*"
+        )
 
 
     @app_commands.command(name="action_report", description="GM: Muestra quién ha actuado, quién falta y los resultados ordenados por prioridad.")
@@ -690,6 +649,7 @@ class HostCog(commands.Cog):
             f"*Usa `/assign` para repartir los roles y los cuartos privados a los jugadores.*"
         )
         logger.info(f"Terraforming complete for expansion {expansion}.")
+        self.bot.storage.save_state(self.bot.game_state)
 
     @app_commands.command(name="wipe", description="GM: Destruye todos los canales y roles creados por el Terraform.")
     @app_commands.default_permissions(administrator=True)
@@ -755,7 +715,7 @@ class HostCog(commands.Cog):
             return
 
         await process_player_death(self.bot, interaction.guild, player, reason=reason)
-        await interaction.response.send_message(f"💀 **{target.display_name}** ha sido ejecutado por el Game Master.", ephemeral=True)
+        await interaction.response.send_message(f"💀 **{target.display_name}** ha sido ejecutado por el Mod.", ephemeral=True)
 
     @app_commands.command(name="force_revive", description="GM: Revive a un jugador y le devuelve los permisos de Vivo.")
     @app_commands.default_permissions(administrator=True)
@@ -794,7 +754,7 @@ class HostCog(commands.Cog):
         except discord.Forbidden:
             logger.error("Missing permissions to revive player roles.")
 
-        await interaction.response.send_message(f"✨ **{target.display_name}** ha sido revivido por el Game Master.", ephemeral=True)
+        await interaction.response.send_message(f"✨ **{target.display_name}** ha sido revivido por el Mod.", ephemeral=True)
         
         # Notify Logs
         log_channel_id = setup.get("log_channel_id")
@@ -913,6 +873,66 @@ class HostCog(commands.Cog):
         state.discord_setup["phase_end_time"] = None
         await interaction.response.send_message("🛑 **Cronómetro cancelado.** La fase ahora no tiene límite de tiempo.")
 
+    # ---------------------------------------------------------
+    # UTILITY COMMANDS (Broadcast & Purge)
+    # ---------------------------------------------------------
+
+    @app_commands.command(name="purge", description="GM: Elimina mensajes en masa.")
+    @app_commands.describe(amount="Numero de mensajes a eliminar (1-100).")
+    @app_commands.default_permissions(administrator=True)
+    async def purge_messages(self, interaction: discord.Interaction, amount: int):
+        if amount < 1 or amount > 100:
+            await interaction.response.send_message("❌ Solo puedes eliminar de 1 a 100 mensajes", ephemeral=True)
+            return
+
+        # Defer response because deleting messages takes API time
+        await interaction.response.defer(ephemeral=True)
+        
+        try:
+            # Add +1 to account for potential command invocation if not slash command, 
+            # though slash commands are ephemeral by nature, 'limit' acts on actual channel messages.
+            deleted = await interaction.channel.purge(limit=amount)
+            await interaction.followup.send(f"✅ Eliminados {len(deleted)} mensajes.")
+            logger.info(f"Admin {interaction.user.id} purged {len(deleted)} messages in channel {interaction.channel.id}.")
+        except discord.Forbidden:
+            await interaction.followup.send("❌ No tengo permisos para eliminar mensajes.")
+        except discord.HTTPException as e:
+            await interaction.followup.send(f"❌ Error durante la purga: {e}")
+
+    @app_commands.command(name="broadcast", description="GM: Envía mensajes en nombre del bot.")
+    @app_commands.describe(
+        title= "Título (default = 📢 ANUNCIO OFICIAL)",
+        message="Mensaje",
+        target_channel="Optional: Especificar canal a enviar (default= game channel)."
+    )
+    @app_commands.default_permissions(administrator=True)
+    async def broadcast_message(self, interaction: discord.Interaction, message: str, title: str = "📢 ANUNCIO OFICIAL:", target_channel: discord.TextChannel = None):
+        channel_to_use = target_channel
+        
+        # Fallback to the main game channel if no specific channel is provided
+        if not channel_to_use:
+            state = getattr(self.bot, "game_state", None)
+            if state and state.discord_setup.get("game_channel_id"):
+                channel_to_use = interaction.guild.get_channel(state.discord_setup["game_channel_id"])
+                
+        if not channel_to_use:
+            await interaction.response.send_message(
+                "❌ No target channel provided and no Game Channel is registered in the current state.", 
+                ephemeral=True
+            )
+            return
+
+        try:
+            embed = discord.Embed(
+                title=title,
+                description=message,
+                color=discord.Color.gold()
+            )
+            await channel_to_use.send(embed=embed)
+            await interaction.response.send_message(f"✅ Broadcast sent to {channel_to_use.mention}.", ephemeral=True)
+            logger.info(f"Broadcast sent to {channel_to_use.id} by {interaction.user.id}.")
+        except discord.Forbidden:
+            await interaction.response.send_message("❌ I lack permissions to send messages in the target channel.", ephemeral=True)
 
 async def setup(bot: commands.Bot) -> None:
     """Standard Cog setup function."""

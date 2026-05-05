@@ -46,10 +46,12 @@ class TimerCog(commands.Cog):
 
             try:
                 # 2. Lock the channel automatically
-                await channel.set_permissions(channel.guild.default_role, send_messages=False)
+                alive_role_id = state.discord_setup.get("alive_role_id")
+                target_role = channel.guild.get_role(alive_role_id) if alive_role_id else channel.guild.default_role
+                await channel.set_permissions(target_role, send_messages=False)
                 await channel.send(
                     "⏰ **¡EL TIEMPO SE HA AGOTADO!**\n"
-                    "🔒 *El canal ha sido silenciado. A la espera del Game Master.*"
+                    "🔒 *El canal ha sido silenciado. A la espera del Mod.*"
                 )
                 
                 # 3. Ping the GM in the private logs

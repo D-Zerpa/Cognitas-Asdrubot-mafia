@@ -29,7 +29,9 @@ class CognitasBot(commands.Bot):
         self.game_state = GameState()
         self.action_manager = ActionManager()
         self.voting_manager = VotingManager()
-        
+
+        from cognitas.core.storage import StorageManager
+        self.storage = StorageManager()
         self.role_registry = {}
         self.temp_registry = {}
         self.active_gimmick = None

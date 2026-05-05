@@ -1,11 +1,10 @@
 import logging
 from datetime import datetime
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
-
+import pytz
+import random
 import discord
 from discord.ext import commands, tasks
 from discord import app_commands
-
 from cognitas.core.state import GameState
 
 logger = logging.getLogger("cognitas.cogs.misc")
@@ -51,9 +50,9 @@ class MiscCog(commands.Cog):
 
         # 2. Get current time
         try:
-            tz = ZoneInfo(region.value)
+            tz = pytz.timezone(region.value)
             current_time = datetime.now(tz).strftime("%H:%M")
-        except ZoneInfoNotFoundError:
+        except pytz.UnknownTimeZoneError:
             await interaction.followup.send("❌ Error interno: Zona horaria no válida.")
             return
 
@@ -102,7 +101,7 @@ class MiscCog(commands.Cog):
                 continue
 
             try:
-                tz = ZoneInfo(region_val)
+                tz = pytz.timezone(region_val)
                 new_time = datetime.now(tz).strftime("%H:%M")
                 
                 # We need to extract the flag/prefix from the current name to keep it
@@ -125,6 +124,66 @@ class MiscCog(commands.Cog):
     @update_clocks.before_loop
     async def before_update_clocks(self):
         await self.bot.wait_until_ready()
+
+    @app_commands.command(name="dice", description="Lanza un dado de determinado número de caras.")
+    @app_commands.describe(sides="Numero de caras (default = 6).")
+    async def roll_dice(self, interaction: discord.Interaction, sides: int = 6):
+        if sides < 2:
+            await interaction.response.send_message("❌ El dado debe tener al menos dos caras.", ephemeral=True)
+            return
+            
+        result = random.randint(1, sides)
+        await interaction.response.send_message(f"🎲 {interaction.user.mention} lanzó un dado de **d{sides}** caras y obtuvo un: **{result}**")
+
+    @app_commands.command(name="coin", description="Lanza una o más monedas.")
+    @app_commands.describe(amount="Número de monedas a lanzar (default = 1).")
+    async def flip_coin(self, interaction: discord.Interaction, amount: int = 1):
+        if amount < 1 or amount > 20:
+            await interaction.response.send_message("❌ Solo puedes lanzar entre 1 y 20 monedas.", ephemeral=True)
+            return
+
+        # List comprehension for efficiency
+        results = [random.choice(["Cara", "Cruz"]) for _ in range(amount)]
+        
+        if amount == 1:
+            await interaction.response.send_message(f"🪙 {interaction.user.mention} ha lanzado una moneda y salió: **{results[0]}**")
+        else:
+            formatted_results = ", ".join(results)
+            await interaction.response.send_message(f"🪙 {interaction.user.mention} ha lanzado {amount} monedas:\n**{formatted_results}**")
+
+    @app_commands.command(name="choose", description="Elige un jugador al azar.")
+    @app_commands.choices(mode=[
+        app_commands.Choice(name="Solo Vivos.", value="alive"),
+        app_commands.Choice(name="Solo Muertos.", value="dead"),
+        app_commands.Choice(name="Todos los jugadores.", value="all")
+    ])
+    async def player_roulette(self, interaction: discord.Interaction, mode: app_commands.Choice[str]):
+        if not hasattr(self.bot, "game_state"):
+            await interaction.response.send_message("❌ El juego no está inicializado.", ephemeral=True)
+            return
+
+        state: GameState = self.bot.game_state
+        players = list(state.players.values())
+        
+        if not players:
+            await interaction.response.send_message("❌ No hay jugadores registrados.", ephemeral=True)
+            return
+
+        # Filter based on selected mode
+        pool = []
+        if mode.value == "alive":
+            pool = [p for p in players if p.is_alive]
+        elif mode.value == "dead":
+            pool = [p for p in players if not p.is_alive]
+        else:
+            pool = players
+
+        if not pool:
+            await interaction.response.send_message(f"❌ No se han encontrado jugadores con el criterio '{mode.name}'", ephemeral=True)
+            return
+
+        chosen_player = random.choice(pool)
+        await interaction.response.send_message(f"🎯 Gira la ruleta de jugadores ({mode.name}): El jugador elegido es <@{chosen_player.user_id}>!")
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(MiscCog(bot))

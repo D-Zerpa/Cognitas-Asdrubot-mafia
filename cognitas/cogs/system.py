@@ -15,7 +15,7 @@ class SystemCog(commands.Cog):
     """
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.storage = StorageManager()
+        self.storage = bot.storage
         
         self._boot_sequence()
         self.auto_save.start()
