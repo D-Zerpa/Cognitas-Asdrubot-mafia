@@ -255,6 +255,59 @@ class TargetDropdown(discord.ui.Select):
         # Defer the interaction silently to prevent Discord from showing an "interaction failed" error
         await interaction.response.defer()
 
+class ActionNoteModal(discord.ui.Modal, title="Detalles de la Acción"):
+    note_input = discord.ui.TextInput(
+        label="Especificaciones (Postura, Elementos, etc.)",
+        style=discord.TextStyle.paragraph,
+        placeholder="Escribe aquí los detalles requeridos para tu habilidad...",
+        required=True,
+        max_length=500
+    )
+
+    def __init__(self, button_instance: 'ActionButton', source_player, final_target_id, burn_prefix: str):
+        super().__init__()
+        self.button_instance = button_instance
+        self.source_player = source_player
+        self.final_target_id = final_target_id
+        self.burn_prefix = burn_prefix
+
+    async def on_submit(self, interaction: discord.Interaction):
+        # Combine the Burn result (if any) with the player's written note
+        final_note = f"{self.burn_prefix}{self.note_input.value}"
+        
+        # Re-use the action submission logic
+        result = self.button_instance.bot.action_manager.submit_action(
+            source_player=self.source_player, 
+            target_id=self.final_target_id, 
+            ability=self.button_instance.ability, 
+            state=self.button_instance.state,
+            gimmick=getattr(self.button_instance.bot, "active_gimmick", None),
+            note=final_note
+        )
+        
+        # Process secret notifications
+        secret_notes = result.get("secret_notifications", {})
+        if secret_notes:
+            for uid, msg_text in secret_notes.items():
+                notified_player = self.button_instance.state.get_player(uid)
+                if notified_player and notified_player.private_channel_id:
+                    priv_channel = interaction.guild.get_channel(notified_player.private_channel_id)
+                    if priv_channel:
+                        await priv_channel.send(msg_text)
+
+        # Visual feedback based on engine response
+        if result["status"] == "blocked":
+            await interaction.response.send_message(f"🛑 {result['ui_text']}", ephemeral=True)
+        elif result["status"] == "redirected":
+            msg = f"🌀 {result.get('ui_try', 'Intentas actuar...')}\nRedirigido hacia <@{result['new_target']}>."
+            await interaction.response.send_message(msg, ephemeral=True)
+        else:
+            embed = self.button_instance.view.message.embeds[0]
+            embed.color = discord.Color.green()
+            embed.set_footer(text=f"Última acción registrada con nota: {self.button_instance.ability.name}")
+            await interaction.response.edit_message(embed=embed, view=self.button_instance.view)
+            await interaction.followup.send(f"✅ Has preparado **{self.button_instance.ability.name}** con la información proporcionada.", ephemeral=False)
+
 
 class ActionButton(discord.ui.Button):
     def __init__(self, ability: Ability, bot: commands.Bot, state: GameState):
@@ -267,7 +320,7 @@ class ActionButton(discord.ui.Button):
         # 1. Retrieve the source player who clicked the button
         source_player = self.state.get_player(interaction.user.id)
         
-        # 2. Target Logic (Psycho Mode: Smart Targeting)
+        # 2. Target Logic
         final_target_id = None
         
         if self.ability.target_type == TargetType.SINGLE:
@@ -275,31 +328,35 @@ class ActionButton(discord.ui.Button):
                 await interaction.response.send_message("⚠️ **Debes seleccionar un objetivo en el menú desplegable primero.**", ephemeral=True)
                 return
             final_target_id = self.view.selected_target_id
-            
-            # Quick alive/dead validation context
-            # (If you want certain abilities not to affect dead players, validate here. 
-            # For now, we delegate to the Mod when reading the report, 
-            # or you could add a 'targets_dead' flag to the Ability class in the future).
-            target_player = self.state.get_player(final_target_id)
-
         elif self.ability.target_type == TargetType.SELF:
-            # Overrides any dropdown selection and targets the user
             final_target_id = source_player.user_id
-            
-        elif self.ability.target_type in (TargetType.NONE, TargetType.ALL):
-            final_target_id = None
 
-        # 3. Submit to ActionManager
+        # 3. GENERIC PREFIX CONDITION LOGIC (Calculated before submission)
+        action_prefix = ""
+        roll = random.randint(1, 100)
+        for condition in source_player.statuses:
+            prefix = condition.get_action_prefix(roll)
+            if prefix:
+                action_prefix += prefix
+
+        # 4. CHECK IF MODAL IS REQUIRED (Data-driven logic)
+        if self.ability.requires_note:
+            modal = ActionNoteModal(self, source_player, final_target_id, action_prefix)
+            await interaction.response.send_modal(modal)
+            return
+
+        # 5. Submit to ActionManager (Standard flow if no modal is required)
         gimmick = getattr(self.bot, "active_gimmick", None)
         result = self.bot.action_manager.submit_action(
             source_player=source_player, 
             target_id=final_target_id, 
             ability=self.ability, 
             state=self.state,
-            gimmick=gimmick
+            gimmick=gimmick,
+            note=action_prefix if action_prefix else None
         )
 
-        # 4. Process secret expansion notifications (e.g., Fuuka's Oracle Radar)
+        # 6. Process secret expansion notifications
         secret_notes = result.get("secret_notifications", {})
         if secret_notes:
             for uid, msg_text in secret_notes.items():
@@ -309,7 +366,7 @@ class ActionButton(discord.ui.Button):
                     if priv_channel:
                         await priv_channel.send(msg_text)
 
-        # 5. Visual feedback to the user based on Engine response
+        # 7. Visual feedback to the user based on Engine response
         if result["status"] == "blocked":
             await interaction.response.send_message(f"🛑 {result['ui_text']}", ephemeral=True)
         elif result["status"] == "redirected":
@@ -322,7 +379,6 @@ class ActionButton(discord.ui.Button):
                 target_name = target_member.display_name if target_member else "Desconocido"
                 target_str = f" sobre **{target_name}**"
             
-            # Update the original message embed to confirm the action was locked in
             embed = self.view.message.embeds[0]
             embed.color = discord.Color.green()
             embed.set_footer(text=f"Última acción registrada: {self.ability.name}{target_str}")
@@ -497,11 +553,14 @@ class GameplayCog(commands.Cog):
         
         # Inject dynamic/temporary abilities based on active Flags
         temp_registry = getattr(self.bot, "temp_registry", {})
-        for flag_name, temp_ab in temp_registry.items():
+        for flag_name, temp_data in temp_registry.items():
             if player.role.flags.get(flag_name):
-                if (state.phase == Phase.DAY and temp_ab.tag == ActionTag.DAY_ACT) or \
-                   (state.phase == Phase.NIGHT and temp_ab.tag == ActionTag.NIGHT_ACT):
-                    valid_abilities.append(temp_ab)
+                temp_list = temp_data if isinstance(temp_data, list) else [temp_data]
+                
+                for temp_ab in temp_list:
+                    if (state.phase == Phase.DAY and temp_ab.tag == ActionTag.DAY_ACT) or \
+                       (state.phase == Phase.NIGHT and temp_ab.tag == ActionTag.NIGHT_ACT):
+                        valid_abilities.append(temp_ab)
 
         if not valid_abilities:
             await interaction.response.send_message("💤 No tienes habilidades disponibles en esta fase.", ephemeral=True)

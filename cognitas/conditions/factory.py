@@ -5,7 +5,7 @@ from typing import Optional, Dict, Any
 from cognitas.conditions.builtin import (
     ParalyzedCondition, DrowsinessCondition, ConfusionCondition, 
     JailedCondition, SilencedCondition, DoubleVoteCondition, 
-    SanctionedCondition, WoundedCondition, PoisonedCondition
+    SanctionedCondition, WoundedCondition, PoisonedCondition, BurnedCondition
 )
 
 logger = logging.getLogger("cognitas.conditions.factory")
@@ -20,7 +20,8 @@ CONDITION_MAP = {
     "double_vote": DoubleVoteCondition,
     "sanctioned": SanctionedCondition,
     "wounded": WoundedCondition,
-    "poisoned": PoisonedCondition
+    "poisoned": PoisonedCondition,
+    "burned": BurnedCondition
 }
 
 def load_condition_from_dict(data: Dict[str, Any]) -> Optional['Condition']:

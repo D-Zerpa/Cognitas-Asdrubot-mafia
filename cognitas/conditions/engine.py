@@ -34,6 +34,13 @@ class Condition(abc.ABC):
         """Determines if a specific type of ability (day/night) can be used."""
         return True
 
+    def get_action_prefix(self, roll: int) -> str:
+        """
+        Action Engine hook: Returns a string to prefix the action's note based on a dice roll.
+        Useful for conditions that alter success rates or add side-effects without hard blocking.
+        """
+        return ""
+
     def get_redirection(self, original_target: Optional[int], valid_targets: List[int]) -> Optional[int]:
         """
         Action Engine hook: Returns a new target ID if the condition forces a redirect.

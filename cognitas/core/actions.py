@@ -37,6 +37,7 @@ class Ability:
         self.accuracy = accuracy
         self.target_type = target_type
         self.resolution = resolution
+        self.requires_note = requires_note
 
 class ActionRecord:
     def __init__(self, source_id: int, target_id: Optional[int], ability: Ability, note: Optional[str] = None, roll: Optional[int] = None):

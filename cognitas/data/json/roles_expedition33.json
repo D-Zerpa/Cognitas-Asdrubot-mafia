@@ -1,0 +1,317 @@
+{
+  "recommended_flags": {
+    "is_act3": "bool (Activa el Acto 3 de Maelle / Desbloquea habilidades de Gommage)",
+    "is_awakened": "bool (Activa el despertar de Verso / Desbloquea sus habilidades activas)"
+  },
+  "roles": {
+    "maelle": {
+      "name": "Maelle – La Hoja de la Retribución",
+      "alignment": "Pueblo",
+      "flags": {
+        "is_act3": false
+      },
+      "abilities": [
+        {
+          "identifier": "combat_stance",
+          "name": "Estocada/Combustión (🪞 Reflejo)",
+          "tag": "night_act",
+          "priority": 70,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": true
+        }
+      ]
+    },
+    "gustave": {
+      "name": "Gustave – El Bastión de Hierro",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "clash",
+          "name": "Choque (🧱 Guardia)",
+          "tag": "night_act",
+          "priority": 85,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "overload",
+          "name": "Sobrecarga (🗡️ Asesinato directo)",
+          "tag": "night_act",
+          "priority": 60,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
+    },
+    "lune": {
+      "name": "Lune – La Erudita de las Vetas",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "elemental_trick",
+          "name": "Truco Elemental (🧭 Análisis)",
+          "tag": "night_act",
+          "priority": 80,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "elemental_chaos",
+          "name": "Caos (Estados alterados)",
+          "tag": "night_act",
+          "priority": 75,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": true
+        }
+      ]
+    },
+    "sciel": {
+      "name": "Sciel – La Tejedora del Destino",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "fate_toss",
+          "name": "Azar del Destino (🃏 Alteración)",
+          "tag": "night_act",
+          "priority": 85,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
+    },
+    "verso": {
+      "name": "Verso – El Espectro del Destino",
+      "alignment": "Pueblo",
+      "flags": {
+        "is_awakened": false
+      },
+      "abilities": [] 
+    },
+    "monoco": {
+      "name": "Monoco – El Coleccionista",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "mimicry_track",
+          "name": "Mimetismo 2 (🐾 Rastreo)",
+          "tag": "night_act",
+          "priority": 80,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "legacy",
+          "name": "Legado (🧲 Robar)",
+          "tag": "night_act",
+          "priority": 90,
+          "target_type": "none",
+          "resolution": "queued",
+          "requires_note": true
+        }
+      ]
+    },
+    "esquie": {
+      "name": "Esquie – Montura épica",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "synchrony",
+          "name": "Sincronía (🎯 Enfoque)",
+          "tag": "night_act",
+          "priority": 95,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
+    },
+    "margot": {
+      "name": "Margot – La Vigilante",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "eye_of_justice",
+          "name": "Ojo de la Justicia (🔭 Vigilancia)",
+          "tag": "night_act",
+          "priority": 80,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
+    },
+    "lucien": {
+      "name": "Lucien – Ingeniero de Lumina",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "lumina_trap",
+          "name": "Trampa de Lumina (🌀 Confusión)",
+          "tag": "night_act",
+          "priority": 85,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
+    },
+    "tristan": {
+      "name": "Tristan – El Médico de la Expedición",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "intervention",
+          "name": "Intervención (🩹 Curación)",
+          "tag": "day_act",
+          "priority": 10,
+          "target_type": "single",
+          "resolution": "instant",
+          "requires_note": false
+        }
+      ]
+    },
+    "renoir": {
+      "name": "Renoir – El Gran Arquitecto",
+      "alignment": "Mafia",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "final_gradient",
+          "name": "Gradiente Final (⛓️ Encarcelamiento)",
+          "tag": "night_act",
+          "priority": 95,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "gradient_rule",
+          "name": "Imponer regla (🃏 Alteración)",
+          "tag": "night_act",
+          "priority": 90,
+          "target_type": "none",
+          "resolution": "queued",
+          "requires_note": true
+        },
+        {
+          "identifier": "author_message",
+          "name": "Invocación de Máscaras (📻 Comunicación)",
+          "tag": "night_act",
+          "priority": 5,
+          "target_type": "none",
+          "resolution": "queued",
+          "requires_note": true
+        },
+        {
+          "identifier": "author_message_day",
+          "name": "Invocación de Máscaras (📻 Comunicación)",
+          "tag": "day_act",
+          "priority": 5,
+          "target_type": "none",
+          "resolution": "instant",
+          "requires_note": true
+        }
+      ]
+    },
+    "clea": {
+      "name": "Clea – La Sombra del Pincel",
+      "alignment": "Mafia",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "silent_execution",
+          "name": "Ejecución Silenciosa (🗡️ Asesinato directo)",
+          "tag": "night_act",
+          "priority": 50,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": true
+        }
+      ]
+    },
+    "paintress": {
+      "name": "The Paintress – La Autora del Ocaso",
+      "alignment": "Independiente",
+      "flags": {
+        "lynch_weight": 0
+      },
+      "abilities": [
+        {
+          "identifier": "author_message",
+          "name": "Dans chaque couleur.. (📻 Comunicación)",
+          "tag": "night_act",
+          "priority": 5,
+          "target_type": "none",
+          "resolution": "queued",
+          "requires_note": true
+        },
+        {
+          "identifier": "paintress_kill",
+          "name": "L'aimer toujours.. (🗡️ Asesinato directo)",
+          "tag": "night_act",
+          "priority": 50,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
+    }
+  },
+  "temporary_abilities": {
+    "is_awakened": [
+      {
+        "identifier": "ascending_assault",
+        "name": "Asalto ascendiente (🛡️ Protección)",
+        "tag": "night_act",
+        "priority": 85,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": false
+      },
+      {
+        "identifier": "perfection",
+        "name": "Perfección (🗡️ Asesinato directo)",
+        "tag": "night_act",
+        "priority": 65,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": false
+      }
+    ],
+    "is_act3": [
+      {
+        "identifier": "gommage_night",
+        "name": "Gommage (🗡️ Asesinato directo)",
+        "tag": "night_act",
+        "priority": 99,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": false
+      },
+      {
+        "identifier": "gommage_day",
+        "name": "Gommage (🗡️ Asesinato directo)",
+        "tag": "day_act",
+        "priority": 99,
+        "target_type": "single",
+        "resolution": "instant",
+        "requires_note": false
+      }
+    ]
+  }
+}

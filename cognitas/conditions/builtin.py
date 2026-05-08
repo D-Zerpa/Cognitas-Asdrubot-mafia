@@ -102,6 +102,27 @@ class SilencedCondition(Condition):
     def is_silenced(self) -> bool:
         return True
 
+class BurnedCondition(Condition):
+    id_name = "burned"
+    name = "Burned"
+    is_negative = True
+    stacking_type = "sum"
+
+    ui_on_apply = "{mention} 🔥 Te han infligido una Quemadura. Tu concentración flaquea."
+    ui_on_expire = "{mention} 💧 Tus quemaduras han sanado por completo."
+
+    def on_stack(self, player: 'Player', state: 'GameState') -> None:
+        # El motor hace max() por defecto, así que forzamos la suma de la duración
+        self.duration += 1
+        logger.info(f"Quemadura acumulada en el jugador {player.user_id}. Nueva duración: {self.duration} días.")
+
+    def get_action_prefix(self, roll: int) -> str:
+        if roll <= 50:
+            return "[🔥 QUEMADURA: Superada] "
+        elif roll <= 80:
+            return "[🔥 QUEMADURA: Acción Fallida] "
+        else:
+            return "[🔥 QUEMADURA: Acción Fallida + Herida] "
 
 # ---------------------------------------------------------
 # BUFFS & DEBUFFS (Stacking: Sum)
