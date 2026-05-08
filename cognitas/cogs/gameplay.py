@@ -115,7 +115,7 @@ class VotingUI(discord.ui.View):
             vote_weight *= condition.get_vote_multiplier()
 
         if vote_weight <= 0:
-            await interaction.response.send_message("❌ Tu derecho a voto ha sido revocado.", ephemeral=True)
+            await interaction.response.send_message("❌ Tu derecho a voto ha sido revocado.", ephemeral=False)
             return
 
         # Target validation
@@ -304,10 +304,10 @@ class ActionNoteModal(discord.ui.Modal, title="Detalles de la Acción"):
 
         # Visual feedback based on engine response
         if result["status"] == "blocked":
-            await interaction.response.send_message(f"🛑 {result['ui_text']}", ephemeral=True)
+            await interaction.response.send_message(f"🛑 {result['ui_text']}", ephemeral=False)
         elif result["status"] == "redirected":
             msg = f"🌀 {result.get('ui_try', 'Intentas actuar...')}\nRedirigido hacia <@{result['new_target']}>."
-            await interaction.response.send_message(msg, ephemeral=True)
+            await interaction.response.send_message(msg, ephemeral=False)
         else:
             embed = self.button_instance.view.message.embeds[0]
             embed.color = discord.Color.green()
@@ -381,10 +381,10 @@ class ActionButton(discord.ui.Button):
 
         # 7. Visual feedback to the user based on Engine response
         if result["status"] == "blocked":
-            await interaction.response.send_message(f"🛑 {result['ui_text']}", ephemeral=True)
+            await interaction.response.send_message(f"🛑 {result['ui_text']}", ephemeral=False)
         elif result["status"] == "redirected":
             msg = f"🌀 {result.get('ui_try', 'Intentas actuar...')}\nRedirigido hacia <@{result['new_target']}>."
-            await interaction.response.send_message(msg, ephemeral=True)
+            await interaction.response.send_message(msg, ephemeral=False)
         else:
             target_str = ""
             if final_target_id:
