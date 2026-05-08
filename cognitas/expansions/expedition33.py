@@ -2,6 +2,8 @@ import logging
 from typing import Optional, Dict, TYPE_CHECKING
 from cognitas.expansions.base import BaseExpansion
 from cognitas.core.time import Phase
+from cognitas.conditions.factory import register_condition
+from cognitas.conditions.engine import Condition
 
 if TYPE_CHECKING:
     from cognitas.core.state import GameState
@@ -9,11 +11,37 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("cognitas.expansions.expedition33")
 
-class Expedition33Expansion(BaseExpansion):
+
+class BurnedCondition(Condition):
+    id_name = "burned"
+    name = "Burned"
+    is_negative = True
+    stacking_type = "sum"
+
+    ui_on_apply = "{mention} 🔥 Te han infligido una Quemadura. Tu concentración flaquea."
+    ui_on_expire = "{mention} 💧 Tus quemaduras han sanado por completo."
+
+    def on_stack(self, player: 'Player', state: 'GameState') -> None:
+        # El motor hace max() por defecto, así que forzamos la suma de la duración
+        self.duration += 1
+        logger.info(f"Quemadura acumulada en el jugador {player.user_id}. Nueva duración: {self.duration} días.")
+
+    def get_action_prefix(self, roll: int) -> str:
+        if roll <= 50:
+            return "[🔥 QUEMADURA: Superada] "
+        elif roll <= 80:
+            return "[🔥 QUEMADURA: Acción Fallida] "
+        else:
+            return "[🔥 QUEMADURA: Acción Fallida + Herida] "
+
+class ExpansionGimmick(BaseExpansion):
     """
     Gimmick y controlador de eventos para la expansión "Expedition 33".
     """
     name: str = "expedition33"
+
+    def __init__(self):
+        register_condition(BurnedCondition)
 
     def get_status_info(self, state: 'GameState') -> Optional[str]:
         """Aparece cuando alguien usa el comando /status."""

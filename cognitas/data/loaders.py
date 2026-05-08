@@ -34,7 +34,8 @@ class RoleLoader:
             priority=ab_data.get("priority", 50),
             accuracy=ab_data.get("accuracy", 100),
             target_type=target_type,
-            resolution=resolution
+            resolution=resolution,
+            requires_note=ab_data.get("requires_note", False)
         )
 
     def load_expansion_data(self, filename: str) -> Dict[str, Any]:
@@ -75,12 +76,16 @@ class RoleLoader:
             roles_dict[role_key] = role
 
         # 2. Parse Temporary Abilities (Items/Flags)
-        temp_abs_dict: Dict[str, Ability] = {}
+        temp_abs_dict: Dict[str, Any] = {} # Cambiamos Ability por Any para soportar listas
         raw_temps = data.get("temporary_abilities", {})
         
-        for flag_key, ab_data in raw_temps.items():
-            ability = self._parse_ability(ab_data)
-            temp_abs_dict[flag_key] = ability
+        for flag_key, ab_data_or_list in raw_temps.items():
+            if isinstance(ab_data_or_list, list):
+                # Flag giving multiple abilities
+                temp_abs_dict[flag_key] = [self._parse_ability(ab) for ab in ab_data_or_list]
+            else:
+                # Flag gives only one hability
+                temp_abs_dict[flag_key] = self._parse_ability(ab_data_or_list)
 
         recommended_flags = data.get("recommended_flags", {})
 

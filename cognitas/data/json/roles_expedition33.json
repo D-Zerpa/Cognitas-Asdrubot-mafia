@@ -267,7 +267,8 @@
           "priority": 50,
           "target_type": "single",
           "resolution": "queued",
-          "requires_note": false
+          "requires_note": false,
+          "accuracy": 33
         }
       ]
     }

@@ -14,12 +14,6 @@ from cognitas.core.time import TimeManager, Phase
 from cognitas.utils.discord_sync import process_player_death
 from cognitas.conditions.engine import ConditionManager
 
-# --- BUILTIN CONDITIONS IMPORTS ---
-from cognitas.conditions.builtin import (
-    ParalyzedCondition, DrowsinessCondition, ConfusionCondition, 
-    JailedCondition, SilencedCondition, DoubleVoteCondition, 
-    SanctionedCondition, WoundedCondition, PoisonedCondition
-)
 
 logger = logging.getLogger("cognitas.cogs.host")
 
@@ -43,6 +37,12 @@ async def flag_autocomplete(interaction: discord.Interaction, current: str) -> l
             
     return choices[:25]
 
+async def condition_autocomplete(interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+    from cognitas.conditions.factory import CONDITION_MAP
+    return [
+        app_commands.Choice(name=name.capitalize(), value=name)
+        for name in CONDITION_MAP.keys() if current.lower() in name.lower()
+    ][:25]
 
 class HostCog(commands.Cog):
     """
@@ -52,42 +52,28 @@ class HostCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    condition_map = {
-        "paralyzed": ParalyzedCondition,
-        "drowsiness": DrowsinessCondition,
-        "confusion": ConfusionCondition,
-        "jailed": JailedCondition,
-        "silenced": SilencedCondition,
-        "double_vote": DoubleVoteCondition,
-        "sanctioned": SanctionedCondition,
-        "wounded": WoundedCondition,
-        "poisoned": PoisonedCondition
-    }
-
     # ---------------------------------------------------------
     # CONDITION MANAGEMENT COMMANDS
     # ---------------------------------------------------------
     effects_group = app_commands.Group(name="effects", description="GM: Gestión de estados alterados y condiciones.", default_permissions=discord.Permissions(administrator=True))
-
-    @effects_group.command(name="apply", description="Aplica un estado alterado a un jugador.")
-    @app_commands.describe(duration="Duración en fases (opcional, sobrescribe por defecto)")
+    @effects_group.command(name="apply", description="GM: Aplica un estado alterado.")
+    @app_commands.autocomplete(condition_id=condition_autocomplete)
     async def effects_apply(self, interaction: discord.Interaction, target: discord.Member, condition_id: str, duration: int = None):
-        if condition_id not in self.condition_map:
-            await interaction.response.send_message("❌ Estado alterado no reconocido.", ephemeral=True)
+        from cognitas.conditions.factory import CONDITION_MAP
+        
+        if condition_id not in CONDITION_MAP:
+            await interaction.response.send_message("❌ Estado no reconocido.", ephemeral=True)
             return
 
-        state: GameState = getattr(self.bot, "game_state", None)
-        if not state: return
-            
-        cond_manager = ConditionManager(state)
-        condition_class = self.condition_map[condition_id]
+        state = self.bot.game_state
+        cond_class = CONDITION_MAP[condition_id] # Usamos el mapa global
         
-        # Instantiate and optionally override duration
-        new_condition = condition_class()
+        new_condition = cond_class()
         if duration is not None:
             new_condition.duration = duration
         
-        cond_manager.apply_condition(target.id, new_condition)
+        from cognitas.conditions.engine import ConditionManager
+        ConditionManager(state).apply_condition(target.id, new_condition)
 
         # UI Feedback
         ui_text = getattr(new_condition, "ui_on_apply", f"Se aplicó {new_condition.name} a {{mention}}.")
@@ -548,7 +534,7 @@ class HostCog(commands.Cog):
             )
             
         embed.set_footer(text="⚡ = Instantánea | ⏳ = En Cola (Fin de fase)")
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.response.send_message(embed=embed, ephemeral=False)
 
 
     # ---------------------------------------------------------

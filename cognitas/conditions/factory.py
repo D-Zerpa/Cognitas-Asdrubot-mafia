@@ -5,7 +5,7 @@ from typing import Optional, Dict, Any
 from cognitas.conditions.builtin import (
     ParalyzedCondition, DrowsinessCondition, ConfusionCondition, 
     JailedCondition, SilencedCondition, DoubleVoteCondition, 
-    SanctionedCondition, WoundedCondition, PoisonedCondition, BurnedCondition
+    SanctionedCondition, WoundedCondition, PoisonedCondition
 )
 
 logger = logging.getLogger("cognitas.conditions.factory")
@@ -21,8 +21,13 @@ CONDITION_MAP = {
     "sanctioned": SanctionedCondition,
     "wounded": WoundedCondition,
     "poisoned": PoisonedCondition,
-    "burned": BurnedCondition
 }
+
+def register_condition(condition_class: Any):
+    """Permite registrar un nuevo estado alterado en el motor."""
+    id_name = condition_class.id_name
+    CONDITION_MAP[id_name] = condition_class
+    logger.info(f"✨ Estado registrado dinámicamente: {id_name}")
 
 def load_condition_from_dict(data: Dict[str, Any]) -> Optional['Condition']:
     """Rebuilds a Condition object from a dictionary."""

@@ -29,7 +29,7 @@ class ResolutionTime(str, Enum):
 class Ability:
     def __init__(self, identifier: str, name: str, tag: ActionTag, 
                  priority: int, accuracy: int = 100, target_type: TargetType = TargetType.SINGLE,
-                 resolution: ResolutionTime = ResolutionTime.QUEUED):
+                 resolution: ResolutionTime = ResolutionTime.QUEUED, requires_note: bool = False):
         self.identifier = identifier
         self.name = name
         self.tag = tag

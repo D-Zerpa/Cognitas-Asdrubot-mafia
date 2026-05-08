@@ -69,13 +69,14 @@ class VotingUI(discord.ui.View):
         alive_count = len(self.state.get_alive_players())
         base_threshold = (alive_count // 2) + 1
         
-        # Calculate Personal Vote Weight
-        vote_weight = float(voter.role.flags.get("vote_weight", 1.0))
+        # Calculate Personal Vote Weight (Safely checking if role exists)
+        base_vote_weight = float(voter.role.flags.get("vote_weight", 1.0)) if voter.role else 1.0
+        vote_weight = base_vote_weight
         for condition in voter.statuses:
             vote_weight *= condition.get_vote_multiplier()
             
-        # Calculate Personal Defense (Lynch Weight)
-        lynch_weight = float(voter.role.flags.get("lynch_weight", 0.0))
+        # Calculate Personal Defense (Lynch Weight safely)
+        lynch_weight = float(voter.role.flags.get("lynch_weight", 0.0)) if voter.role else 0.0
         my_lynch_threshold = base_threshold + lynch_weight
 
         # Check current vote
@@ -107,7 +108,9 @@ class VotingUI(discord.ui.View):
             await interaction.response.send_message("💀 Los muertos no pueden votar.", ephemeral=True)
             return
 
-        vote_weight = float(voter.role.flags.get("vote_weight", 1.0))
+        # Safely retrieve vote weight
+        base_vote_weight = float(voter.role.flags.get("vote_weight", 1.0)) if voter.role else 1.0
+        vote_weight = base_vote_weight
         for condition in voter.statuses:
             vote_weight *= condition.get_vote_multiplier()
 
@@ -219,12 +222,19 @@ class VotingUI(discord.ui.View):
                 voter_mentions = ", ".join(voters_by_target.get(t_id, []))
                 embed.add_field(name=f"{t_name} ({weight:.1f} votos)", value=f"{progress}\n↳ **Votantes:** {voter_mentions}", inline=False)
 
+    
         end_day_count = len(self.state.end_day_votes)
         if end_day_count > 0:
             end_day_threshold = (alive_count * 2 + 2) // 3
-            embed.add_field(name=f"⏩ Terminar Día ({end_day_count}/{end_day_threshold})", value="Revisa el chat público para ver los votantes.", inline=False)
+            voters_str = ", ".join([f"<@{v_id}>" for v_id in self.state.end_day_votes])
             
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+            embed.add_field(
+                name=f"⏩ Terminar Día ({end_day_count}/{end_day_threshold})", 
+                value=f"↳ **Votantes:** {voters_str}", 
+                inline=False
+            )
+            
+        await interaction.response.send_message(embed=embed, ephemeral=False)
 
 class TargetDropdown(discord.ui.Select):
     def __init__(self, state: GameState, guild: discord.Guild):
@@ -257,25 +267,22 @@ class TargetDropdown(discord.ui.Select):
 
 class ActionNoteModal(discord.ui.Modal, title="Detalles de la Acción"):
     note_input = discord.ui.TextInput(
-        label="Especificaciones (Postura, Elementos, etc.)",
+        label="Especificaciones",
         style=discord.TextStyle.paragraph,
         placeholder="Escribe aquí los detalles requeridos para tu habilidad...",
         required=True,
         max_length=500
     )
 
-    def __init__(self, button_instance: 'ActionButton', source_player, final_target_id, burn_prefix: str):
+    def __init__(self, button_instance: 'ActionButton', source_player, final_target_id, action_prefix: str):
         super().__init__()
         self.button_instance = button_instance
         self.source_player = source_player
         self.final_target_id = final_target_id
-        self.burn_prefix = burn_prefix
+        self.action_prefix = action_prefix
 
     async def on_submit(self, interaction: discord.Interaction):
-        # Combine the Burn result (if any) with the player's written note
-        final_note = f"{self.burn_prefix}{self.note_input.value}"
-        
-        # Re-use the action submission logic
+        final_note = f"{self.action_prefix}{self.note_input.value}"
         result = self.button_instance.bot.action_manager.submit_action(
             source_player=self.source_player, 
             target_id=self.final_target_id, 
@@ -306,7 +313,13 @@ class ActionNoteModal(discord.ui.Modal, title="Detalles de la Acción"):
             embed.color = discord.Color.green()
             embed.set_footer(text=f"Última acción registrada con nota: {self.button_instance.ability.name}")
             await interaction.response.edit_message(embed=embed, view=self.button_instance.view)
-            await interaction.followup.send(f"✅ Has preparado **{self.button_instance.ability.name}** con la información proporcionada.", ephemeral=False)
+            
+            msg = f"✅ Has preparado **{self.button_instance.ability.name}** con la información proporcionada."
+            prefix_val = getattr(self, "action_prefix", getattr(self, "action_prefix", ""))
+            if prefix_val:
+                msg += f"\n\n**⚠️ Consecuencia del Estado Alterado:**\n> {prefix_val}"
+                
+            await interaction.followup.send(msg, ephemeral=False)
 
 
 class ActionButton(discord.ui.Button):
@@ -379,12 +392,18 @@ class ActionButton(discord.ui.Button):
                 target_name = target_member.display_name if target_member else "Desconocido"
                 target_str = f" sobre **{target_name}**"
             
+            # Update the original message embed to confirm the action was locked in
             embed = self.view.message.embeds[0]
             embed.color = discord.Color.green()
             embed.set_footer(text=f"Última acción registrada: {self.ability.name}{target_str}")
             
             await interaction.response.edit_message(embed=embed, view=self.view)
-            await interaction.followup.send(f"✅ Has preparado **{self.ability.name}**{target_str}.", ephemeral=False)
+            
+            msg = f"✅ Has preparado **{self.ability.name}**{target_str}."
+            if action_prefix:
+                msg += f"\n\n**⚠️ Consecuencia del Estado Alterado:**\n> {action_prefix}"
+                
+            await interaction.followup.send(msg, ephemeral=False)
 
 class ActionUI(discord.ui.View):
     def __init__(self, state: GameState, guild: discord.Guild, valid_abilities: List[Ability], bot: commands.Bot):
@@ -428,12 +447,19 @@ class GameplayCog(commands.Cog):
             await interaction.response.send_message("🌙 Solo puedes votar durante el Día.", ephemeral=True)
             return False
 
+        return True
+
     @app_commands.command(name="vote", description="Abre tu panel personal de votación.")
     async def open_vote_panel(self, interaction: discord.Interaction):
         if not await self._validate_voter(interaction):
             return
             
         voter = self.bot.game_state.get_player(interaction.user.id)
+
+        if not voter:
+            await interaction.response.send_message("❌ No estás registrado en la partida actual.", ephemeral=True)
+            return
+
         if not voter.is_alive:
             await interaction.response.send_message("💀 Los muertos no pueden votar.", ephemeral=True)
             return

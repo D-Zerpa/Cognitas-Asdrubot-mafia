@@ -209,11 +209,11 @@ Controlas la narrativa del **Asesinato ⚔️** (puedes inventar la causa de mue
 **Alineación:** Independiente
 
 ### Habilidades
-**"À travers l'or..." — Pasiva**  
+**"À travers l'or, son rire persiste" — Pasiva**  
 **Escudo 🪖** permanente contra asesinatos. La primera **Investigación 🔍** cada noche dará un resultado falso.
 
-**"Dans chaque couleur..." — Activa, Nocturna**  
+**"Dans chaque couleur, une part de lui" — Activa, Nocturna**  
 Puedes redactar el mensaje de inicio de día de la moderación (sujeto a revisión).
 
-**"L'aimer toujours..." — Activa, Nocturna**  
+**"L'aimer toujours, même s'il n'est plus ici" — Activa, Nocturna**  
 **33% de probabilidad** de **Asesinato ⚔️**. Si falla, aplica un **Debuff aleatorio** a alguien al azar.
