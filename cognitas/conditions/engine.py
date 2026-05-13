@@ -78,9 +78,9 @@ class Condition(abc.ABC):
         """Serializes the condition state for saving to disk."""
         return {
             "id_name": self.id_name,
-            "duration": self.duration,
-            "stacks": self.stacks,
-            "source_id": self.source_id
+            "duration": getattr(self, "duration", -1),
+            "stacks": getattr(self, "stacks", 1),
+            "source_id": getattr(self, "source_id", None)
         }
 
 class ConditionManager:

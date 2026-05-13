@@ -48,7 +48,7 @@ class TimerCog(commands.Cog):
                 # 2. Lock the channel automatically
                 alive_role_id = state.discord_setup.get("alive_role_id")
                 target_role = channel.guild.get_role(alive_role_id) if alive_role_id else channel.guild.default_role
-                await channel.set_permissions(target_role, send_messages=False)
+                await channel.set_permissions(target_role, read_messages=True, send_messages=False)
                 await channel.send(
                     "⏰ **¡EL TIEMPO SE HA AGOTADO!**\n"
                     "🔒 *El canal ha sido silenciado. A la espera del Mod.*"

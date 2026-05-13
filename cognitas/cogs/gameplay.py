@@ -354,7 +354,12 @@ class ActionButton(discord.ui.Button):
 
         # 4. CHECK IF MODAL IS REQUIRED (Data-driven logic)
         if self.ability.requires_note:
-            modal = ActionNoteModal(self, source_player, final_target_id, action_prefix)
+            modal = ActionNoteModal(
+                button_instance=self, 
+                source_player=source_player, 
+                final_target_id=final_target_id, 
+                action_prefix=action_prefix
+            )
             await interaction.response.send_modal(modal)
             return
 

@@ -44,6 +44,85 @@ async def condition_autocomplete(interaction: discord.Interaction, current: str)
         for name in CONDITION_MAP.keys() if current.lower() in name.lower()
     ][:25]
 
+class ActionReportPaginator(discord.ui.View):
+    def __init__(self, state, missing_ids, submitted_records):
+        super().__init__(timeout=600) 
+        self.state = state
+        self.missing_ids = missing_ids
+        self.submitted_records = submitted_records
+        self.current_page = 0
+        self.items_per_page = 5 
+        
+        if not submitted_records:
+            self.max_pages = 1
+        else:
+            self.max_pages = ((len(submitted_records) - 1) // self.items_per_page) + 1
+
+        self._update_buttons()
+
+    def _update_buttons(self):
+        self.btn_prev.disabled = self.current_page == 0
+        self.btn_next.disabled = self.current_page >= self.max_pages - 1
+
+    def build_embed(self) -> discord.Embed:
+        from cognitas.core.time import Phase
+        from cognitas.core.actions import ResolutionTime
+        
+        embed = discord.Embed(
+            title=f"📋 Reporte de Acciones ({'Día' if self.state.phase == Phase.DAY else 'Noche'} {self.state.cycle})",
+            description=f"Página **{self.current_page + 1} de {self.max_pages}**",
+            color=discord.Color.dark_purple()
+        )
+
+        if self.missing_ids:
+            missing_mentions = ", ".join([f"<@{u_id}>" for u_id in self.missing_ids])
+            embed.add_field(name=f"Faltan por Actuar ({len(self.missing_ids)})", value=missing_mentions[:1000], inline=False)
+        else:
+            embed.add_field(name="Faltan por Actuar", value="✅ ¡Todos han enviado sus acciones!", inline=False)
+
+        if not self.submitted_records:
+            embed.add_field(name="Cola de Resolución", value="Vacía.", inline=False)
+        else:
+            start_idx = self.current_page * self.items_per_page
+            end_idx = start_idx + self.items_per_page
+            page_records = self.submitted_records[start_idx:end_idx]
+
+            report_lines = []
+            for rec in page_records:
+                target_str = f" ➔ <@{rec.target_id}>" if rec.target_id else ""
+                acc_icon = "🎯 ÉXITO" if rec.is_success else "❌ FALLO"
+                acc_detail = f"({rec.roll}/{rec.ability.accuracy})" if not rec.is_success else ""
+                res_icon = "⚡" if rec.ability.resolution == ResolutionTime.INSTANT else "⏳"
+                
+                line = f"`[{rec.ability.priority:02d}]` {res_icon} <@{rec.source_id}> usó **{rec.ability.name}**{target_str} | {acc_icon} {acc_detail}"
+                
+                if rec.note:
+                    line += f"\n   *📝 Nota: {rec.note}*"
+                    
+                report_lines.append(line)
+
+            embed.add_field(
+                name="Acciones Registradas (Orden de Prioridad)", 
+                value="\n\n".join(report_lines)[:1024], 
+                inline=False
+            )
+            
+        embed.set_footer(text="⚡ = Instantánea | ⏳ = En Cola (Fin de fase)")
+        return embed
+
+    @discord.ui.button(label="◀️ Anterior", style=discord.ButtonStyle.primary, custom_id="prev_page")
+    async def btn_prev(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.current_page -= 1
+        self._update_buttons()
+        await interaction.response.edit_message(embed=self.build_embed(), view=self)
+
+    @discord.ui.button(label="Siguiente ▶️", style=discord.ButtonStyle.primary, custom_id="next_page")
+    async def btn_next(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.current_page += 1
+        self._update_buttons()
+        await interaction.response.edit_message(embed=self.build_embed(), view=self)
+
+
 class HostCog(commands.Cog):
     """
     Handles Mod commands.
@@ -74,16 +153,24 @@ class HostCog(commands.Cog):
         
         from cognitas.conditions.engine import ConditionManager
         ConditionManager(state).apply_condition(target.id, new_condition)
+        
+        player = state.get_player(target.id)
+        ui_text = getattr(new_condition, "ui_on_apply", None)
+        
+        if ui_text and player and player.private_channel_id:
+            priv_channel = interaction.guild.get_channel(player.private_channel_id)
+            if priv_channel:
+                await priv_channel.send(ui_text.format(mention=target.mention))
 
         # UI Feedback
         ui_text = getattr(new_condition, "ui_on_apply", f"Se aplicó {new_condition.name} a {{mention}}.")
-        await interaction.response.send_message(f"✅ {ui_text.format(mention=target.mention)}")
+        await interaction.response.send_message(f"✅ {ui_text.format(mention=target.mention)}", ephemeral=True)
         logger.info(f"Applied {condition_id} to {target.id} (Duration: {new_condition.duration})")
 
-    @effects_group.command(name="heal", description="Cura un estado específico de un jugador, o todos si se omite el estado.")
+    @effects_group.command(name="heal", description="GM: Cura un estado específico de un jugador, o todos si se omite el estado.")
     @app_commands.describe(condition_id="ID del estado a curar (dejar vacío para limpiar todo)")
     async def effects_heal(self, interaction: discord.Interaction, target: discord.Member, condition_id: str = None):
-        state: GameState = getattr(self.bot, "game_state", None)
+        state = getattr(self.bot, "game_state", None)
         if not state: return
 
         player = state.get_player(target.id)
@@ -91,19 +178,37 @@ class HostCog(commands.Cog):
             await interaction.response.send_message("❌ Jugador no válido o muerto.", ephemeral=True)
             return
 
+        priv_channel = None
+        if player.private_channel_id:
+            priv_channel = interaction.guild.get_channel(player.private_channel_id)
+
         if condition_id:
-            # Heal specific condition
-            original_count = len(player.statuses)
+
+            removed_conditions = [cond for cond in player.statuses if cond.id_name == condition_id]
             player.statuses = [cond for cond in player.statuses if cond.id_name != condition_id]
             
-            if len(player.statuses) < original_count:
-                await interaction.response.send_message(f"⚕️ Se ha curado el estado **{condition_id}** de {target.mention}.")
+            if removed_conditions:
+                if priv_channel:
+                    ui_text = getattr(removed_conditions[0], "ui_on_expire", None)
+                    if ui_text:
+                        await priv_channel.send(ui_text.format(mention=target.mention))
+                        
+                await interaction.response.send_message(f"⚕️ Se ha curado el estado **{condition_id}** de {target.mention}.", ephemeral=True)
             else:
                 await interaction.response.send_message(f"⚠️ {target.mention} no estaba afectado por **{condition_id}**.", ephemeral=True)
         else:
-            # Cleansed all
+            removed_conditions = list(player.statuses)
             player.statuses.clear()
-            await interaction.response.send_message(f"✨ Todos los estados alterados de {target.mention} han sido purificados.")
+            
+            if priv_channel:
+                for cond in removed_conditions:
+                    ui_text = getattr(cond, "ui_on_expire", None)
+                    if ui_text:
+                        await priv_channel.send(ui_text.format(mention=target.mention))
+                
+                await priv_channel.send(f"✨ {target.mention}, todos tus estados alterados han sido purificados.")
+
+            await interaction.response.send_message(f"✨ Todos los estados alterados de {target.mention} han sido purificados.", ephemeral=True)
             
         logger.info(f"Healed effects for {target.id}. Specific: {condition_id or 'ALL'}")
 
@@ -468,73 +573,33 @@ class HostCog(commands.Cog):
         )
 
 
-    @app_commands.command(name="action_report", description="GM: Muestra quién ha actuado, quién falta y los resultados ordenados por prioridad.")
+    @app_commands.command(name="action_report", description="GM: Muestra quién ha actuado y los resultados ordenados por prioridad.")
     @app_commands.default_permissions(administrator=True)
     async def action_report(self, interaction: discord.Interaction):
         if not hasattr(self.bot, "game_state") or not hasattr(self.bot, "action_manager"):
             await interaction.response.send_message("❌ El motor no está inicializado.", ephemeral=True)
             return
 
-        from cognitas.core.actions import ActionTag, ResolutionTime
+        from cognitas.core.actions import ActionTag
+        from cognitas.core.time import Phase
         
-        state: GameState = self.bot.game_state
+        state = self.bot.game_state
         manager = self.bot.action_manager
 
         expected_tag = ActionTag.DAY_ACT if state.phase == Phase.DAY else ActionTag.NIGHT_ACT
         alive_players = state.get_alive_players()
 
-        # 1. Identify who CAN act this phase
         expected_actors = []
         for p in alive_players:
             if p.role and any(ab.tag == expected_tag for ab in p.role.abilities):
                 expected_actors.append(p.user_id)
 
-        # 2. Get the submitted actions (Sorted automatically by our ActionManager)
         submitted_records = manager.get_resolution_report(self.bot.game_state)
         submitted_ids = [record.source_id for record in submitted_records]
-
-        # 3. Find the missing ones
         missing_ids = [u_id for u_id in expected_actors if u_id not in submitted_ids]
 
-        # 4. Build the UI
-        embed = discord.Embed(
-            title=f"📋 Reporte de Acciones ({'Día' if state.phase == Phase.DAY else 'Noche'} {state.cycle})",
-            color=discord.Color.dark_purple()
-        )
-
-        # --- SECTION: MISSING ACTIONS ---
-        if missing_ids:
-            missing_mentions = "\n".join([f"⚠️ <@{u_id}>" for u_id in missing_ids])
-            embed.add_field(name=f"Faltan por Actuar ({len(missing_ids)})", value=missing_mentions, inline=False)
-        else:
-            embed.add_field(name="Faltan por Actuar", value="✅ ¡Todos han enviado sus acciones!", inline=False)
-
-        # --- SECTION: SUBMITTED ACTIONS (Ordered) ---
-        if not submitted_records:
-            embed.add_field(name="Cola de Resolución", value="Vacía.", inline=False)
-        else:
-            report_lines = []
-            for rec in submitted_records:
-                target_str = f" ➔ <@{rec.target_id}>" if rec.target_id else ""
-                acc_icon = "🎯 ÉXITO" if rec.is_success else "❌ FALLO"
-                acc_detail = f"({rec.roll}/{rec.ability.accuracy})" if not rec.is_success else ""
-                res_icon = "⚡" if rec.ability.resolution == ResolutionTime.INSTANT else "⏳"
-                
-                line = f"`[{rec.ability.priority:02d}]` {res_icon} <@{rec.source_id}> usó **{rec.ability.name}**{target_str} | {acc_icon} {acc_detail}"
-                
-                if rec.note:
-                    line += f"\n   *📝 Nota: {rec.note}*"
-                    
-                report_lines.append(line)
-
-            embed.add_field(
-                name="Acciones Registradas (Orden de Prioridad)", 
-                value="\n\n".join(report_lines)[:1024], 
-                inline=False
-            )
-            
-        embed.set_footer(text="⚡ = Instantánea | ⏳ = En Cola (Fin de fase)")
-        await interaction.response.send_message(embed=embed, ephemeral=False)
+        view = ActionReportPaginator(state, missing_ids, submitted_records)
+        await interaction.response.send_message(embed=view.build_embed(), view=view, ephemeral=False)
 
 
     # ---------------------------------------------------------

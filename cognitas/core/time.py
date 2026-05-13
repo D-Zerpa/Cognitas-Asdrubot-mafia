@@ -83,7 +83,7 @@ class PhaseState(abc.ABC):
                 alive_role_id = self.state.discord_setup.get("alive_role_id")
                 target_role = guild.get_role(alive_role_id) if alive_role_id else guild.default_role
                 
-                await game_channel.set_permissions(target_role, send_messages=self.can_speak)
+                await game_channel.set_permissions(target_role, read_messages=True, send_messages=self.can_speak)
 
                 fase_url_name = "día" if self.state.phase == Phase.DAY else "noche"
                 new_channel_name = f"{fase_url_name}-{self.state.cycle}"
@@ -105,7 +105,7 @@ class PhaseState(abc.ABC):
             if game_channel:
                 alive_role_id = self.state.discord_setup.get("alive_role_id")
                 target_role = guild.get_role(alive_role_id) if alive_role_id else guild.default_role
-                await game_channel.set_permissions(target_role, send_messages=False)
+                await game_channel.set_permissions(target_role, read_messages=True, send_messages=False)
 
 
 class DayPhaseState(PhaseState):

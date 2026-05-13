@@ -271,6 +271,39 @@
           "accuracy": 33
         }
       ]
+    },
+
+    "noco": {
+      "name": "Noco – El Heraldo de los Ecos",
+      "alignment": "independiente",
+      "description": "Recolecta 3 Fragmentos de Memoria (Sintonizando con Verso, Renoir, Maelle o Paintress). Pasiva: La primera vez que CADA jugador actúe sobre ti, su acción fallará automáticamente.",
+      "flags": {
+        "memory_fragments": 0,
+        "vote_weight": 1.0,
+        "lynch_weight": 0
+      },
+      "abilities": [
+        {
+          "identifier": "noco_caza_ecos",
+          "name": "Caza-Ecos (🔍 Sintonizar/Robar)",
+          "tag": "night_act",
+          "priority": 25,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": true,
+          "accuracy": 100
+        },
+        {
+          "identifier": "noco_salto",
+          "name": "Salto entre Actos (🎭 Canalizar Muerto)",
+          "tag": "night_act",
+          "priority": 15,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": true,
+          "accuracy": 100
+        }
+      ]
     }
   },
   "temporary_abilities": {
