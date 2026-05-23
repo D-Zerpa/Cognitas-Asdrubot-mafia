@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from .engine import Condition
 from cognitas.core.actions import ActionTag
 from typing import Optional, List, Dict, Union, Any
+import random
 
 if TYPE_CHECKING:
     from cognitas.core.models import Player
