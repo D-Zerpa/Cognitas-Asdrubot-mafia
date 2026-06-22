@@ -29,7 +29,7 @@ def register_condition(condition_class: Any):
     CONDITION_MAP[id_name] = condition_class
     logger.info(f"✨ Estado registrado dinámicamente: {id_name}")
 
-def load_condition_from_dict(data: Dict[str, Any]) -> Optional['Condition']:
+def load_condition_from_dict(data: Dict[str, Any]):
     """Rebuilds a Condition object from a dictionary."""
     cond_id = data.get("id_name")
     

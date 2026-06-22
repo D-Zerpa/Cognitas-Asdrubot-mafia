@@ -138,7 +138,7 @@ class VotingUI(discord.ui.View):
         eval_result = current_phase.evaluate_lynch(self.bot.voting_manager)
         
         # UI Feedback: Update the personal dashboard
-        await interaction.response.edit_message(embed=self.generate_embed(), view=self)
+        await interaction.response.edit_message(embed=self.generate_embed(), view=None)
         
         # UI Feedback: Public notification
         target_name = "NO LINCHAR" if target_val == "NO_LYNCH" else interaction.guild.get_member(target_val).display_name
@@ -163,7 +163,7 @@ class VotingUI(discord.ui.View):
     @discord.ui.button(label="Retirar Voto", style=discord.ButtonStyle.secondary, custom_id="btn_clear_vote")
     async def btn_clear(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.bot.voting_manager.unvote(self.state, self.user_id)
-        await interaction.response.edit_message(embed=self.generate_embed(), view=self)
+        await interaction.response.edit_message(embed=self.generate_embed(), view=None)
         self.bot.storage.save_state(self.state)
         await interaction.channel.send(f"💨 **{interaction.user.display_name}** ha retirado su voto.")
 
@@ -175,7 +175,7 @@ class VotingUI(discord.ui.View):
         current_votes = len(self.state.end_day_votes)
         threshold = (alive_count * 2 + 2) // 3
         
-        await interaction.response.edit_message(embed=self.generate_embed(), view=self)
+        await interaction.response.edit_message(embed=self.generate_embed(), view=None)
         await interaction.channel.send(f"⏩ **{interaction.user.display_name}** ha votado para terminar el Día anticipadamente. *({threshold - current_votes} votos faltantes)*")
 
         from cognitas.core.time import TimeManager
@@ -309,17 +309,15 @@ class ActionNoteModal(discord.ui.Modal, title="Detalles de la Acción"):
             msg = f"🌀 {result.get('ui_try', 'Intentas actuar...')}\nRedirigido hacia <@{result['new_target']}>."
             await interaction.response.send_message(msg, ephemeral=False)
         else:
-            embed = self.button_instance.view.message.embeds[0]
-            embed.color = discord.Color.green()
-            embed.set_footer(text=f"Última acción registrada con nota: {self.button_instance.ability.name}")
-            await interaction.response.edit_message(embed=embed, view=self.button_instance.view)
+            msg = f"Has preparado **{self.button_instance.ability.name}** con la información proporcionada."
             
-            msg = f"✅ Has preparado **{self.button_instance.ability.name}** con la información proporcionada."
-            prefix_val = getattr(self, "action_prefix", getattr(self, "action_prefix", ""))
-            if prefix_val:
-                msg += f"\n\n**⚠️ Consecuencia del Estado Alterado:**\n> {prefix_val}"
+            if self.action_prefix:
+                msg += f"\n\n**⚠️ Consecuencia del Estado Alterado:**\n> {self.action_prefix}"
                 
-            await interaction.followup.send(msg, ephemeral=False)
+            embed = discord.Embed(title="✅ Acción Registrada", description=msg, color=discord.Color.green())
+            
+            # Cerramos el panel original
+            await interaction.response.edit_message(embed=embed, view=None)
 
 
 class ActionButton(discord.ui.Button):
@@ -390,6 +388,7 @@ class ActionButton(discord.ui.Button):
         elif result["status"] == "redirected":
             msg = f"🌀 {result.get('ui_try', 'Intentas actuar...')}\nRedirigido hacia <@{result['new_target']}>."
             await interaction.response.send_message(msg, ephemeral=False)
+        
         else:
             target_str = ""
             if final_target_id:
@@ -397,18 +396,14 @@ class ActionButton(discord.ui.Button):
                 target_name = target_member.display_name if target_member else "Desconocido"
                 target_str = f" sobre **{target_name}**"
             
-            # Update the original message embed to confirm the action was locked in
-            embed = self.view.message.embeds[0]
-            embed.color = discord.Color.green()
-            embed.set_footer(text=f"Última acción registrada: {self.ability.name}{target_str}")
-            
-            await interaction.response.edit_message(embed=embed, view=self.view)
-            
-            msg = f"✅ Has preparado **{self.ability.name}**{target_str}."
+            msg = f"Has preparado **{self.ability.name}**{target_str}."
             if action_prefix:
                 msg += f"\n\n**⚠️ Consecuencia del Estado Alterado:**\n> {action_prefix}"
                 
-            await interaction.followup.send(msg, ephemeral=False)
+            embed = discord.Embed(title="✅ Acción Registrada", description=msg, color=discord.Color.green())
+            
+            # Editamos el mensaje original quitando la vista (view=None)
+            await interaction.response.edit_message(embed=embed, view=None)
 
 class ActionUI(discord.ui.View):
     def __init__(self, state: GameState, guild: discord.Guild, valid_abilities: List[Ability], bot: commands.Bot):
@@ -529,6 +524,64 @@ class GameplayCog(commands.Cog):
                 embed.add_field(name="✨ Efecto de Expansión", value=gimmick_info, inline=False)
 
         await interaction.response.send_message(embed=embed)
+        
+    @app_commands.command(name="vote_status", description="Muestra el resumen público de votación actual.")
+    async def show_tally(self, interaction: discord.Interaction):
+        state: GameState = getattr(self.bot, "game_state", None)
+        if not state:
+            await interaction.response.send_message("❌ La partida no ha comenzado.", ephemeral=True)
+            return
+
+        from cognitas.core.time import Phase
+        if state.phase != Phase.DAY:
+            await interaction.response.send_message("🌙 Las votaciones solo ocurren durante el Día.", ephemeral=True)
+            return
+
+        tally = self.bot.voting_manager.get_tally(state)
+        alive_count = len(state.get_alive_players())
+        threshold = (alive_count // 2) + 1
+        
+        embed = discord.Embed(title="📊 Resumen de Votación en Vivo", description=f"Requeridos para mayoría absoluta: **{threshold}**", color=discord.Color.dark_red())
+        
+        if not tally:
+            embed.add_field(name="Estado Actual", value="Aún no hay votos emitidos.", inline=False)
+        else:
+            voters_by_target = {}
+            for v_id, t_id in state.votes.items():
+                v = state.get_player(v_id)
+                v_name = f"👁️‍🗨️ **Anónimo**" if (v and v.role and v.role.flags.get("hidden_vote")) else f"<@{v_id}>"
+                voters_by_target.setdefault(t_id, []).append(v_name)
+                
+            for t_id, weight in tally.items():
+                t_threshold = threshold
+                if t_id == "NO_LYNCH":
+                    t_name = "🛑 NO LINCHAR"
+                else:
+                    t_member = interaction.guild.get_member(int(t_id))
+                    t_name = t_member.display_name if t_member else str(t_id)
+                    t_player = state.get_player(t_id)
+                    if t_player and t_player.role:
+                        t_threshold += float(t_player.role.flags.get("lynch_weight", 0))
+                        
+                progress = "🟥" * int(weight) + "⬜" * max(0, int(t_threshold - weight))
+                if weight >= t_threshold: progress = "💀 MAYORÍA"
+                
+                voter_mentions = ", ".join(voters_by_target.get(t_id, []))
+                embed.add_field(name=f"{t_name} ({weight:.1f} votos)", value=f"{progress}\n↳ **Votantes:** {voter_mentions}", inline=False)
+
+    
+        end_day_count = len(state.end_day_votes)
+        if end_day_count > 0:
+            end_day_threshold = (alive_count * 2 + 2) // 3
+            voters_str = ", ".join([f"<@{v_id}>" for v_id in state.end_day_votes])
+            
+            embed.add_field(
+                name=f"⏩ Terminar Día ({end_day_count}/{end_day_threshold})", 
+                value=f"↳ **Votantes:** {voters_str}", 
+                inline=False
+            )
+            
+        await interaction.response.send_message(embed=embed, ephemeral=False)
 
     @app_commands.command(name="player_list", description="Muestra la lista de jugadores vivos y muertos.")
     async def player_list(self, interaction: discord.Interaction):

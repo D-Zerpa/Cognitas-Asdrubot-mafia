@@ -121,6 +121,202 @@ class ActionReportPaginator(discord.ui.View):
         self.current_page += 1
         self._update_buttons()
         await interaction.response.edit_message(embed=self.build_embed(), view=self)
+        
+        
+# ---------------------------------------------------------
+# Player Management 
+# ---------------------------------------------------------
+
+class ManagePlayerDropdown(discord.ui.Select):
+    def __init__(self, state, guild):
+        options = []
+        for player in state.players.values():
+            member = guild.get_member(player.user_id)
+            name = member.display_name if member else f"ID: {player.user_id}"
+            emoji = "🟢" if player.is_alive else "💀"
+            options.append(discord.SelectOption(label=name, value=str(player.user_id), emoji=emoji))
+        
+        super().__init__(placeholder="👤 Selecciona un jugador para inspeccionar/editar...", min_values=1, max_values=1, options=options[:25])
+
+    async def callback(self, interaction: discord.Interaction):
+        self.view.target_id = int(self.values[0])
+        await self.view.refresh_interface(interaction)
+
+
+class ManagePlayerUI(discord.ui.View):
+    def __init__(self, bot, state, guild):
+        super().__init__(timeout=600)
+        self.bot = bot
+        self.state = state
+        self.guild = guild
+        self.target_id = None
+        
+        self.add_item(ManagePlayerDropdown(state, guild))
+
+    def build_embed(self) -> discord.Embed:
+        if not self.target_id:
+            return discord.Embed(title="🎛️ Panel de Control de Usuario", description="Selecciona un jugador arriba para desplegar sus herramientas de edición.", color=discord.Color.greyple())
+        
+        player = self.state.get_player(self.target_id)
+        member = self.guild.get_member(self.target_id)
+        name = member.mention if member else f"ID: {self.target_id}"
+        
+        embed = discord.Embed(title=f"🛠️ Modificar: {member.display_name if member else self.target_id}", color=discord.Color.orange())
+        embed.add_field(name="Información Básica", value=f"• **Usuario:** {name}\n• **Estado:** {'🟢 VIVO' if player.is_alive else '💀 MUERTO'}\n• **Rol:** {player.role.name if player.role else '*Ninguno*'}\n• **Canal Privado:** <#{player.private_channel_id}>" if player.private_channel_id else 'No asignado', inline=False)
+        
+        flags_str = ""
+        if player.role and player.role.flags:
+            for k, v in player.role.flags.items():
+                flags_str += f"• `{k}`: **{v}**\n"
+        embed.add_field(name="Flags de Sistema / Atributos", value=flags_str if flags_str else "*Sin flags activas.*", inline=True)
+        
+        statuses_str = ""
+        if player.statuses:
+            for cond in player.statuses:
+                statuses_str += f"• **{cond.name}** (`{cond.id_name}`) - Duración: {cond.duration} turno(s)\n"
+        embed.add_field(name="Estados Alterados", value=statuses_str if statuses_str else "*Sin estados alterados.*", inline=True)
+        
+        return embed
+
+    async def refresh_interface(self, interaction: discord.Interaction):
+        """Actualiza el embed y habilita/deshabilita los botones según el estado del jugador."""
+        embed = self.build_embed()
+        
+        self.children = [c for c in self.children if isinstance(c, ManagePlayerDropdown)]
+        
+        if self.target_id:
+            player = self.state.get_player(self.target_id)
+     
+            if player.is_alive:
+                btn_life = discord.ui.Button(label="Force KILL", style=discord.ButtonStyle.danger, custom_id="manage_kill", row=1)
+                btn_life.callback = self.action_kill
+            else:
+                btn_life = discord.ui.Button(label="Force REVIVE", style=discord.ButtonStyle.success, custom_id="manage_revive", row=1)
+                btn_life.callback = self.action_revive
+            self.add_item(btn_life)
+            
+            btn_flag = discord.ui.Button(label="Editar Flag", style=discord.ButtonStyle.primary, custom_id="manage_flag", row=1)
+            btn_flag.callback = self.action_edit_flag
+            self.add_item(btn_flag)
+            
+            btn_status_add = discord.ui.Button(label="+ Estado", style=discord.ButtonStyle.primary, custom_id="manage_status_add", row=1)
+            btn_status_add.callback = self.action_add_status
+            self.add_item(btn_status_add)
+            
+            btn_status_rem = discord.ui.Button(label="- Limpiar Estados", style=discord.ButtonStyle.secondary, custom_id="manage_status_rem", row=1)
+            btn_status_rem.callback = self.action_clear_statuses
+            self.add_item(btn_status_rem)
+
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    # ------------------ Button Actions ------------------
+
+    async def action_kill(self, interaction: discord.Interaction):
+        player = self.state.get_player(self.target_id)
+        from cognitas.utils.discord_sync import process_player_death
+        player.is_alive = False
+        await process_player_death(self.bot, interaction.guild, player, reason="Ejecutado por comandos administrativos del GM.")
+        self.bot.storage.save_state(self.state)
+        await self.refresh_interface(interaction)
+
+    async def action_revive(self, interaction: discord.Interaction):
+        player = self.state.get_player(self.target_id)
+        player.is_alive = True
+        
+        alive_role_id = self.state.discord_setup.get("alive_role_id")
+        member = interaction.guild.get_member(self.target_id)
+        if member and alive_role_id:
+            role = interaction.guild.get_role(alive_role_id)
+            if role: await member.add_roles(role, reason="Revivido por el GM")
+            
+        self.bot.storage.save_state(self.state)
+        await self.refresh_interface(interaction)
+
+    async def action_edit_flag(self, interaction: discord.Interaction):
+        modal = ManageEditFlagModal(self)
+        await interaction.response.send_modal(modal)
+
+    async def action_add_status(self, interaction: discord.Interaction):
+        modal = ManageAddStatusModal(self)
+        await interaction.response.send_modal(modal)
+
+    async def action_clear_statuses(self, interaction: discord.Interaction):
+        player = self.state.get_player(self.target_id)
+        
+        priv_channel = interaction.guild.get_channel(player.private_channel_id) if player.private_channel_id else None
+        if priv_channel:
+            for cond in player.statuses:
+                ui_text = getattr(cond, "ui_on_expire", None)
+                if ui_text: await priv_channel.send(ui_text.format(mention=f"<@{self.target_id}>"))
+            await priv_channel.send(f"✨ Tus estados alterados han sido purificados administrativamente.")
+            
+        player.statuses.clear()
+        self.bot.storage.save_state(self.state)
+        await self.refresh_interface(interaction)
+
+
+class ManageEditFlagModal(discord.ui.Modal, title="Editar Flag del Jugador"):
+    flag_key = discord.ui.TextInput(label="Nombre de la Flag (Key)", placeholder="ej: memory_fragments, hidden_vote, vote_weight")
+    flag_value = discord.ui.TextInput(label="Nuevo Valor", placeholder="ej: 3 (número) o True/False (booleano)")
+
+    def __init__(self, parent_view):
+        super().__init__()
+        self.parent_view = parent_view
+
+    async def on_submit(self, interaction: discord.Interaction):
+        player = self.parent_view.state.get_player(self.parent_view.target_id)
+        if not player or not player.role: return
+        
+        key = self.flag_key.value.strip()
+        val_raw = self.flag_value.value.strip()
+        
+        if val_raw.lower() == "true": final_val = True
+        elif val_raw.lower() == "false": final_val = False
+        else:
+            try: final_val = float(val_raw) if "." in val_raw else int(val_raw)
+            except ValueError: final_val = val_raw 
+            
+        player.role.flags[key] = final_val
+        self.parent_view.bot.storage.save_state(self.parent_view.state)
+        await self.parent_view.refresh_interface(interaction)
+
+
+class ManageAddStatusModal(discord.ui.Modal, title="Añadir Estado Alterado"):
+    status_id = discord.ui.TextInput(label="ID del Estado", placeholder="ej: confusion, burn, silenced")
+    duration = discord.ui.TextInput(label="Duración (Turnos)", placeholder="ej: 1 (dejar vacío para usar defecto)", required=False)
+
+    def __init__(self, parent_view):
+        super().__init__()
+        self.parent_view = parent_view
+
+    async def on_submit(self, interaction: discord.Interaction):
+        from cognitas.conditions.factory import CONDITION_MAP
+        from cognitas.conditions.engine import ConditionManager
+        
+        s_id = self.status_id.value.strip()
+        if s_id not in CONDITION_MAP:
+            await interaction.response.send_message("❌ ID de estado inválido.", ephemeral=True)
+            return
+            
+        cond_class = CONDITION_MAP[s_id]
+        new_condition = cond_class()
+        
+        if self.duration.value:
+            try: new_condition.duration = int(self.duration.value.strip())
+            except ValueError: pass
+
+        ConditionManager(self.parent_view.state).apply_condition(self.parent_view.target_id, new_condition)
+        
+        player = self.parent_view.state.get_player(self.parent_view.target_id)
+        ui_text = getattr(new_condition, "ui_on_apply", None)
+        if ui_text and player and player.private_channel_id:
+            priv_channel = interaction.guild.get_channel(player.private_channel_id)
+            member = interaction.guild.get_member(self.parent_view.target_id)
+            if priv_channel and member: await priv_channel.send(ui_text.format(mention=member.mention))
+            
+        self.parent_view.bot.storage.save_state(self.parent_view.state)
+        await self.parent_view.refresh_interface(interaction)
+
 
 
 class HostCog(commands.Cog):
@@ -161,6 +357,15 @@ class HostCog(commands.Cog):
             priv_channel = interaction.guild.get_channel(player.private_channel_id)
             if priv_channel:
                 await priv_channel.send(ui_text.format(mention=target.mention))
+                
+        
+        public_text = getattr(new_condition, "ui_on_apply_public", None) 
+        if public_text:
+            game_channel_id = state.discord_setup.get("game_channel_id")
+            if game_channel_id:
+                game_channel = interaction.guild.get_channel(game_channel_id)
+                if game_channel:
+                    await game_channel.send(public_text.format(mention=target.mention))
 
         # UI Feedback
         ui_text = getattr(new_condition, "ui_on_apply", f"Se aplicó {new_condition.name} a {{mention}}.")
@@ -181,17 +386,28 @@ class HostCog(commands.Cog):
         priv_channel = None
         if player.private_channel_id:
             priv_channel = interaction.guild.get_channel(player.private_channel_id)
+            
+        game_channel = None
+        game_channel_id = state.discord_setup.get("game_channel_id")
+        if game_channel_id:
+            game_channel = interaction.guild.get_channel(game_channel_id)
 
         if condition_id:
-
             removed_conditions = [cond for cond in player.statuses if cond.id_name == condition_id]
             player.statuses = [cond for cond in player.statuses if cond.id_name != condition_id]
             
             if removed_conditions:
+                cond = removed_conditions[0]
+                
                 if priv_channel:
-                    ui_text = getattr(removed_conditions[0], "ui_on_expire", None)
+                    ui_text = getattr(cond, "ui_on_expire", None)
                     if ui_text:
                         await priv_channel.send(ui_text.format(mention=target.mention))
+
+                if game_channel:
+                    ui_public_text = getattr(cond, "ui_on_expire_public", None)
+                    if ui_public_text:
+                        await game_channel.send(ui_public_text.format(mention=target.mention))
                         
                 await interaction.response.send_message(f"⚕️ Se ha curado el estado **{condition_id}** de {target.mention}.", ephemeral=True)
             else:
@@ -200,17 +416,24 @@ class HostCog(commands.Cog):
             removed_conditions = list(player.statuses)
             player.statuses.clear()
             
-            if priv_channel:
-                for cond in removed_conditions:
+            for cond in removed_conditions:
+                if priv_channel:
                     ui_text = getattr(cond, "ui_on_expire", None)
                     if ui_text:
                         await priv_channel.send(ui_text.format(mention=target.mention))
                 
+                if game_channel:
+                    ui_public_text = getattr(cond, "ui_on_expire_public", None)
+                    if ui_public_text:
+                        await game_channel.send(ui_public_text.format(mention=target.mention))
+            
+            if priv_channel:
                 await priv_channel.send(f"✨ {target.mention}, todos tus estados alterados han sido purificados.")
 
             await interaction.response.send_message(f"✨ Todos los estados alterados de {target.mention} han sido purificados.", ephemeral=True)
             
         logger.info(f"Healed effects for {target.id}. Specific: {condition_id or 'ALL'}")
+            
 
     @effects_group.command(name="list", description="Lista los estados activos de un jugador.")
     async def effects_list(self, interaction: discord.Interaction, target: discord.Member):
@@ -507,6 +730,17 @@ class HostCog(commands.Cog):
         embed.set_footer(text="Estas claves son las que debes usar en el comando /assign.")
         
         await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+        
+    @app_commands.command(name="manage_player", description="GM: Abre la mesa de edición integrada para un jugador.")
+    @app_commands.default_permissions(administrator=True)
+    async def host_manage_player(self, interaction: discord.Interaction):
+        if not hasattr(self.bot, "game_state"):
+            await interaction.response.send_message("❌ El motor no está inicializado.", ephemeral=True)
+            return
+            
+        view = ManagePlayerUI(self.bot, self.bot.game_state, interaction.guild)
+        await interaction.response.send_message(embed=view.build_embed(), view=view, ephemeral=True)
 
     # ---------------------------------------------------------
     # CYCLE RELATED COMMANDS
