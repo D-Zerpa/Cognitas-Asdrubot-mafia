@@ -31,3 +31,10 @@ class BaseExpansion(abc.ABC):
         need to be notified secretly (like the Oracle/Fuuka radar).
         """
         return {}
+    
+    async def on_phase_start(self, bot, guild, state: 'GameState') -> None:
+        """
+        Asynchronous hook triggered immediately after a new phase begins and channels are updated.
+        Allows the expansion to send private DMs, manipulate Discord roles, or read cached data.
+        """
+        pass

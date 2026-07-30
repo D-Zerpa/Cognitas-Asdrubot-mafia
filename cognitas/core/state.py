@@ -30,6 +30,9 @@ class GameState:
         self.vote_weights: Dict[int, int] = {}
         self.end_day_votes: set[int] = set()
         self.action_queue: List[Dict[str, Any]] = []
+        self.action_queue: List[Dict[str, Any]] = []
+        self.expansion_data: Dict[str, Any] = {}
+        self.gm_reminders: List[str] = []
 
     def add_player(self, player: Player) -> None:
         self.players[player.user_id] = player
@@ -50,7 +53,9 @@ class GameState:
             "votes": self.votes,
             "vote_weights": self.vote_weights,
             "end_day_votes": list(self.end_day_votes),
-            "action_queue": self.action_queue
+            "action_queue": self.action_queue,
+            "expansion_data": self.expansion_data,
+            "gm_reminders": self.gm_reminders
         }
 
     @classmethod
@@ -80,6 +85,8 @@ class GameState:
         state.vote_weights = {int(k) if k.isdigit() else k: v for k, v in saved_weights.items()}
         state.end_day_votes = set(data.get("end_day_votes", []))
         state.action_queue = data.get("action_queue", [])
+        state.expansion_data = data.get("expansion_data", {})
+        state.gm_reminders = data.get("gm_reminders", [])
             
         return state
 

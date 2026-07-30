@@ -16,58 +16,7 @@ class SystemCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.storage = bot.storage
-        
-        self._boot_sequence()
         self.auto_save.start()
-
-    def _boot_sequence(self):
-        """Attempts to load a previous save state and re-link expansions to survive restarts."""
-        state = self.storage.load_state()
-        if state and state.discord_setup.get("expansion"):
-            self.bot.game_state = state
-            logger.info(f"💾 Guardado detectado. Recuperando partida en: {state.phase.name} {state.cycle}")
-            
-            expansion_name = state.discord_setup.get("expansion")
-            logger.info(f"🔄 Restaurando expansión: {expansion_name.upper()}")
-            
-            loader = RoleLoader()
-            filename = f"roles_{expansion_name}.json"
-            expansion_data = loader.load_expansion_data(filename)
-            
-            if expansion_data["roles"]:
-                self.bot.role_registry = expansion_data["roles"]
-                self.bot.temp_registry = expansion_data["temp_abilities"]
-                self.bot.recommended_flags = expansion_data.get("recommended_flags", {})
-                logger.info(f"✅ Memoria restaurada: {len(self.bot.role_registry)} roles listos.")
-                
-                import copy
-                for player in state.players.values():
-                    if player.role:
-                        match_key = next((k for k, r in self.bot.role_registry.items() if r.name == player.role.name), None)
-                        if match_key:
-                            saved_flags = player.role.flags
-                            player.role = copy.deepcopy(self.bot.role_registry[match_key])
-                            player.role.flags.update(saved_flags)
-                logger.info("💉 Roles de los jugadores rehidratados con sus habilidades.")
-                # ------------------------------
-            else:
-                logger.error("⚠️ Error crítico: No se pudo recargar el JSON de la expansión guardada.")
-            
-            # 2. Cargar las Mecánicas Python (Gimmick)
-            import importlib
-            try:
-                gimmick_module = importlib.import_module(f"cognitas.expansions.{expansion_name}")
-                GimmickClass = getattr(gimmick_module, "ExpansionGimmick")
-                self.bot.active_gimmick = GimmickClass()
-                logger.info("✅ Mecánicas Python de la expansión conectadas.")
-            except (ImportError, AttributeError):
-                from cognitas.expansions.base import BaseExpansion
-                self.bot.active_gimmick = BaseExpansion()
-                logger.warning("⚠️ No se encontró gimmick específico. Usando BaseExpansion.")
-        else:
-            from cognitas.core.state import GameState
-            self.bot.game_state = GameState()
-            logger.info("📄 No se encontró guardado previo válido. Iniciando lienzo en blanco.")
 
     def cog_unload(self):
         self.auto_save.cancel()
@@ -96,18 +45,65 @@ class SystemCog(commands.Cog):
         else:
             await interaction.response.send_message("❌ Error crítico al guardar. Revisa la consola del bot.", ephemeral=True)
 
-    @app_commands.command(name="load_game", description="GM: Carga la última partida guardada. (Sobrescribe la actual).")
+    @app_commands.command(name="load_game", description="GM: Manually loads the last saved game (Overwrites current state).")
     @app_commands.default_permissions(administrator=True)
     async def load_game(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
         
-        self._boot_sequence()
-        state = getattr(self.bot, "game_state", None)
+        state = self.storage.load_state()
+        if not state:
+            await interaction.followup.send("❌ No valid save file found on disk.")
+            return
+            
+        self.bot.game_state = state
+        expansion_name = state.discord_setup.get("expansion")
         
-        if state and state.discord_setup.get("expansion"):
-            await interaction.followup.send(f"📂 **Partida cargada manual.** Fase actual: **{state.phase.name} {state.cycle}**.")
-        else:
-            await interaction.followup.send("❌ No se encontró archivo de guardado válido.")
+        if expansion_name:
+            import importlib
+            from cognitas.data.loaders import RoleLoader
+            import copy
+            
+            # 1. Restore Roles & Flags
+            loader = RoleLoader()
+            expansion_data = loader.load_expansion_data(f"roles_{expansion_name}.json")
+            if expansion_data and expansion_data.get("roles"):
+                self.bot.role_registry = expansion_data["roles"]
+                self.bot.temp_registry = expansion_data.get("temp_abilities", {})
+                self.bot.recommended_flags = expansion_data.get("recommended_flags", {})
+                
+                # Rehydrate players
+                for player in state.players.values():
+                    if player.role:
+                        match_key = next((k for k, r in self.bot.role_registry.items() if r.name == player.role.name), None)
+                        if match_key:
+                            saved_flags = player.role.flags
+                            player.role = copy.deepcopy(self.bot.role_registry[match_key])
+                            player.role.flags.update(saved_flags)
+            
+            # 2. Restore Python Gimmick (Logic)
+            try:
+                gimmick_module = importlib.import_module(f"cognitas.expansions.{expansion_name}")
+                GimmickClass = getattr(gimmick_module, "ExpansionGimmick")
+                self.bot.active_gimmick = GimmickClass()
+            except (ImportError, AttributeError):
+                from cognitas.expansions.base import BaseExpansion
+                self.bot.active_gimmick = BaseExpansion()
+                
+            # 3. Restore Expansion Commands (Cog) & Sync Tree
+            expected_cog_path = f"cognitas.expansions.{expansion_name}_commands"
+            if getattr(self.bot, "active_expansion_cog", None) and self.bot.active_expansion_cog in self.bot.extensions:
+                await self.bot.unload_extension(self.bot.active_expansion_cog)
+                
+            try:
+                await self.bot.load_extension(expected_cog_path)
+                self.bot.active_expansion_cog = expected_cog_path
+            except Exception as e:
+                logger.warning(f"No specific expansion commands loaded for {expansion_name}: {e}")
+                self.bot.active_expansion_cog = None
+                
+            await self.bot.tree.sync()
+            
+        await interaction.followup.send(f"📂 **Manual load successful.** Current phase: **{state.phase.name} {state.cycle}**.")
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(SystemCog(bot))

@@ -18,10 +18,12 @@ class Condition(abc.ABC):
     name: str = "Base Condition"
     is_negative: bool = True
     stacking_type: str = "refresh"  # Options: "refresh", "sum", "none"
+    category: str = "" # "Physical", "Mental", "Spiritual". Empty for generic.
 
-    def __init__(self, duration: int = 1, stacks: int = 1):
+    def __init__(self, duration: int = 1, stacks: int = 1, source_id: Optional[int] = None):
         self.duration = duration
         self.stacks = stacks
+        self.source_id = source_id
 
     def tick(self) -> bool:
         """Decreases duration. Returns True if expired."""
@@ -78,9 +80,10 @@ class Condition(abc.ABC):
         """Serializes the condition state for saving to disk."""
         return {
             "id_name": self.id_name,
-            "duration": getattr(self, "duration", -1),
-            "stacks": getattr(self, "stacks", 1),
-            "source_id": getattr(self, "source_id", None)
+            "duration": self.duration,
+            "stacks": self.stacks,
+            "source_id": self.source_id
+            
         }
 
 class ConditionManager:

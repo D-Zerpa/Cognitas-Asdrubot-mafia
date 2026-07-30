@@ -18,6 +18,9 @@ async def process_player_death(bot, guild: discord.Guild, player: Player, reason
     if player.is_alive:
         player.kill()
         logger.info(f"Player {player.user_id} logically killed. Reason: {reason}")
+        
+        if hasattr(state, "expansion") and hasattr(state.expansion, "on_player_death"):
+            state.expansion.on_player_death(state, player)
 
     # 2. Fetch the Discord Member object
     member = guild.get_member(player.user_id)
@@ -48,6 +51,8 @@ async def process_player_death(bot, guild: discord.Guild, player: Player, reason
             if roles_to_remove: await member.remove_roles(*roles_to_remove, reason="Player death sync")
         except discord.Forbidden:
             logger.error(f"Missing permissions to swap roles for {member.display_name}.")
+        except discord.HTTPException as e:
+            logger.error(f"Discord API failure while swapping roles for {member.display_name}: {e}")
 
     # 4. Welcome to the Graveyard
     mention_str = member.mention if member else f"<@{player.user_id}>"

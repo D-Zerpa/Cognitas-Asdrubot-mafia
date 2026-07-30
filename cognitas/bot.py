@@ -35,9 +35,11 @@ class CognitasBot(commands.Bot):
         self.role_registry = {}
         self.temp_registry = {}
         self.active_gimmick = None
+        self.active_expansion_cog: str | None = None
 
     async def setup_hook(self):
-        """Carga todos los módulos (Cogs) y sincroniza los comandos de barra."""
+        
+        """Loads all base modules (Cogs), restores state, and syncs slash commands."""
         cogs = [
             "cognitas.cogs.host",
             "cognitas.cogs.gameplay",
@@ -49,9 +51,51 @@ class CognitasBot(commands.Bot):
         for cog in cogs:
             try:
                 await self.load_extension(cog)
-                logger.info(f"Loaded extension: {cog}")
+                logger.info(f"Loaded base extension: {cog}")
             except Exception as e:
-                logger.error(f"Failed to load extension {cog}: {e}")
+                logger.error(f"Failed to load base extension {cog}: {e}")
+
+        # --- MEMORY RESTORATION ---
+        loaded_state = self.storage.load_state()
+        if loaded_state:
+            self.game_state = loaded_state
+            logger.info("Previous GameState successfully restored from disk.")
+            
+            # Auto-reconnect the active expansion if one was loaded
+            expansion_name = self.game_state.discord_setup.get("expansion")
+            if expansion_name:
+                logger.info(f"Reconnecting expansion: {expansion_name}...")
+                import importlib
+                from cognitas.data.loaders import RoleLoader
+                
+                # 1. Restore Roles & Flags
+                loader = RoleLoader()
+                expansion_data = loader.load_expansion_data(f"roles_{expansion_name}.json")
+                if expansion_data and expansion_data.get("roles"):
+                    self.role_registry = expansion_data["roles"]
+                    self.temp_registry = expansion_data.get("temp_abilities", {})
+                    self.recommended_flags = expansion_data.get("recommended_flags", {})
+                
+                # 2. Restore Python Gimmick (Logic)
+                try:
+                    gimmick_module = importlib.import_module(f"cognitas.expansions.{expansion_name}")
+                    GimmickClass = getattr(gimmick_module, "ExpansionGimmick")
+                    self.active_gimmick = GimmickClass()
+                except (ImportError, AttributeError) as e:
+                    logger.warning(f"No specific gimmick found for {expansion_name}. Using BaseExpansion. Error: {e}")
+                    from cognitas.expansions.base import BaseExpansion
+                    self.active_gimmick = BaseExpansion()
+                    
+                # 3. Restore Expansion Commands (Cog)
+                expected_cog_path = f"cognitas.expansions.{expansion_name}_commands"
+                try:
+                    await self.load_extension(expected_cog_path)
+                    self.active_expansion_cog = expected_cog_path
+                    logger.info(f"Restored expansion cog: {expected_cog_path}")
+                except Exception as e:
+                    logger.info(f"No custom commands loaded for {expansion_name} (this is normal if vanilla): {e}")
+        else:
+            logger.info("No previous state found. Starting with a blank GameState.")
                 
         # Command Sync
         logger.info("Syncing slash commands...")

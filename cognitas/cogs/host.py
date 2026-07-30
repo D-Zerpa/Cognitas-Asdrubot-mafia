@@ -213,9 +213,10 @@ class ManagePlayerUI(discord.ui.View):
 
     async def action_kill(self, interaction: discord.Interaction):
         player = self.state.get_player(self.target_id)
+        
         from cognitas.utils.discord_sync import process_player_death
-        player.is_alive = False
         await process_player_death(self.bot, interaction.guild, player, reason="Ejecutado por comandos administrativos del GM.")
+        
         self.bot.storage.save_state(self.state)
         await self.refresh_interface(interaction)
 
@@ -223,11 +224,29 @@ class ManagePlayerUI(discord.ui.View):
         player = self.state.get_player(self.target_id)
         player.is_alive = True
         
-        alive_role_id = self.state.discord_setup.get("alive_role_id")
+        # We must clear their statuses so they don't immediately die again 
+        # if they were killed by a lethal condition like Wounded.
+        player.statuses.clear()
+        
+        setup = self.state.discord_setup
         member = interaction.guild.get_member(self.target_id)
-        if member and alive_role_id:
-            role = interaction.guild.get_role(alive_role_id)
-            if role: await member.add_roles(role, reason="Revivido por el GM")
+        
+        if member:
+            roles_to_add, roles_to_remove = [], []
+            
+            if setup.get("alive_role_id"):
+                alive_role = interaction.guild.get_role(setup["alive_role_id"])
+                if alive_role: roles_to_add.append(alive_role)
+                
+            if setup.get("dead_role_id"):
+                dead_role = interaction.guild.get_role(setup["dead_role_id"])
+                if dead_role: roles_to_remove.append(dead_role)
+                
+            try:
+                if roles_to_add: await member.add_roles(*roles_to_add, reason="GM UI Revive")
+                if roles_to_remove: await member.remove_roles(*roles_to_remove, reason="GM UI Revive")
+            except discord.Forbidden:
+                logger.error("Missing permissions to swap roles in action_revive.")
             
         self.bot.storage.save_state(self.state)
         await self.refresh_interface(interaction)
@@ -669,19 +688,22 @@ class HostCog(commands.Cog):
         logger.info(f"Player {member.id} assigned to {role_key} in {private_channel.id}")
         self.bot.storage.save_state(self.bot.game_state)
 
-    @app_commands.command(name="set_expansion", description="GM: Carga los roles (JSON) y las mecánicas (Python) de una expansión.")
+    @app_commands.command(name="set_expansion", description="GM: Carga los roles (JSON), mecánicas y comandos de una expansión.")
     @app_commands.describe(perfil="Nombre de la expansión (ej. 'persona', 'smt', 'vanilla')")
     @app_commands.default_permissions(administrator=True)
     async def set_expansion(self, interaction: discord.Interaction, perfil: str):
+        # 0. Defer immediately because tree.sync() is slow and can timeout the interaction
+        await interaction.response.defer(ephemeral=True)
+        
         perfil = perfil.lower()
-        filename = f"roles_{perfil}.json" # Asumimos convención de nombres
+        filename = f"roles_{perfil}.json"
         
         # 1. Load the Roles JSON
         loader = RoleLoader()
         expansion_data = loader.load_expansion_data(filename)
         
         if not expansion_data["roles"]:
-            await interaction.response.send_message(f"❌ Error al cargar los roles de `{filename}`.", ephemeral=True)
+            await interaction.followup.send(f"❌ Error al cargar los roles de `{filename}`.")
             return
             
         self.bot.role_registry = expansion_data["roles"]
@@ -691,11 +713,9 @@ class HostCog(commands.Cog):
         # 2. Dynamically inject the Python Gimmick Skeleton
         try:
             gimmick_module = importlib.import_module(f"cognitas.expansions.{perfil}")
-            # Grabs the ExpansionGimmick class from that file
             GimmickClass = getattr(gimmick_module, "ExpansionGimmick")
             self.bot.active_gimmick = GimmickClass()
             gimmick_name = self.bot.active_gimmick.name
-
         except (ImportError, AttributeError) as e:
             logger.warning(f"No specific gimmick python file found for {perfil}. Using BaseExpansion. Error: {e}")
             from cognitas.expansions.base import BaseExpansion
@@ -704,12 +724,42 @@ class HostCog(commands.Cog):
 
         if hasattr(self.bot, "game_state"):
             self.bot.game_state.discord_setup["expansion"] = perfil
-            
-        await interaction.response.send_message(
+
+        # 3. Dynamic Commands (Cog) Loading
+        expected_cog_path = f"cognitas.expansions.{perfil}_commands"
+        cog_status_msg = "Ninguno (Vanilla)"
+        
+        # Unload previous expansion cog if it exists
+        if self.bot.active_expansion_cog and self.bot.active_expansion_cog in self.bot.extensions:
+            try:
+                await self.bot.unload_extension(self.bot.active_expansion_cog)
+                logger.info(f"Unloaded previous expansion cog: {self.bot.active_expansion_cog}")
+            except Exception as e:
+                logger.error(f"Failed to unload {self.bot.active_expansion_cog}: {e}")
+
+        # Attempt to load new expansion cog
+        try:
+            await self.bot.load_extension(expected_cog_path)
+            self.bot.active_expansion_cog = expected_cog_path
+            cog_status_msg = f"Cargados exitosamente ({expected_cog_path})"
+        except commands.ExtensionNotFound:
+            # It's totally fine if an expansion doesn't have custom commands
+            self.bot.active_expansion_cog = None
+            cog_status_msg = "No se encontraron comandos específicos."
+        except Exception as e:
+            self.bot.active_expansion_cog = None
+            cog_status_msg = f"⚠️ Error al cargar comandos: {e}"
+            logger.error(f"Error loading {expected_cog_path}: {e}")
+
+        # 4. Sync the Discord Command Tree (Crucial for UI update)
+        await self.bot.tree.sync()
+
+        # 5. Final Report
+        await interaction.followup.send(
             f"✅ **Expansión Cargada:** {perfil.upper()}\n"
             f"👥 **Roles en memoria:** {len(self.bot.role_registry)}\n"
-            f"⚙️ **Mecánica Activa:** {gimmick_name}", 
-            ephemeral=True
+            f"⚙️ **Mecánica Activa:** {gimmick_name}\n"
+            f"💻 **Comandos (Cog):** {cog_status_msg}"
         )
 
     @app_commands.command(name="debug_roles", description="GM: Lista las claves de los roles cargados en memoria.")
@@ -1019,6 +1069,8 @@ class HostCog(commands.Cog):
 
         # 1. Logical revive
         player.is_alive = True
+        
+        player.statuses.clear()
         
         # 2. Discord Role Swap (Remove Dead, Add Alive)
         setup = state.discord_setup

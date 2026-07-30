@@ -59,8 +59,14 @@ class PhaseState(abc.ABC):
         for player in self.state.players.values():
             if not player.is_alive:
                 member = guild.get_member(player.user_id)
+                
                 if member and alive_role_id and any(r.id == alive_role_id for r in member.roles):
-                    await process_player_death(bot, guild, player, reason="Efectos al final de la fase")
+                    
+                    active_gimmick = getattr(bot, "active_gimmick", None)
+                    if active_gimmick and hasattr(active_gimmick, "on_player_death"):
+                        active_gimmick.on_player_death(self.state, player)
+
+                    await process_player_death(bot, guild, player, reason="Efectos letales durante la fase")
 
         # 3. Stop timer
         self.state.discord_setup["phase_end_time"] = None
@@ -95,6 +101,11 @@ class PhaseState(abc.ABC):
                     logger.warning("Rate limit hit while trying to rename the game channel.")
                 except discord.Forbidden:
                     logger.error("Missing permissions to rename the game channel.")
+        
+        active_gimmick = getattr(bot, "active_gimmick", None)
+        if active_gimmick and hasattr(active_gimmick, "on_phase_start"):
+            await active_gimmick.on_phase_start(bot, guild, self.state)
+            
 
     async def lock_channel(self, guild: discord.Guild):
         """Stops the clock and locks the channel immediately."""

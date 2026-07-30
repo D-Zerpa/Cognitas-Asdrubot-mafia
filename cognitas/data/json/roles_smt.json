@@ -1,290 +1,713 @@
 {
-  "meta": {
-    "expansion": "smt",
-    "version": "3.0-D",
-    "generated_at": "2025-11-10T08:05:32.734880Z"
-  },
-  "roles": [
-    {
-      "id": "astaroth",
-      "name": "Astaroth",
-      "notes": "Grand Duke of Hell",
-      "team": "mafia",
+  "roles": {
+    "satanas": {
+      "name": "Satanás - El Adversario",
+      "alignment": "Mafia (Caos)",
       "flags": {
-        "night_act": true,
-        "day_act": false
-      }
+        "is_faction_leader": true,
+        "investigation_override": "Pueblo"
+      },
+      "abilities": [
+        {
+          "identifier": "asesinato_demoniaco",
+          "name": "Asesinato Demoníaco (Asesinato directo) 🗡️",
+          "tag": "night_act",
+          "priority": 20,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+
+      ]
     },
-    {
-      "id": "baal",
-      "name": "Baal",
-      "notes": "Lord of the Skies",
-      "team": "mafia",
+    "helel": {
+      "name": "Helel - El Portador de Luz",
+      "alignment": "Mafia (Caos)",
       "flags": {
-        "night_act": true,
-        "day_act": false
-      }
+        "investigation_override": "Pueblo"
+      },
+      "abilities": [
+        {
+          "identifier": "brillo_radiante",
+          "name": "Brillo Radiante (Redirección) 🔀",
+          "tag": "night_act",
+          "priority": 15,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "luz_letal",
+          "name": "Luz Letal (Asesinato directo) 🗡️",
+          "tag": "night_act",
+          "priority": 20,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
     },
-    {
-      "id": "beelzebub",
-      "name": "Beelzebub",
-      "notes": "Lord of the Flies",
-      "team": "mafia",
-      "flags": {
-        "night_act": true,
-        "day_act": false
-      }
+    "belial": {
+      "name": "Belial - El Impío",
+      "alignment": "Mafia (Caos)",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "desolacion",
+          "name": "Desolación (Bloqueo) ❌",
+          "tag": "night_act",
+          "priority": 5,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "espada_perdicion",
+          "name": "Espada de la Perdición (Asesinato directo) 🗡️",
+          "tag": "night_act",
+          "priority": 20,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
     },
-    {
-      "id": "belial",
-      "name": "Belial",
-      "notes": "The Impious",
-      "team": "mafia",
-      "flags": {
-        "night_act": true,
-        "day_act": false
-      }
+    "beelzebub": {
+      "name": "Beelzebub - Señor de las Moscas",
+      "alignment": "Mafia (Caos)",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "plaga_persistente",
+          "name": "Plaga Persistente (Plaga/Veneno) 🐍",
+          "tag": "night_act",
+          "priority": 15,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "banquete_moscas",
+          "name": "Banquete de Moscas (Veneno) 🐍",
+          "tag": "night_act",
+          "priority": 20,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
     },
-    {
-      "id": "helel",
-      "name": "Helel",
-      "notes": "Lightbringer",
-      "team": "mafia",
-      "flags": {
-        "night_act": true,
-        "day_act": false
-      }
+    "astaroth": {
+      "name": "Astaroth - El Gran Duque del Infierno",
+      "alignment": "Mafia (Caos)",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "mentor_engano",
+          "name": "Mentor del Engaño (Maquillaje) 🎭",
+          "tag": "night_act",
+          "priority": 10,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "falsificador",
+          "name": "Falsificador (Maquillaje) 🎭",
+          "tag": "night_act",
+          "priority": 20,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": true
+        }
+      ]
     },
-    {
-      "id": "herald-of-lucifer",
-      "name": "Herald Of Lucifer",
-      "notes": "Walter + Lilith fusion",
-      "team": "mafia",
-      "flags": {
-        "night_act": true,
-        "day_act": false
-      }
+    "baal": {
+      "name": "Baal - Señor de los Cielos",
+      "alignment": "Mafia (Caos)",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "trono_usurpado",
+          "name": "Trono Usurpado (Robar) 🧲",
+          "tag": "night_act",
+          "priority": 10,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "mimetismo_demoniaco",
+          "name": "Mimetismo Demoníaco (Maquillaje) 🎭",
+          "tag": "night_act",
+          "priority": 20,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": true
+        }
+      ]
     },
-    {
-      "id": "herald-of-merkabah",
-      "name": "Herald Of Merkabah",
-      "notes": "Jonathan + Gabriel fusion",
-      "team": "mafia",
+    "mastema": {
+      "name": "Mastema - El Acusador",
+      "alignment": "Mafia (Orden)",
       "flags": {
-        "night_act": true,
-        "day_act": false
-      }
+        "is_faction_leader": true,
+        "investigation_override": "Pueblo"
+      },
+      "abilities": [
+        {
+          "identifier": "juicio_divino",
+          "name": "Juicio Divino (Comunicación) 📻",
+          "tag": "night_act",
+          "priority": 10,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "susurro_acusacion",
+          "name": "Susurro de Acusación (Comunicación) 📻",
+          "tag": "day_act",
+          "priority": 50,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "instant",
+          "requires_note": true
+        }
+      ]
     },
-    {
-      "id": "mastema",
-      "name": "Mastema",
-      "notes": "Accuser (Order)",
-      "team": "mafia",
-      "flags": {
-        "day_act": true,
-        "night_act": true
-      }
+    "miguel": {
+      "name": "Miguel - El Guerrero Celestial",
+      "alignment": "Mafia (Orden)",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "espada_flamigera",
+          "name": "Espada Flamígera (Reflejo) 🪞",
+          "tag": "night_act",
+          "priority": 2,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "guardian_reino",
+          "name": "Guardián del Reino (Alteración) 🃏",
+          "tag": "passive",
+          "priority": 99,
+          "accuracy": 100,
+          "target_type": "none",
+          "resolution": "instant",
+          "requires_note": false
+        }
+      ]
     },
-    {
-      "id": "miguel",
-      "name": "Miguel",
-      "notes": "Celestial Warrior (Order)",
-      "team": "mafia",
-      "flags": {
-        "night_act": true,
-        "day_act": false
-      }
+    "rafael": {
+      "name": "Rafael - El Sanador de Dios",
+      "alignment": "Mafia (Orden)",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "falso_consuelo",
+          "name": "Falso Consuelo (Curación) 🩹",
+          "tag": "night_act",
+          "priority": 15,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "velo_piedad",
+          "name": "Velo de Piedad (Guardia) 🧱",
+          "tag": "passive",
+          "priority": 99,
+          "accuracy": 100,
+          "target_type": "none",
+          "resolution": "instant",
+          "requires_note": false
+        }
+      ]
     },
-    {
-      "id": "rafael",
-      "name": "Rafael",
-      "notes": "Healer of God (Order)",
-      "team": "mafia",
-      "flags": {
-        "day_act": true,
-        "night_act": true
-      }
+    "uriel": {
+      "name": "Uriel - La Llama de Dios",
+      "alignment": "Mafia (Orden)",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "llama_cielo",
+          "name": "Llama del Cielo (Bloqueo) ❌",
+          "tag": "night_act",
+          "priority": 5,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "centinela_aurora",
+          "name": "Centinela de la Aurora (Comunicación) 📻",
+          "tag": "passive",
+          "priority": 99,
+          "accuracy": 100,
+          "target_type": "none",
+          "resolution": "instant",
+          "requires_note": false
+        }
+      ]
     },
-    {
-      "id": "satanas",
-      "name": "Satanas",
-      "notes": "Chaos Leader",
-      "team": "mafia",
-      "flags": {
-        "night_act": true,
-        "day_act": false
-      }
+    "legion": {
+      "name": "Legión - El Enjambre de Almas",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "somos_legion",
+          "name": "¡SOMOS LEGIÓN! (Comunicación) 📻",
+          "tag": "passive",
+          "priority": 99,
+          "accuracy": 100,
+          "target_type": "none",
+          "resolution": "instant",
+          "requires_note": false
+        },
+        {
+          "identifier": "somos_legion_activa",
+          "name": "¿SoMoS LeGiÓn? (Comunicación) 📻",
+          "tag": "night_act",
+          "priority": 50,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": true
+        }
+      ]
     },
-    {
-      "id": "uriel",
-      "name": "Uriel",
-      "notes": "Flame of God (Order)",
-      "team": "mafia",
-      "flags": {
-        "night_act": true,
-        "day_act": false
-      }
+    "jack_frost": {
+      "name": "Jack Frost - El Travieso de Hielo",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "hee_ho_freeze",
+          "name": "Hee-Ho Freeze (Bloqueo) ❌",
+          "tag": "night_act",
+          "priority": 5,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "jack_bros_frost",
+          "name": "Jack Bros (Alteración) 🃏",
+          "tag": "passive",
+          "priority": 99,
+          "accuracy": 100,
+          "target_type": "none",
+          "resolution": "instant",
+          "requires_note": false
+        },
+        {
+          "identifier": "hielo_protector",
+          "name": "Hielo Protector (Protección) 🛡️",
+          "tag": "passive",
+          "priority": 99,
+          "accuracy": 100,
+          "target_type": "none",
+          "resolution": "instant",
+          "requires_note": false
+        }
+      ]
     },
-    {
-      "id": "yhvh",
-      "name": "Yhvh",
-      "notes": "Lord of All",
-      "team": "neutral",
-      "flags": {
-        "hidden_vote": true,
-        "day_act": true,
-        "night_act": true
-      }
+    "pyro_jack": {
+      "name": "Pyro Jack - La Llama Burlona",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "truco_fuego",
+          "name": "Truco de Fuego (Veneno) 🐍",
+          "tag": "night_act",
+          "priority": 15,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "jack_bros_pyro",
+          "name": "Jack Bros (Alteración) 🃏",
+          "tag": "passive",
+          "priority": 99,
+          "accuracy": 100,
+          "target_type": "none",
+          "resolution": "instant",
+          "requires_note": false
+        },
+        {
+          "identifier": "sustituto",
+          "name": "Sustituto (Protección) 🛡️",
+          "tag": "passive",
+          "priority": 99,
+          "accuracy": 100,
+          "target_type": "none",
+          "resolution": "instant",
+          "requires_note": false
+        }
+      ]
     },
-    {
-      "id": "angel",
-      "name": "Angel",
-      "notes": "Messenger of Light",
-      "team": "town",
-      "flags": {
-        "day_act": true,
-        "night_act": true
-      }
+    "oni": {
+      "name": "Oni - El Guerrero Rojo",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "guardaespaldas_oni",
+          "name": "Guardaespaldas Oni (Guardia) 🧱",
+          "tag": "night_act",
+          "priority": 15,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "furia_berserker",
+          "name": "Furia Berserker (Veneno) 🐍",
+          "tag": "passive",
+          "priority": 99,
+          "accuracy": 100,
+          "target_type": "none",
+          "resolution": "instant",
+          "requires_note": false
+        }
+      ]
     },
-    {
-      "id": "flynn",
-      "name": "Flynn",
-      "notes": "Samurai Bearer of Destiny",
-      "team": "town",
-      "flags": {
-        "night_act": true,
-        "day_act": false
-      }
+    "angel": {
+      "name": "Ángel - El Mensajero de la Luz",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "proteccion_divina",
+          "name": "Protección Divina (Protección) 🛡️",
+          "tag": "night_act",
+          "priority": 15,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "amrita",
+          "name": "Amrita (Curación) 🩹",
+          "tag": "night_act",
+          "priority": 20,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "revelacion_angel",
+          "name": "Revelación (Vigilancia) 🔭",
+          "tag": "passive",
+          "priority": 99,
+          "accuracy": 100,
+          "target_type": "none",
+          "resolution": "instant",
+          "requires_note": false
+        }
+      ]
     },
-    {
-      "id": "hecate",
-      "name": "Hecate",
-      "notes": "Day Jailor",
-      "team": "town",
-      "flags": {
-        "day_act": true,
-        "night_act": false
-      }
+    "turbo_granny": {
+      "name": "Turbo Granny - La Anciana de Medianoche",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "carrera_espeluznante",
+          "name": "Carrera Espeluznante (Rastreo) 🐾",
+          "tag": "night_act",
+          "priority": 30,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "intocable",
+          "name": "Intocable (Evasión) 💨",
+          "tag": "passive",
+          "priority": 99,
+          "accuracy": 100,
+          "target_type": "none",
+          "resolution": "instant",
+          "requires_note": false
+        }
+      ]
     },
-    {
-      "id": "herald-of-masakado",
-      "name": "Herald Of Masakado",
-      "notes": "Isabeau ascension",
-      "team": "town",
-      "flags": {
-        "night_act": true,
-        "day_act": false
-      }
+    "loki": {
+      "name": "Loki - El Embaucador de los Dioses",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "vision_embaucador",
+          "name": "Visión del Embaucador (Análisis) 🧭",
+          "tag": "night_act",
+          "priority": 30,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "mentiras_reveladoras",
+          "name": "Mentiras Reveladoras (Maquillaje) 🎭",
+          "tag": "passive",
+          "priority": 99,
+          "accuracy": 100,
+          "target_type": "none",
+          "resolution": "instant",
+          "requires_note": false
+        }
+      ]
     },
-    {
-      "id": "isabeau",
-      "name": "Isabeau",
-      "notes": "Samurai Voice of Neutrality",
-      "team": "town",
-      "flags": {
-        "night_act": true,
-        "day_act": false
-      }
+    "mara": {
+      "name": "Mara - El Rey de la Tentación",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "festival_lascivia",
+          "name": "Festival de Lascivia (Bloqueo) ❌",
+          "tag": "night_act",
+          "priority": 5,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "deseo_imparable",
+          "name": "Deseo Imparable (Alteración) 🃏",
+          "tag": "passive",
+          "priority": 99,
+          "accuracy": 100,
+          "target_type": "none",
+          "resolution": "instant",
+          "requires_note": false
+        }
+      ]
     },
-    {
-      "id": "jack-frost",
-      "name": "Jack Frost",
-      "notes": "Trickster of Ice",
-      "team": "town",
-      "flags": {
-        "night_act": true,
-        "day_act": false
-      }
+    "norn": {
+      "name": "Norn - Las Hilanderas del Destino",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "hilos_oraculo",
+          "name": "Hilos del Oráculo (Análisis) 🧭",
+          "tag": "night_act",
+          "priority": 40,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": true
+        },
+        {
+          "identifier": "destino_inefable",
+          "name": "Destino Inefable (Alteración) 🃏",
+          "tag": "passive",
+          "priority": 99,
+          "accuracy": 100,
+          "target_type": "none",
+          "resolution": "instant",
+          "requires_note": false
+        }
+      ]
     },
-    {
-      "id": "jack-o-lantern",
-      "name": "Jack-O'-Lantern",
-      "notes": "Flame Trickster",
-      "team": "town",
-      "flags": {
-        "night_act": true,
-        "day_act": false
-      }
+    "hecate": {
+      "name": "Hécate - Reina de la Noche",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "cruce_sombras",
+          "name": "Cruce de Sombras (Encarcelamiento) ⛓️",
+          "tag": "day_act",
+          "priority": 50,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "instant",
+          "requires_note": false
+        },
+        {
+          "identifier": "reina_umbral",
+          "name": "Reina del Umbral (Asesinato directo) 🗡️",
+          "tag": "passive",
+          "priority": 99,
+          "accuracy": 100,
+          "target_type": "none",
+          "resolution": "instant",
+          "requires_note": false
+        }
+      ]
     },
-    {
-      "id": "jonathan",
-      "name": "Jonathan",
-      "notes": "Samurai Paladin of Loyalty",
-      "team": "town",
-      "flags": {
-        "night_act": true,
-        "day_act": false
-      }
+    "jonathan": {
+      "name": "Jonathan - El Paladín de la Lealtad",
+      "alignment": "Samurai (Pueblo)",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "demon_summoning_program",
+          "name": "Demon Summoning Program (Alteración) 🃏",
+          "tag": "passive",
+          "priority": 99,
+          "accuracy": 100,
+          "target_type": "none",
+          "resolution": "instant",
+          "requires_note": false
+        },
+        {
+          "identifier": "voluntad_hierro",
+          "name": "Voluntad de Hierro (Guardia) 🧱",
+          "tag": "night_act",
+          "priority": 15,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
     },
-    {
-      "id": "legion",
-      "name": "Legion",
-      "notes": "Ensemble of Souls",
-      "team": "town",
-      "flags": {
-        "night_act": true,
-        "day_act": false
-      }
+    "walter": {
+      "name": "Walter - El Guerrero Indomable",
+      "alignment": "Samurai (Pueblo)",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "demon_summoning_program",
+          "name": "Demon Summoning Program (Alteración) 🃏",
+          "tag": "passive",
+          "priority": 99,
+          "accuracy": 100,
+          "target_type": "none",
+          "resolution": "instant",
+          "requires_note": false
+        },
+        {
+          "identifier": "espada_rebelde",
+          "name": "Espada Rebelde (Asesinato directo) 🗡️",
+          "tag": "night_act",
+          "priority": 20,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
     },
-    {
-      "id": "loki",
-      "name": "Loki",
-      "notes": "Trickster Investigator",
-      "team": "town",
-      "flags": {
-        "night_act": true,
-        "day_act": false
-      }
+    "isabeau": {
+      "name": "Isabeau - La Voz de la Neutralidad",
+      "alignment": "Samurai (Pueblo)",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "demon_summoning_program",
+          "name": "Demon Summoning Program (Alteración) 🃏",
+          "tag": "passive",
+          "priority": 99,
+          "accuracy": 100,
+          "target_type": "none",
+          "resolution": "instant",
+          "requires_note": false
+        },
+        {
+          "identifier": "oracion_sanadora",
+          "name": "Oración Sanadora (Curación) 🩹",
+          "tag": "night_act",
+          "priority": 15,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
     },
-    {
-      "id": "mara",
-      "name": "Mara",
-      "notes": "Chain Paralysis Controller",
-      "team": "town",
+    "flynn": {
+      "name": "Flynn - El Portador del Destino",
+      "alignment": "Samurai (Pueblo)",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "demon_summoning_program",
+          "name": "Demon Summoning Program (Alteración) 🃏",
+          "tag": "passive",
+          "priority": 99,
+          "accuracy": 100,
+          "target_type": "none",
+          "resolution": "instant",
+          "requires_note": false
+        },
+        {
+          "identifier": "camino_elegido",
+          "name": "Camino del Elegido (Alteración) 🃏",
+          "tag": "night_act",
+          "priority": 40,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
+    },"yhvh": {
+      "name": "YHVH - El Señor de Todo",
+      "alignment": "Independiente",
       "flags": {
-        "night_act": true,
-        "day_act": false
-      }
-    },
-    {
-      "id": "norn",
-      "name": "Norn",
-      "notes": "Oracular Weaver",
-      "team": "town",
-      "flags": {
-        "night_act": true,
-        "day_act": false
-      }
-    },
-    {
-      "id": "oni",
-      "name": "Oni",
-      "notes": "Red Warrior",
-      "team": "town",
-      "flags": {
-        "night_act": true,
-        "day_act": false
-      }
-    },
-    {
-      "id": "turbo-granny",
-      "name": "Turbo Granny",
-      "notes": "Midnight Hag",
-      "team": "town",
-      "flags": {
-        "night_act": true,
-        "day_act": false
-      }
-    },
-    {
-      "id": "walter",
-      "name": "Walter",
-      "notes": "Samurai Warrior",
-      "team": "town",
-      "flags": {
-        "night_act": true,
-        "day_act": false
-      }
+        "investigation_override": "glitched",
+        "hidden_vote": true
+      },
+      "abilities": [
+        {
+          "identifier": "estasis_absoluta",
+          "name": "Estasis Absoluta (Alteración) 🃏",
+          "tag": "night_act",
+          "priority": 10,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "la_revelacion",
+          "name": "La Revelación (Alteración) 🃏",
+          "tag": "day_act",
+          "priority": 10,
+          "accuracy": 100,
+          "target_type": "none",
+          "resolution": "instant",
+          "requires_note": false
+        }
+      ]
     }
-  ]
+  },
+  "temporary_abilities": {},
+  "recommended_flags": {
+  }
 }

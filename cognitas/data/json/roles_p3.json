@@ -1,287 +1,817 @@
 {
-  "meta": {
-    "expansion": "p3",
-    "version": "3.0-D",
-    "generated_at": "2025-11-10T08:05:32.735366Z"
-  },
-  "roles": [
-    {
-      "id": "nyx",
-      "name": "Nyx",
-      "notes": "NYX – El Fin Inevitable | Antagonista principal; poder escala con Arcanos muertos. Investigación devuelve Ryoji.",
-      "team": "mafia",
+  "roles": {
+    "kenji": {
+      "name": "Kenji Tomochika - El Impulsivo",
+      "alignment": "Pueblo",
       "flags": {
-        "arcana": false,
-        "sees": false,
-        "day_act": false,
-        "night_act": true
-      }
+        "arcana": true
+      },
+      "abilities": [
+        {
+          "identifier": "charla_improvisada",
+          "name": "Charla Improvisada (Comunicación) 📻",
+          "tag": "day_act",
+          "priority": 50,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "instant",
+          "requires_note": false
+        },
+        {
+          "identifier": "suerte_principiante",
+          "name": "Suerte del Principiante (Evasión) 💨",
+          "tag": "passive",
+          "priority": 99,
+          "accuracy": 17,
+          "target_type": "none",
+          "resolution": "instant",
+          "requires_note": false
+        }
+      ]
     },
-    {
-      "id": "chidori",
-      "name": "Chidori",
-      "notes": "Chidori Yoshino – La Voz del Colgado | Strega; medium con resurrección incompleta y herencia de habilidad.",
-      "team": "third",
+    "hidetoshi": {
+      "name": "Hidetoshi Odagiri - El Legislador del Orden",
+      "alignment": "Pueblo",
       "flags": {
-        "arcana": true,
-        "sees": false,
-        "day_act": false,
-        "night_act": true
-      }
+        "arcana": true
+      },
+      "abilities": [
+        {
+          "identifier": "sancion_disciplinaria",
+          "name": "Sanción Disciplinaria (Estado alterado (Sanción))",
+          "tag": "day_act",
+          "priority": 50,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "instant",
+          "requires_note": false
+        },
+        {
+          "identifier": "autoridad_inquebrantable",
+          "name": "Autoridad Inquebrantable (Bloqueo) ❌",
+          "tag": "day_act",
+          "priority": 50,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "instant",
+          "requires_note": true
+        }
+      ]
     },
-    {
-      "id": "elizabeth",
-      "name": "Elizabeth",
-      "notes": "Elizabeth – La Observadora del Velo | Neutral; investiga tipo+alineamiento y altera la habilidad objetivo; victoria por set de conocimientos.",
-      "team": "third",
+    "rio": {
+      "name": "Rio Iwasaki - La Determinación en Marcha",
+      "alignment": "Pueblo",
       "flags": {
-        "arcana": false,
-        "sees": false,
-        "day_act": false,
-        "night_act": true
-      }
+        "arcana": true
+      },
+      "abilities": [
+        {
+          "identifier": "impulso_equipo",
+          "name": "Impulso del Equipo (Buffs) 🌟",
+          "tag": "day_act",
+          "priority": 50,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "instant",
+          "requires_note": true
+        }
+      ]
     },
-    {
-      "id": "jin",
-      "name": "Jin",
-      "notes": "Jin Shirato – El Analista del Abismo | Strega; análisis de tipo de habilidad y control disruptivo al encontrar a Nyx.",
-      "team": "third",
+    "yuko": {
+      "name": "Yuko Nishiwaki - La Fortaleza del Corazón",
+      "alignment": "Pueblo",
       "flags": {
-        "arcana": true,
-        "sees": false,
-        "day_act": false,
-        "night_act": true
-      }
+        "arcana": true
+      },
+      "abilities": [
+        {
+          "identifier": "palabras_coraje",
+          "name": "Palabras de Coraje (Buffs) 🌟",
+          "tag": "day_act",
+          "priority": 50,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "instant",
+          "requires_note": false
+        },
+        {
+          "identifier": "espiritu_inquebrantable",
+          "name": "Espíritu Inquebrantable (Protección/Curación) 🛡️",
+          "tag": "passive",
+          "priority": 99,
+          "accuracy": 100,
+          "target_type": "none",
+          "resolution": "instant",
+          "requires_note": false
+        }
+      ]
     },
-    {
-      "id": "kotone",
-      "name": "Kotone",
-      "notes": "Kotone Shiomi – La Visitante del Amanecer | Neutral; chats nocturnos (vínculos), copia de habilidad; hidden vote; victoria al hallar a Makoto y su nombre.",
-      "team": "third",
+    "chihiro": {
+      "name": "Chihiro Fushimi - El Espejo de la Verdad",
+      "alignment": "Pueblo",
       "flags": {
-        "arcana": false,
-        "sees": false,
-        "hidden_vote": true,
-        "day_act": true,
-        "night_act": true
-      }
+        "arcana": true
+      },
+      "abilities": [
+        {
+          "identifier": "juicio_moral",
+          "name": "Juicio Moral (Encarcelamiento) ⛓️",
+          "tag": "day_act",
+          "priority": 50,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "instant",
+          "requires_note": true
+        }
+      ]
     },
-    {
-      "id": "reaper",
-      "name": "Reaper",
-      "notes": "The Reaper – El Eco de la Muerte | Anti-Pueblo; despierta N4; asesinato inevitable hasta lograr 3 muertes para victoria instantánea.",
-      "team": "third",
+    "takaya": {
+      "name": "Takaya - El Profeta del Crepúsculo",
+      "alignment": "Strega (Independiente)",
       "flags": {
-        "arcana": false,
-        "sees": false,
-        "day_act": false,
-        "night_act": true
-      }
+        "arcana": true
+      },
+      "abilities": [
+        {
+          "identifier": "requiem_profeta",
+          "name": "Requiem del Profeta (Asesinato directo) 🗡️",
+          "tag": "night_act",
+          "priority": 20,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
     },
-    {
-      "id": "shinjiro-b",
-      "name": "Shinjiro_B",
-      "notes": "Shinjiro Aragaki – El Berserker del Crepúsculo | Hierofante; RNG nocturno (kill/herida/nada). Condición con Ken o bajas totales.",
-      "team": "third",
+    "jin": {
+      "name": "Jin Shirato - El Analista del Abismo",
+      "alignment": "Strega (Independiente)",
       "flags": {
-        "arcana": true,
-        "sees": false,
-        "day_act": false,
-        "night_act": true
-      }
+        "arcana": true
+      },
+      "abilities": [
+        {
+          "identifier": "terminal_cegador",
+          "name": "Terminal Cegador (Análisis) 🧭",
+          "tag": "night_act",
+          "priority": 30,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
     },
-    {
-      "id": "shinjiro-s",
-      "name": "Shinjiro_S",
-      "notes": "Shinjiro Aragaki – El Escudo del Atardecer | Hierofante; intercepta asesinatos y acumula Redención. Condición con Ken o asesinatos totales.",
-      "team": "third",
+    "chidori": {
+      "name": "Chidori Yoshino - La Voz del Colgado",
+      "alignment": "Strega (Independiente)",
       "flags": {
-        "arcana": true,
-        "sees": false,
-        "day_act": false,
-        "night_act": true
-      }
+        "arcana": true
+      },
+      "abilities": [
+        {
+          "identifier": "lazos_mas_alla",
+          "name": "Lazos del Más Allá (Comunicación) 📻",
+          "tag": "night_act",
+          "priority": 50,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": true
+        }
+      ]
     },
-    {
-      "id": "takaya",
-      "name": "Takaya",
-      "notes": "Takaya – El Profeta del Crepúsculo | Strega; killer con 3 balas + robo de habilidad al quedarse sin balas.",
-      "team": "third",
+    "shinjiro_b": {
+      "name": "Shinjiro Aragaki - El Berserker del Crepúsculo",
+      "alignment": "Independiente",
       "flags": {
-        "arcana": true,
-        "sees": false,
-        "day_act": false,
-        "night_act": true
-      }
+        "arcana": true
+      },
+      "abilities": [
+        {
+          "identifier": "despertar_incontrolable",
+          "name": "Despertar Incontrolable (Asesinato directo) 🗡️",
+          "tag": "night_act",
+          "priority": 20,
+          "accuracy": 100,
+          "target_type": "none",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
     },
-    {
-      "id": "aigis",
-      "name": "Aigis",
-      "notes": "Aigis – El Corazón Mecánico | SEES; pararrayos, escudo al morir, Orgia Mode.",
-      "team": "town",
+    "shinjiro_s": {
+      "name": "Shinjiro Aragaki - El Escudo del Atardecer",
+      "alignment": "Independiente",
       "flags": {
-        "arcana": false,
+        "arcana": true
+      },
+      "abilities": [
+        {
+          "identifier": "pacto_ocaso",
+          "name": "Pacto del Ocaso (Guardia) 🧱",
+          "tag": "night_act",
+          "priority": 15,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
+    },
+    "elizabeth": {
+      "name": "Elizabeth - La Observadora del Velo",
+      "alignment": "Independiente (Neutral)",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "curiosidad_arcana",
+          "name": "Curiosidad Arcana (Análisis/Alteración) 🧭/🃏",
+          "tag": "night_act",
+          "priority": 30,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
+    },
+    "reaper": {
+      "name": "The Reaper - El Eco de la Muerte",
+      "alignment": "Independiente (Anti-Pueblo)",
+      "flags": {
+        "investigation_override": "Mafia"
+      },
+      "abilities": [
+        {}
+      ]
+    },
+    "kotone": {
+      "name": "Kotone Shiomi - La Visitante del Amanecer",
+      "alignment": "Independiente",
+      "flags": {
+        "hidden_vote": true
+      },
+      "abilities": [
+        {
+          "identifier": "sueno_compartido",
+          "name": "Sueño Compartido (Comunicación) 📻",
+          "tag": "night_act",
+          "priority": 50,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "resonancia_vinculo",
+          "name": "Resonancia del Vínculo (Alteración) 🃏",
+          "tag": "night_act",
+          "priority": 10,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": true
+        },
+        {
+          "identifier": "resonancia_vinculo",
+          "name": "Resonancia del Vínculo (Alteración) 🃏",
+          "tag": "day_act",
+          "priority": 10,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": true
+
+        }
+      ]
+    },
+    "mitsuru": {
+      "name": "Mitsuru Kirijo - La Emperatriz del Invierno",
+      "alignment": "SEES (Pueblo)",
+      "flags": {
         "sees": true,
-        "day_act": false,
-        "night_act": true
-      }
+        "arcana": true
+      },
+      "abilities": [
+        {
+          "identifier": "analisis_tactico",
+          "name": "Análisis Táctico (Análisis) 🧭",
+          "tag": "night_act",
+          "priority": 40,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "instant",
+          "requires_note": false
+        }
+      ]
     },
-    {
-      "id": "akihiko",
-      "name": "Akihiko",
-      "notes": "Akihiko Sanada – El Puño del Amanecer | SEES; bloqueo reactivo y reflejo 25%.",
-      "team": "town",
+    "fuuka": {
+      "name": "Fuuka Yamagishi - La Sacerdotisa del Silencio",
+      "alignment": "SEES (Pueblo)",
       "flags": {
-        "arcana": false,
         "sees": true,
-        "day_act": false,
-        "night_act": true
-      }
+        "arcana": true
+      },
+      "abilities": [
+        {
+          "identifier": "el_potencial",
+          "name": "El Potencial (Comunicación) 📻",
+          "tag": "passive",
+          "priority": 99,
+          "accuracy": 100,
+          "target_type": "none",
+          "resolution": "instant",
+          "requires_note": false
+        }
+      ]
     },
-    {
-      "id": "chihiro",
-      "name": "Chihiro",
-      "notes": "Chihiro Fushimi – El Espejo de la Verdad | Arcano civil; juicio moral diurno con resoluciones de confusión; pasiva de equilibrio.",
-      "team": "town",
+    "akihiko": {
+      "name": "Akihiko Sanada - El Puño del Amanecer",
+      "alignment": "SEES (Pueblo)",
       "flags": {
-        "arcana": true,
-        "sees": false,
-        "day_act": true,
-        "night_act": false
-      }
+        "sees": true
+      },
+      "abilities": [
+        {
+          "identifier": "punos_voltaje",
+          "name": "Puños de Voltaje (Bloqueo) ❌",
+          "tag": "night_act",
+          "priority": 5,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
     },
-    {
-      "id": "fuuka",
-      "name": "Fuuka",
-      "notes": "Fuuka Yamagishi – La Sacerdotisa del Silencio | SEES; oráculo (radar) pasivo y registro táctico nocturno.",
-      "team": "town",
+    "yukari": {
+      "name": "Yukari Takeba - El Viento del Alba",
+      "alignment": "SEES (Pueblo)",
       "flags": {
-        "arcana": true,
         "sees": true,
-        "oracle": false,
-        "day_act": false,
-        "night_act": true
-      }
+        "arcana": true
+      },
+      "abilities": [
+        {
+          "identifier": "viento_vida",
+          "name": "Viento de Vida (Protección) 🛡️",
+          "tag": "night_act",
+          "priority": 15,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "luz_sanadora",
+          "name": "Luz Sanadora (Curación) 🩹",
+          "tag": "day_act",
+          "priority": 20,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "instant",
+          "requires_note": false
+        }
+      ]
     },
-    {
-      "id": "hidetoshi",
-      "name": "Hidetoshi",
-      "notes": "Hidetoshi Odagiri – El Legislador del Orden | Arcano civil; sanción de voto y registros de conducta (silencio/auto-fallo).",
-      "team": "town",
+    "junpei": {
+      "name": "Junpei Iori - El Filo del Caos",
+      "alignment": "SEES (Pueblo)",
       "flags": {
-        "arcana": true,
-        "sees": false,
-        "day_act": true,
-        "night_act": false
-      }
+      },
+      "abilities": [
+        {
+          "identifier": "el_potencial",
+          "name": "El Potencial (Comunicación) 📻",
+          "tag": "passive",
+          "priority": 99,
+          "accuracy": 100,
+          "target_type": "none",
+          "resolution": "instant",
+          "requires_note": false
+        }
+      ]
     },
-    {
-      "id": "junpei",
-      "name": "Junpei",
-      "notes": "Junpei Iori – El Filo del Caos | SEES; RNG 1-3 con bloque/herida/autolesión y reroll 1/partida.",
-      "team": "town",
+    "aigis": {
+      "name": "Aigis - El Corazón Mecánico",
+      "alignment": "SEES (Pueblo)",
       "flags": {
-        "arcana": false,
-        "sees": true,
-        "day_act": false,
-        "night_act": true
-      }
+      },
+      "abilities": [
+        {
+          "identifier": "el_potencial",
+          "name": "El Potencial (Comunicación) 📻",
+          "tag": "passive",
+          "priority": 99,
+          "accuracy": 100,
+          "target_type": "none",
+          "resolution": "instant",
+          "requires_note": false
+        }
+      ]
     },
-    {
-      "id": "ken",
-      "name": "Ken",
-      "notes": "Ken Amada – El Portador de la Justicia | SEES; lanza letal con costo si es Town; acumula Ira por caídos SEES.",
-      "team": "town",
+    "ken": {
+      "name": "Ken Amada - El Portador de la Justicia",
+      "alignment": "SEES (Pueblo)",
       "flags": {
-        "arcana": false,
-        "sees": true,
-        "day_act": false,
-        "night_act": true
-      }
+      },
+      "abilities": [
+        {
+          "identifier": "el_potencial",
+          "name": "El Potencial (Comunicación) 📻",
+          "tag": "passive",
+          "priority": 99,
+          "accuracy": 100,
+          "target_type": "none",
+          "resolution": "instant",
+          "requires_note": false
+        }
+      ]
     },
-    {
-      "id": "kenji",
-      "name": "Kenji",
-      "notes": "Kenji Tomochika – El Impulsivo | Arcano civil; charla privada diurna + revelación mutua si coinciden votos; suerte del 6.",
-      "team": "town",
+    "koromaru": {
+      "name": "Koromaru - El Guardián Silencioso",
+      "alignment": "SEES (Pueblo)",
       "flags": {
-        "arcana": true,
-        "sees": false,
-        "day_act": true,
-        "night_act": false
-      }
+      },
+      "abilities": [
+        {
+          "identifier": "el_potencial",
+          "name": "El Potencial (Comunicación) 📻",
+          "tag": "passive",
+          "priority": 99,
+          "accuracy": 100,
+          "target_type": "none",
+          "resolution": "instant",
+          "requires_note": false
+        }
+      ]
     },
-    {
-      "id": "koromaru",
-      "name": "Koromaru",
-      "notes": "Koromaru – El Guardián Silencioso | SEES; tracker/visitor + evasión 50%.",
-      "team": "town",
+    "makoto": {
+      "name": "Makoto Yuki - El Portador del Alma",
+      "alignment": "SEES (Pueblo)",
       "flags": {
-        "arcana": true,
-        "sees": true,
-        "day_act": false,
-        "night_act": true
-      }
+        "arcana": true
+      },
+      "abilities": [
+        {
+          "identifier": "el_potencial",
+          "name": "El Potencial (Comunicación) 📻",
+          "tag": "passive",
+          "priority": 99,
+          "accuracy": 100,
+          "target_type": "none",
+          "resolution": "instant",
+          "requires_note": false
+        },
+        {
+          "identifier": "social_links",
+          "name": "Social Links (Comunicación) 📻",
+          "tag": "night_act",
+          "priority": 50,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
     },
-    {
-      "id": "makoto",
-      "name": "Makoto",
-      "notes": "Makoto Yuki – El Portador del Alma | SEES; Wild Resonance (copia) + Afinidad + Theurgy de prioridad; Social Links nocturno; arcano clave.",
-      "team": "town",
+    "nyx": {
+      "name": "Nyx - El Fin Inevitable",
+      "alignment": "Mafia",
       "flags": {
-        "arcana": true,
-        "sees": true,
-        "day_act": false,
-        "night_act": true
-      }
-    },
-    {
-      "id": "mitsuru",
-      "name": "Mitsuru",
-      "notes": "Mitsuru Kirijo – La Emperatriz del Invierno | SEES; líder reclutadora (despierta Personas) y habilita Theurgies.",
-      "team": "town",
-      "flags": {
-        "arcana": true,
-        "sees": true,
-        "day_act": false,
-        "night_act": true
-      }
-    },
-    {
-      "id": "rio",
-      "name": "Rio",
-      "notes": "Rio Iwasaki – La Determinación en Marcha | Arcano civil; buff de enfoque/voto doble; momentum acumulable.",
-      "team": "town",
-      "flags": {
-        "arcana": true,
-        "sees": false,
-        "day_act": true,
-        "night_act": false
-      }
-    },
-    {
-      "id": "yukari",
-      "name": "Yukari",
-      "notes": "Yukari Takeba – El Viento del Alba | SEES; protección nocturna, curación diurna, theurgy anti-kill global.",
-      "team": "town",
-      "flags": {
-        "arcana": true,
-        "sees": true,
-        "day_act": true,
-        "night_act": true
-      }
-    },
-    {
-      "id": "yuko",
-      "name": "Yuko",
-      "notes": "Yuko Nishiwaki – La Fortaleza del Corazón | Arcano civil; protección diurna contra estados + moral y cargas extra.",
-      "team": "town",
-      "flags": {
-        "arcana": true,
-        "sees": false,
-        "day_act": true,
-        "night_act": false
-      }
+        "investigation_override": "Ryoji Mochizuki"
+      },
+      "abilities": [
+        {
+          "identifier": "revelacion_lunar",
+          "name": "Revelación Lunar (Análisis) 🧭",
+          "tag": "night_act",
+          "priority": 30,
+          "accuracy": 100,
+          "target_type": "none",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
     }
-  ]
+  },
+
+  "temporary_abilities": {
+    "nyx_phase_one": [
+      {
+        "identifier": "corrupcion_lunar",
+        "name": "Corrupción Lunar (🐍 Veneno)",
+        "tag": "night_act",
+        "priority": 15,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": false
+      }
+    ],
+    "nyx_phase_two": [
+      {
+        "identifier": "sombras_descendentes",
+        "name": "Sombras Descendentes (🗡️ Asesinato directo)",
+        "tag": "night_act",
+        "priority": 20,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": false
+      },
+      {
+        "identifier": "eco_onirico",
+        "name": "Eco Onírico (📻 Comunicación)",
+        "tag": "night_act",
+        "priority": 50,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": true
+      }
+    ],
+    "nyx_phase_three": [
+      {
+        "identifier": "silencio_lunar",
+        "name": "Silencio Lunar (❌ Bloqueo)",
+        "tag": "night_act",
+        "priority": 5,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": false
+      },
+      {
+        "identifier": "desconcierto_lunar",
+        "name": "Desconcierto Lunar (🔀 Redirección)",
+        "tag": "night_act",
+        "priority": 2,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": true
+      }
+    ],
+    "nyx_phase_four": [
+      {
+        "identifier": "eclipse_final",
+        "name": "Eclipse Final (🗡️ Asesinato directo)",
+        "tag": "night_act",
+        "priority": 20,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": false
+      }
+    ],
+    "reaper_awakened": [
+      {
+        "identifier": "juicio_inefable",
+        "name": "Juicio Inefable (🗡️ Asesinato directo)",
+        "tag": "night_act",
+        "priority": 20,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": false
+      }
+    ],
+    "takaya_awakened": [
+      {
+        "identifier": "eco_crepusculo",
+        "name": "Eco del Crepúsculo (🃏 Alteración)",
+        "tag": "night_act",
+        "priority": 15,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": false
+      }
+    ],
+    "jin_awakened": [
+      {
+        "identifier": "protocolo_ruina",
+        "name": "Protocolo de Ruina (🃏 Alteración)",
+        "tag": "night_act",
+        "priority": 15,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": true
+      }
+    ],
+    "chidori_awakened": [
+      {
+        "identifier": "rosa_resurreccion",
+        "name": "Rosa de la Resurrección (🌅 Resurrección)",
+        "tag": "night_act",
+        "priority": 5,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": false
+      }
+    ],
+    "mitsuru_awakened": [
+      {
+        "identifier": "empress_palace",
+        "name": "Empress' Palace (⛓️ Encarcelamiento)",
+        "tag": "night_act",
+        "priority": 10,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": false
+      }
+    ],
+    "fuuka_awakened": [
+      {
+        "identifier": "oracle_scan",
+        "name": "Oracle Scan (🐾 Rastreo)",
+        "tag": "night_act",
+        "priority": 40,
+        "accuracy": 100,
+        "target_type": "none",
+        "resolution": "queued",
+        "requires_note": false
+      }
+    ],
+    "akihiko_awakened": [
+      {
+        "identifier": "sonic_counter",
+        "name": "Sonic Counter (🃏 Alteración)",
+        "tag": "night_act",
+        "priority": 2,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": true
+      }
+    ],
+    "yukari_awakened": [
+      {
+        "identifier": "hymn_salvation",
+        "name": "Hymn of Salvation (🛡️ Protección)",
+        "tag": "night_act",
+        "priority": 15,
+        "accuracy": 100,
+        "target_type": "none",
+        "resolution": "queued",
+        "requires_note": false
+      }
+    ],
+    "junpei_awakened": [
+      {
+        "identifier": "ataque_temerario",
+        "name": "Ataque Temerario (Bloqueo)",
+        "tag": "night_act",
+        "priority": 10,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": false
+      },
+      {
+        "identifier": "de_las_cenizas",
+        "name": "De las Cenizas (🃏 Alteración)",
+        "tag": "night_act",
+        "priority": 50,
+        "accuracy": 100,
+        "target_type": "none",
+        "resolution": "instant",
+        "requires_note": true
+      },
+      {
+        "identifier": "heroic_strike",
+        "name": "Heroic Strike (🗡️ Asesinato directo)",
+        "tag": "night_act",
+        "priority": 20,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": false
+      }
+    ],
+    "aigis_awakened": [
+      {
+        "identifier": "modo_guardia",
+        "name": "Modo Guardia (🧱 Guardia)",
+        "tag": "night_act",
+        "priority": 15,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": false
+      },
+      {
+        "identifier": "orgia_mode",
+        "name": "Orgia Mode (🧱 Guardia)",
+        "tag": "night_act",
+        "priority": 10,
+        "accuracy": 100,
+        "target_type": "none",
+        "resolution": "queued",
+        "requires_note": false
+      }
+    ],
+    "ken_awakened": [
+      {
+        "identifier": "lanza_castigo",
+        "name": "Lanza del Castigo (🗡️ Asesinato directo)",
+        "tag": "night_act",
+        "priority": 20,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": false
+      },
+      {
+        "identifier": "final_justice",
+        "name": "Final Justice (🏷️ Identificación)",
+        "tag": "night_act",
+        "priority": 30,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": false
+      }
+    ],
+    "koromaru_awakened": [
+      {
+        "identifier": "olfato_espiritual",
+        "name": "Olfato Espiritual (🐾 Rastreo)",
+        "tag": "night_act",
+        "priority": 30,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": false
+      },
+      {
+        "identifier": "lunar_scent",
+        "name": "Lunar Scent (🔭 Vigilancia)",
+        "tag": "night_act",
+        "priority": 30,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": true
+      }
+    ],
+    "makoto_awakened": [
+      {
+        "identifier": "wild_resonance",
+        "name": "Wild Resonance (🃏 Alteración)",
+        "tag": "night_act",
+        "priority": 10,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": false
+      },
+      {
+        "identifier": "luz_vinculos",
+        "name": "Luz de los Vínculos (🌟 Buffs)",
+        "tag": "passive",
+        "priority": 99,
+        "accuracy": 100,
+        "target_type": "none",
+        "resolution": "instant",
+        "requires_note": false
+      },
+      {
+        "identifier": "final_seal",
+        "name": "The Final Seal (EndGame)",
+        "tag": "night_act",
+        "priority": 1,
+        "accuracy": 100,
+        "target_type": "none",
+        "resolution": "queued",
+        "requires_note": false
+      }
+    ]
+  },
+
+  "recommended_flags": {
+    "arcana": "bool (Identifies the player as a Social Link/Arcana. Used for Nyx's apocalypse progression)",
+    "sees": "bool (Identifies the player as a SEES member, triggering Fuuka's radar)",
+    "investigation_override": "str (Text returned if an investigative role examines this player)",
+    "hidden_vote": "bool (Masks the player's name in public daytime votes)",
+    "awakened": "bool (Generic global flag indicating if a SEES member has their full abilities)",
+    "makoto_awakened": "bool (Automatically injects Wild Resonance, Luz de los Vinculos and The Final Seal)",
+    "fuuka_awakened": "bool (Automatically injects Sensores, Registro and Oracle Scan)",
+    "akihiko_awakened": "bool (Automatically injects Punos, Instinto and Sonic Counter)",
+    "yukari_awakened": "bool (Automatically injects Viento, Luz Sanadora and Hymn of Salvation)",
+    "junpei_awakened": "bool (Automatically injects Ataque Temerario, De las Cenizas and Heroic Strike)",
+    "aigis_awakened": "bool (Automatically injects Modo Guardia, Protocolo Defensivo and Orgia Mode)",
+    "ken_awakened": "bool (Automatically injects Lanza del Castigo, Justicia Retrograda and Final Justice)",
+    "koromaru_awakened": "bool (Automatically injects Olfato, Instinto and Lunar Scent)",
+    "nyx_phase_one": "bool (Injects Corrupcion Lunar and warns of Umbra effect [1 dead Arcana])",
+    "nyx_phase_two": "bool (Injects Sombras Descendentes, Eco Onirico and warns of Apogeo effect [4 dead Arcana])",
+    "nyx_phase_three": "bool (Injects Silencio Lunar, Desconcierto Lunar and warns of Tenebris effect [6 dead Arcana])",
+    "nyx_phase_four": "bool (Injects Eclipse Final and warns of Avatar effect [10 dead Arcana])"
+  }
 }

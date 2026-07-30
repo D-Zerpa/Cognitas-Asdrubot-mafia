@@ -57,21 +57,43 @@ class RoleLoader:
             logger.error(f"JSON syntax error in {filename}: {e}")
             return {"roles": {}, "temp_abilities": {}}
 
+        # Ensure the parsed JSON is actually a dictionary at its root
+        if not isinstance(data, dict):
+            logger.error(f"Invalid JSON structure in {filename}: Expected a dictionary at the root.")
+            return {"roles": {}, "temp_abilities": {}}
+
         # 1. Parse Roles
         roles_dict: Dict[str, Role] = {}
         raw_roles = data.get("roles", {})
+        
+        # Guard against "roles" being something else like a string or null
+        if not isinstance(raw_roles, dict):
+            logger.error(f"Invalid 'roles' structure in {filename}: Expected a dictionary.")
+            raw_roles = {}
 
         for role_key, role_data in raw_roles.items():
+            if not isinstance(role_data, dict):
+                logger.warning(f"Skipping malformed role '{role_key}': Expected a dictionary.")
+                continue
+
             flags = role_data.get("flags", {})
             role = Role(
                 name=role_data.get("name", "Unknown"),
                 alignment=role_data.get("alignment", "Unknown"),
-                flags=flags
+                flags=flags if isinstance(flags, dict) else {}
             )
 
-            for ab_data in role_data.get("abilities", []):
-                ability = self._parse_ability(ab_data)
-                role.abilities.append(ability)
+            # Safely parse abilities only if it's a list
+            raw_abilities = role_data.get("abilities", [])
+            if isinstance(raw_abilities, list):
+                for ab_data in raw_abilities:
+                    if isinstance(ab_data, dict):
+                        ability = self._parse_ability(ab_data)
+                        role.abilities.append(ability)
+                    else:
+                        logger.warning(f"Skipping malformed ability in role '{role_key}'.")
+            else:
+                logger.warning(f"Abilities for role '{role_key}' must be a list. Skipping.")
 
             roles_dict[role_key] = role
 

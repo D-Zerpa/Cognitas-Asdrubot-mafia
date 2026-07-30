@@ -1,0 +1,559 @@
+{
+  "recommended_flags": {
+    "call_of_the_voices": "bool (Enables dynamic night kill)",
+    "student_law": "bool (Student: Block ability)",
+    "student_spirit": "bool (Student: Spiritual healing)",
+    "student_science": "bool (Student: Reveal ability type)",
+    "student_art": "bool (Student: Mental healing)",
+    "student_aristocrat": "bool (Student: Temporary shield)",
+    "student_commoner": "bool (Student: Double Vote)",
+    "can_espionage": "bool (Vagabundo: Unlocks Amateur Espionage)"
+  },
+  "temporary_abilities": {
+    "call_of_the_voices": {
+      "identifier": "dynamic_night_kill",
+      "name": "Llamado de las voces (🗡️ Asesinato directo)",
+      "tag": "night_act",
+      "priority": 50,
+      "target_type": "single",
+      "resolution": "queued",
+      "requires_note": false
+    },
+    "student_law": {
+      "identifier": "student_block",
+      "name": "La Ley (🔒 Bloqueo)",
+      "tag": "night_act",
+      "priority": 80,
+      "target_type": "single",
+      "resolution": "queued",
+      "requires_note": false
+    },
+    "student_spirit": {
+      "identifier": "student_heal_spirit",
+      "name": "Espiritista (🩹 Curación)",
+      "tag": "day_act",
+      "priority": 50,
+      "target_type": "single",
+      "resolution": "instant",
+      "requires_note": false
+    },
+    "student_science": {
+      "identifier": "student_reveal",
+      "name": "Científico (🕯️ Revelación)",
+      "tag": "night_act",
+      "priority": 30,
+      "target_type": "single",
+      "resolution": "queued",
+      "requires_note": false
+    },
+    "student_art": {
+      "identifier": "student_heal_mental",
+      "name": "Artista (🩹 Curación)",
+      "tag": "day_act",
+      "priority": 50,
+      "target_type": "single",
+      "resolution": "instant",
+      "requires_note": false
+    },
+    "student_aristocrat": {
+      "identifier": "student_shield",
+      "name": "Aristócrata (🛡️ Protección)",
+      "tag": "night_act",
+      "priority": 85,
+      "target_type": "self",
+      "resolution": "queued",
+      "requires_note": false
+    },
+    "can_espionage": {
+      "identifier": "amateur_espionage",
+      "name": "Espionaje amateur (🐾 Rastreo)",
+      "tag": "night_act",
+      "priority": 25,
+      "target_type": "single",
+      "resolution": "queued",
+      "requires_note": false
+    }
+  },
+  "roles": {
+    "martial_artist": {
+      "name": "Artista Marcial",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "soryu_shiki",
+          "name": "Soryū Shiki (🔒 Bloqueo)",
+          "tag": "night_act",
+          "priority": 80,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
+    },
+    "author": {
+      "name": "Autor",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "magnum_opus",
+          "name": "Magnum Opus (📻 Comunicación)",
+          "tag": "day_act",
+          "priority": 50,
+          "target_type": "none",
+          "resolution": "instant",
+          "requires_note": true
+        }
+      ]
+    },
+    "reformed_cultist": {
+      "name": "Cultista Reformado",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "veil_affinity",
+          "name": "Afinidad con El Velo (🌀 Estados alterados / 🛡️ Protección)",
+          "tag": "night_act",
+          "priority": 95,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
+    },
+    "detective": {
+      "name": "Detective",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "elemental",
+          "name": "Elemental (🕯️ Revelación)",
+          "tag": "night_act",
+          "priority": 30,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
+    },
+    "student": {
+      "name": "Estudiante",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "brilliant_mind",
+          "name": "Una mente brillante (🧭 Análisis)",
+          "tag": "day_act",
+          "priority": 50,
+          "target_type": "single",
+          "resolution": "instant",
+          "requires_note": false
+        }
+      ]
+    },
+    "photographer": {
+      "name": "Fotógrafo",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "light_memory",
+          "name": "La memoria escrita en luz (🔭 Vigilancia)",
+          "tag": "night_act",
+          "priority": 30,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
+    },
+    "butler": {
+      "name": "Mayordomo",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "anything_you_need",
+          "name": "¿Algo que necesite, señor? (📻 Comunicación / 🧱 Guardia)",
+          "tag": "night_act",
+          "priority": 90,
+          "target_type": "none",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
+    },
+    "nun": {
+      "name": "Monja",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "gods_vestal",
+          "name": "La vestal de Dios (🩹 Curación)",
+          "tag": "day_act",
+          "priority": 50,
+          "target_type": "single",
+          "resolution": "instant",
+          "requires_note": false
+        }
+      ]
+    },
+    "professor": {
+      "name": "Profesor",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "magna_academia",
+          "name": "Magna Academia (🌟 Buffs - Escribe 2 nombres)",
+          "tag": "night_act",
+          "priority": 90,
+          "target_type": "none",
+          "resolution": "queued",
+          "requires_note": true
+        }
+      ]
+    },
+    "psychologist": {
+      "name": "Psicólogo",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "jungian_integration",
+          "name": "Integración jungiana (🩹 Curación)",
+          "tag": "day_act",
+          "priority": 50,
+          "target_type": "single",
+          "resolution": "instant",
+          "requires_note": false
+        }
+      ]
+    },
+    "hobo": {
+      "name": "Vagabundo",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "modern_nomad",
+          "name": "Nómada moderno (🐾 Rastreo)",
+          "tag": "passive",
+          "priority": 99,
+          "target_type": "none",
+          "resolution": "instant",
+          "requires_note": false
+        }
+      ]
+    },
+    "virtuoso": {
+      "name": "Virtuoso",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "hymn_of_hope",
+          "name": "Himno de la Esperanza (🌟 Buffs)",
+          "tag": "day_act",
+          "priority": 50,
+          "target_type": "single",
+          "resolution": "instant",
+          "requires_note": false
+        },
+        {
+          "identifier": "martyrs_requiem",
+          "name": "Réquiem del Mártir (🩹 Curación - Escribe 3 nombres)",
+          "tag": "night_act",
+          "priority": 95,
+          "target_type": "none",
+          "resolution": "queued",
+          "requires_note": true
+        }
+      ]
+    },
+    "doctor": {
+      "name": "Doctor",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "healing_hands",
+          "name": "Manos sanadoras (🩹 Curación)",
+          "tag": "day_act",
+          "priority": 50,
+          "target_type": "single",
+          "resolution": "instant",
+          "requires_note": false
+        },
+        {
+          "identifier": "compulsive_surgery",
+          "name": "Cirugía Compulsiva (🩹 Curación / 🕯️ Revelación)",
+          "tag": "night_act",
+          "priority": 50,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
+    },
+    "gangster": {
+      "name": "Gangster",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "unconventional_methods",
+          "name": "Métodos no-convencionales (🔒 Bloqueo / 🌀 Estados alterados)",
+          "tag": "day_act",
+          "priority": 80,
+          "target_type": "single",
+          "resolution": "instant",
+          "requires_note": false
+        }
+      ]
+    },
+    "judge": {
+      "name": "Juez",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "summary_judgment",
+          "name": "Sentencia Sumaria (🗡️ Asesinato directo)",
+          "tag": "day_act",
+          "priority": 99,
+          "target_type": "single",
+          "resolution": "instant",
+          "requires_note": false
+        }
+      ]
+    },
+    "noble": {
+      "name": "Noble",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "service_bell",
+          "name": "Campana de Servicio (🌟 Buffs / 📻 Comunicación)",
+          "tag": "night_act",
+          "priority": 90,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "noblesse_depee",
+          "name": "La Noblesse d'épée (🗡️ Asesinato directo)",
+          "tag": "day_act",
+          "priority": 95,
+          "target_type": "single",
+          "resolution": "instant",
+          "requires_note": false
+        }
+      ]
+    },
+    "occultist": {
+      "name": "Ocultista",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "ethereal_transfusion",
+          "name": "Transfusión Etérea (🩹 Curación)",
+          "tag": "day_act",
+          "priority": 50,
+          "target_type": "single",
+          "resolution": "instant",
+          "requires_note": false
+        },
+        {
+          "identifier": "salt_circle",
+          "name": "Círculo de Sal (🛡️ Protección)",
+          "tag": "night_act",
+          "priority": 85,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
+    },
+    "parapsychologist": {
+      "name": "Parapsicólogo",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "cold_reading",
+          "name": "Lectura en Frío (🧭 Análisis - Escribe 5 afirmaciones)",
+          "tag": "night_act",
+          "priority": 20,
+          "target_type": "none",
+          "resolution": "queued",
+          "requires_note": true
+        }
+      ]
+    },
+    "pathologist": {
+      "name": "Patólogo",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "forensic_autopsy",
+          "name": "Autopsia Forense (🧭 Análisis)",
+          "tag": "night_act",
+          "priority": 40,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
+    },
+    "rookie_cop": {
+      "name": "Policía Novato",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "inexperienced_eye",
+          "name": "Ojo inexperto (🧭 Análisis)",
+          "tag": "night_act",
+          "priority": 30,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "trigger_happy",
+          "name": "Gatillo Fácil (🗡️ Asesinato directo)",
+          "tag": "night_act",
+          "priority": 60,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
+    },
+    "politician": {
+      "name": "Político",
+      "alignment": "Pueblo",
+      "flags": {"vote_weight": 2.0},
+      "abilities": [
+        {
+          "identifier": "public_tribune",
+          "name": "Tribuna Pública (📻 Comunicación / 🔒 Bloqueo)",
+          "tag": "day_act",
+          "priority": 80,
+          "target_type": "single",
+          "resolution": "instant",
+          "requires_note": false
+        }
+      ]
+    },
+    "priest": {
+      "name": "Sacerdote",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "collective_fervor",
+          "name": "Fervor Colectivo (🌟 Buffs - Escribe 3 nombres)",
+          "tag": "day_act",
+          "priority": 50,
+          "target_type": "none",
+          "resolution": "instant",
+          "requires_note": true
+        },
+        {
+          "identifier": "sale_of_indulgences",
+          "name": "Venta de Indulgencias (🌟 Buffs)",
+          "tag": "night_act",
+          "priority": 60,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
+    },
+    "salesman": {
+      "name": "Vendedor",
+      "alignment": "Pueblo",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "unrefusable_offer",
+          "name": "Oferta Irrechazable (📻 Comunicación)",
+          "tag": "night_act",
+          "priority": 90,
+          "target_type": "none",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
+    },
+
+    "dagon_priest": {
+      "name": "Sacerdote de Dagon",
+      "alignment": "Mafia",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "bonds_of_fate",
+          "name": "Lazos del destino (🔀 Redirección - Escribe 2 nombres)",
+          "tag": "night_act",
+          "priority": 85,
+          "target_type": "none",
+          "resolution": "queued",
+          "requires_note": true
+        }
+      ]
+    },
+    "sorcerer": {
+      "name": "Hechicero",
+      "alignment": "Mafia",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "void_gaze",
+          "name": "La mirada del vacío (🕯️ Revelación / 🌀 Estados alterados)",
+          "tag": "night_act",
+          "priority": 40,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "primal_desires",
+          "name": "Deseos primigenios (🎭 Maquillaje)",
+          "tag": "day_act",
+          "priority": 50,
+          "target_type": "single",
+          "resolution": "instant",
+          "requires_note": false
+        }
+      ]
+    },
+    "acolyte": {
+      "name": "Acólito",
+      "alignment": "Mafia",
+      "flags": {},
+      "abilities": [
+        {
+          "identifier": "voices_from_the_deep",
+          "name": "Voces de lo profundo (📻 Comunicación - Escribe 2 nombres)",
+          "tag": "night_act",
+          "priority": 10,
+          "target_type": "none",
+          "resolution": "queued",
+          "requires_note": true
+        }
+      ]
+    }
+  }
+}

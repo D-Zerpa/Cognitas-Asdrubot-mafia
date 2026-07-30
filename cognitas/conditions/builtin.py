@@ -20,6 +20,7 @@ class ParalyzedCondition(Condition):
     name = "Paralyzed"
     is_negative = True
     stacking_type = "refresh"
+    category = "Mental"
 
     ui_on_apply = "{mention} ¡Has sido Paralizado!"
     ui_on_block = "Estás Paralizado, no puedes usar tus habilidades."
@@ -34,6 +35,7 @@ class DrowsinessCondition(Condition):
     name = "Drowsiness"
     is_negative = True
     stacking_type = "refresh"
+    category = "Mental"
 
     ui_on_apply = "{mention} ¡Has sido afectado por Somnolencia!"
     ui_on_block = "Estás Somnoliento, no puedes usar tus habilidades."
@@ -48,6 +50,7 @@ class ConfusionCondition(Condition):
     name = "Confusion"
     is_negative = True
     stacking_type = "refresh"
+    category = "Mental"
 
     ui_on_apply = "{mention} ¡Has sido Confundido!"
     ui_on_try_act = "Estás Confundido, intentas aferrarte a la realidad..."
@@ -76,6 +79,7 @@ class JailedCondition(Condition):
     name = "Jailed"
     is_negative = True
     stacking_type = "refresh"
+    category = "Physical"
 
     ui_on_apply = "{mention} ¡Has sido Encarcelado!"
     ui_on_apply_public = "¡{mention} ha sido Encarcelado/a! No puede hablar ni usar habilidades hasta ser liberado/a."
@@ -94,6 +98,7 @@ class SilencedCondition(Condition):
     name = "Silenced"
     is_negative = True
     stacking_type = "refresh"
+    category = "Spiritual"
 
     ui_on_apply = "{mention} ¡Has sido Silenciado!"
     ui_on_apply_public = "¡{mention} ha sido Silenciado/a! No puede hablar."
@@ -113,6 +118,7 @@ class DoubleVoteCondition(Condition):
     name = "Double Vote"
     is_negative = False
     stacking_type = "sum"
+    category = "Buff"
 
     ui_on_apply = "{mention} ¡Has sido bendecido con voto doble!"
     ui_on_expire = "{mention} Tu voto doble ha expirado."
@@ -126,6 +132,7 @@ class SanctionedCondition(Condition):
     name = "Sanctioned"
     is_negative = True
     stacking_type = "sum"
+    category = "Mental"
 
     ui_on_apply_1 = "{mention} ¡Estás Sancionado, tu voto vale la mitad!"
     ui_on_apply_public_1 = "¡{mention} ha sido Sancionado/a! Su poder de voto se reduce a la mitad."
@@ -145,6 +152,7 @@ class WoundedCondition(Condition):
     name = "Wounded"
     is_negative = True
     stacking_type = "sum"
+    category = "Physical"
 
     ui_on_apply_1 = "{mention} Estás Herido, no puedes votar. Mejor corre a buscar a alguien que te cure."
     ui_on_apply_2 = "{mention} ¡Tu herida empeoró, has muerto!"
@@ -171,6 +179,7 @@ class PoisonedCondition(Condition):
     name = "Poisoned"
     is_negative = True
     stacking_type = "sum"
+    category = "Physical"
 
     ui_on_apply_1 = "{mention} Estás Envenenado. Mejor corre a buscar a alguien que te cure."
     ui_on_apply_2 = "{mention} Moriste por envenenamiento. QEPD."

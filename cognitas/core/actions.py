@@ -40,15 +40,25 @@ class Ability:
         self.requires_note = requires_note
 
 class ActionRecord:
-    def __init__(self, source_id: int, target_id: Optional[int], ability: Ability, note: Optional[str] = None, roll: Optional[int] = None):
+    def __init__(self, source_id: int, target_id: Optional[int], ability: Ability, note: Optional[str] = None, roll: Optional[int] = None, state: Optional['GameState'] = None):
         self.source_id = source_id
         self.target_id = target_id
         self.ability = ability
         self.note = note
         
-        # RNG lock-in: Si ya tiramos el dado (viene del JSON), lo usamos. Si no, tiramos uno nuevo.
+        # RNG lock-in
         self.roll = roll if roll is not None else random.randint(1, 100)
-        self.is_success = self.roll <= self.ability.accuracy
+        
+        # Certainty verification
+        has_certainty = False
+        if state:
+            player = state.get_player(source_id)
+            if player:
+                has_certainty = any(cond.id_name == "certainty" for cond in player.statuses)
+                
+        # Success or failure
+        self.is_success = True if has_certainty else (self.roll <= self.ability.accuracy)
+        self.used_certainty = has_certainty and (self.ability.accuracy < 100)
 
 class ActionManager:
     """
@@ -96,7 +106,7 @@ class ActionManager:
         ]
         
         # 4. Queue the final action
-        temp_record = ActionRecord(source_player.user_id, final_target, ability, note)
+        temp_record = ActionRecord(source_player.user_id, final_target, ability, note, state=state)
         
         state.action_queue.append({
             "source_id": source_player.user_id,
@@ -162,7 +172,8 @@ class ActionManager:
                     target_id=action_dict["target_id"],
                     ability=ability,
                     note=action_dict.get("note"),
-                    roll=action_dict.get("roll")
+                    roll=action_dict.get("roll"),
+                    state=state
                 )
                 reconstructed_queue.append(record)
                 

@@ -2,42 +2,21 @@ from __future__ import annotations
 import discord
 import random
 import os
-from typing import List
-from . import Expansion, register
-from ..status import Status, register as register_status
-from ..status import engine as SE
-import importlib
+from typing import List, Optional, TYPE_CHECKING
+from cognitas.expansions.base import BaseExpansion
 
-# ==============================================================================
-#  PERSONA 3 EXPANSION
-# ==============================================================================
+if TYPE_CHECKING:
+    from cognitas.core.state import GameState
+    from cognitas.core.models import Player
 
-@register("persona3")
-@register("p3")
-class PersonaExpansion(Expansion):
+class ExpansionGimmick(BaseExpansion):
+    """
+    Persona 3 expansion featuring the Nyx Apocalypse countdown, 
+    Nyx global phase triggers, and Fuuka's Oracle radar.
+    """
     name = "p3"
     
-    _daily_nyx_msg: str = ""
-    # --- EASTER EGGS ---
-    
-    memes = {
-        "mass destruction": "🎺 BABY BABY BABY BABY BABY... YEEEEAH!",
-        "disturbing the peace": "🎶 LOOK INTO MY EYES!",
-        "disturbing the piece": "🎶 LOOK INTO MY EYES!",
-        "junpei": "Junpei Ace Detective? More like **Stupei Ace Defective**.",
-        "marin karin": "🧊 *Mitsuru intenta usar Marin Karin...* ¡Falló! (Como siempre).",
-        "akihiko": "💪 Did you see that, Shinji?!",
-        "protein": "💪 I've been waiting for this!",
-        "the enemy": "😱 *Gasp!* The enemy!",
-        "toaster": "🤖 No soy una tostadora. Soy un arma anti-sombras de última generación.\n*♪ Burn my bread... ♪*",
-        "tostadora": "🤖 No soy una tostadora. Soy un arma anti-sombras de última generación.\n*♪ Burn my bread... ♪*",
-        "tartarus": "😩 ¿Otra vez a subir escaleras? *Sigh...*",
-        "nyx": "The Arcana is the means by which all is revealed...",
-        "tanaka": "🎶 Anata no, terebi ni, Jika-netto Tanaka~ 🎶\n💰 *¡Amazing Commodities!*",
-    }
-
-    # --- NARRATIVE SKELETON ---
-    # Map: Alive Arcanas -> Flavor Text
+    # Narrative timeline based on remaining active Arcana players
     NYX_TIMELINE = {
         13: "El cielo está tranquilo. La vida cotidiana continúa ignorante del destino.",
         12: "La primera campana ha sonado. Una sombra se proyecta sobre la ciudad.",
@@ -55,279 +34,123 @@ class PersonaExpansion(Expansion):
         0:  "LA HORA OSCURA ETERNA HA COMENZADO. NYX HA DESCENDIDO."
     }
 
+    def __init__(self):
+        super().__init__()
+        self._daily_nyx_msg: str = ""
+        # Cache to store who acted during the night
+        self._night_actors_cache: set[int] = set()
+
     # --------------------------------------------------------------------------
-    #  PHASE HOOKS
+    #  EXPANSION INTERFACE HOOKS
     # --------------------------------------------------------------------------
-    
-    async def on_phase_change(self, guild: discord.Guild, game_state, new_phase: str):
-        # Local imports to break the cycle
-        from ..core.infra import get_infra
 
-        if new_phase == "day":
-            await self._send_fuuka_log(guild, game_state)
-            await self._trigger_nyx_effects(guild, game_state)
+    def get_status_info(self, state: 'GameState') -> Optional[str]:
+        """Provides the current Apocalypse countdown status for the /status command."""
+        count = self._count_arcanas(state, alive_only=True)
+        flavor = self.NYX_TIMELINE.get(count, "El fin se acerca inexorablemente...")
+        return f"**Conteo hasta el Apocalipsis:** {count} horas restantes\n> *\"{flavor}\"*"
 
-        # Reaper Logic: Night 4
-        if new_phase == "night" and game_state.current_day_number == 4:
-            reaper_is_alive = False
-            for p in getattr(game_state, "players", {}).values():
-                # Check canonical role name "Reaper"
-                if p.get("role") == "Reaper" and p.get("alive", True):
-                    reaper_is_alive = True
-                    break
-            
-            if reaper_is_alive:
-                infra = get_infra(guild.id)
-                ch_id = (infra.get("channels") or {}).get("game")
-                if ch_id:
-                    ch = guild.get_channel(ch_id)
-                    if ch:
-                        await ch.send("⛓️ **Se escuchan cadenas arrastrándose en la oscuridad...** 💀")
-
-    def banner_for_day(self, game_state):
-        count = self._count_arcanas(game_state, alive_only=True)
+    def on_phase_change(self, state: 'GameState') -> Optional[str]:
+        """Triggered when the phase advances. Handles Nyx notifications and effects."""
+        # Note: Phase change handles cycle announcements. 
+        count = self._count_arcanas(state, alive_only=True)
         flavor = self.NYX_TIMELINE.get(count, "El fin se acerca inexorablemente...")
         
-        msg = (
+        announcement = (
             f"🌑 **El Apocalipsis se aproxima...**\n"
             f"# ⏳ Faltan **{count}** horas.\n\n"
             f"> *\"{flavor}\"*"
         )
         
-        # Append entropy report if available
         if self._daily_nyx_msg:
-            msg += f"\n\n{self._daily_nyx_msg}"
+            announcement += f"\n\n{self._daily_nyx_msg}"
             self._daily_nyx_msg = ""
             
-        img_path = self._find_image_for_count(count)
-        return {
-            "content": msg,
-            "file_path": img_path
-        }
+        return announcement
 
-    def banner_for_night(self, game_state):
-        # Usamos la misma lógica para mostrar el reloj y la cuenta atrás actualizada
-        return self.banner_for_day(game_state)
-
-    def _find_image_for_count(self, count: int) -> str | None:
-        """
-        Locate the countdown image.
-        Target directory: cognitas/expansions/assets/p3/
-        """
-        # Build path relative to THIS file (persona3.py)
-        base_dir = os.path.join(os.path.dirname(__file__), "assets", "p3")
+    def on_player_death(self, state: 'GameState', player: 'Player') -> None:
+        """Triggered automatically when a player dies. Can update tracking if needed."""
+        pass
+    
+    def on_action_submitted(self, state: 'GameState', source_id: int, target_id: Optional[int], ability_tag: str) -> dict[int, str]:
+        """Intercepts actions for Fuuka's Radar and caches night actors for the Morning Report."""
+        notifications = {}
         
-        # Try multiple formats and filenames
-        for ext in [".jpg", ".png", ".jpeg", ".gif"]:
-            candidates = [
-                f"p3_hour_{count}{ext}", 
-                f"hour_{count}{ext}", 
-                f"{count}{ext}"
-            ]
-            for fname in candidates:
-                full = os.path.join(base_dir, fname)
-                if os.path.exists(full):
-                    return full
-        return None
+        # 1. Cache for Night Report
+        if ability_tag == "night_act":
+            self._night_actors_cache.add(source_id)
+            
+        if not target_id:
+            return notifications
 
-    def get_status_lines(self, game_state) -> list[str]:
-        c = self._count_arcanas(game_state, alive_only=True)
-        return [f"**Conteo hasta el Apocalipsis:** {c}"]
+        # 2. Immediate Radar Logic
+        target = state.players.get(target_id)
+        if not target or not target.role or not target.role.flags.get("sees", False):
+            return notifications
 
-    # --------------------------------------------------------------------------
-    #  ACTION HOOKS
-    # --------------------------------------------------------------------------
-
-    async def on_action_commit(self, interaction: discord.Interaction, game_state, actor_uid: str, target_uid: str | None, action_data: dict) -> None:
-        from ..core.players import send_to_player  # Local import
-
-        if not target_uid: return
-
-        players = getattr(game_state, "players", {})
-        target = players.get(target_uid)
-        
-        # 1. Is target SEES?
-        if not target or not target.get("flags", {}).get("sees", False):
-            return
-
-        # 2. Notify Oracles (exclude self-target)
-        oracles = self._get_active_oracles(game_state, exclude_uid=actor_uid)
-        if not oracles:
-            return
-
-        target_name = target.get("role", "Unknown role")
+        oracles = self._get_active_oracles(state, exclude_uid=source_id)
+        target_name = target.role.name
         msg = f"📡 **[ORACLE]** Anomalía detectada: Habilidad usada contra **{target_name}**."
 
-        for oracle_uid in oracles:
-            await send_to_player(interaction.guild, oracle_uid, msg)
+        for oracle_id in oracles:
+            notifications[oracle_id] = msg
+
+        return notifications
+    
+    async def on_phase_start(self, bot, guild: discord.Guild, state: 'GameState') -> None:
+        """Delivers Fuuka's Tactical Report at Dawn and clears the cache."""
+        if state.phase.value == "day":
+            oracles = self._get_active_oracles(state)
+            if oracles:
+                prev_night_num = max(1, state.cycle - 1)
+                
+                if not self._night_actors_cache:
+                    msg = f"📡 **[ORACLE] Registro Táctico — Noche {prev_night_num}**\n*No se detectó actividad anoche.*"
+                else:
+                    names = []
+                    for uid in self._night_actors_cache:
+                        member = guild.get_member(uid)
+                        name = member.display_name if member else f"ID:{uid}"
+                        names.append(name)
+                    
+                    list_str = ", ".join(names)
+                    msg = (
+                        f"📡 **[ORACLE] Registro Táctico — Noche {prev_night_num}**\n"
+                        f"Se detectaron firmas energéticas de los siguientes agentes:\n"
+                        f"`{list_str}`"
+                    )
+                
+                # Send private messages to all oracles via their private channels
+                for oracle_uid in oracles:
+                    oracle_player = state.get_player(oracle_uid)
+                    if oracle_player and oracle_player.private_channel_id:
+                        priv_channel = guild.get_channel(oracle_player.private_channel_id)
+                        if priv_channel:
+                            await priv_channel.send(msg)
+                            
+            # Always wipe the cache clean for the next night
+            self._night_actors_cache.clear()
 
     # --------------------------------------------------------------------------
-    #  NYX LOGIC
+    #  INTERNAL LOGIC & HELPERS
     # --------------------------------------------------------------------------
 
-    async def _trigger_nyx_effects(self, guild: discord.Guild, game_state):
-        from ..core.players import send_to_player  # Local import
-
-        self._daily_nyx_msg = ""
-        alive_arcanas = self._count_arcanas(game_state, alive_only=True)
-        total_arcanas = self._count_arcanas(game_state, alive_only=False)
-        dead_arcanas = total_arcanas - alive_arcanas
-        
-        target_count = 2
-        status_name = None
-        filter_flag = None
-        flavour_text = ""
-
-        # Determine Phase thresholds
-        if dead_arcanas >= 6:
-            status_name = "Confusion"
-            filter_flag = None # Any target
-            flavour_text = "🌀 **Fase Tenebris:** La desesperación nubla las mentes..."
-        elif dead_arcanas >= 4:
-            status_name = "Drowsiness"
-            filter_flag = "night_act" # Only those active at night
-            flavour_text = "💤 **Fase Apogeo:** La Apatía consume la voluntad..."
-        elif dead_arcanas >= 1:
-            status_name = "Paralyzed"
-            filter_flag = "day_act" # Only those active during day (vote or skill)
-            flavour_text = "⛓️ **Fase Umbra:** El miedo paraliza los cuerpos..."
-        else:
-            return # Phase 0
-
-        # Select candidates
-        candidates = []
-        for uid, p in game_state.players.items():
-            if not p.get("alive", True): continue
-            
-            if filter_flag:
-                flags = p.get("flags", {})
-                if flags.get(filter_flag, False):
-                    candidates.append(uid)
-            else:
-                candidates.append(uid)
-
-        if not candidates: return
-
-        # Pick random victims
-        victims = random.sample(candidates, min(len(candidates), target_count))
-        
-        for uid in victims:
-            SE.apply(game_state, uid, status_name, source="Nyx Global")
-            await send_to_player(guild, uid, f"💀 **La influencia de Nyx te alcanza:** {flavour_text}")
-
-        self._daily_nyx_msg = (
-            f"{flavour_text}\n"
-            f"**{len(victims)}** personas han sucumbido al efecto: **{status_name}**."
-        )
-
-
-    # --------------------------------------------------------------------------
-    #  INTERNAL HELPERS
-    # --------------------------------------------------------------------------
-
-    def _count_arcanas(self, game_state, alive_only: bool = True) -> int:
-        c = 0
-        for uid, p in getattr(game_state, "players", {}).items():
-            is_arcana = p.get("flags", {}).get("arcana")
-            is_alive = p.get("alive", True)
-            
-            if is_arcana:
-                if alive_only and not is_alive:
+    def _count_arcanas(self, state: 'GameState', alive_only: bool = True) -> int:
+        """Counts how many players have the 'arcana' flag enabled in their role."""
+        count = 0
+        for player in state.players.values():
+            if player.role and player.role.flags.get("arcana", False):
+                if alive_only and not player.is_alive:
                     continue
-                c += 1
-        return c
+                count += 1
+        return count
 
-    def _get_active_oracles(self, game_state, exclude_uid: str | None = None) -> List[str]:
-        """Return UIDs of alive players with 'oracle' flag."""
-        out = []
-        for uid, p in getattr(game_state, "players", {}).items():
-            if uid == exclude_uid: continue
-            if p.get("alive", True) and p.get("flags", {}).get("oracle", False):
-                out.append(uid)
-        return out
-
-    async def _send_fuuka_log(self, guild: discord.Guild, game_state):
-        from ..core import actions as act_core       # Local import
-        from ..core.players import send_to_player    # Local import
-
-        # We need Night (N-1)
-        prev_night_num = max(1, game_state.current_day_number - 1)
-        actor_uids = act_core.acted_uids("night", prev_night_num)
-        
-        oracles = self._get_active_oracles(game_state)
-        if not oracles: return
-
-        if not actor_uids:
-            msg = f"📡 **[ORACLE] Registro Táctico — Noche {prev_night_num}**\n*No se detectó actividad anoche.*"
-        else:
-            names = []
-            for uid in actor_uids:
-                p = game_state.players.get(uid, {})
-                names.append(p.get("name") or p.get("alias") or "???")
-            
-            list_str = ", ".join(names)
-            msg = (
-                f"📡 **[ORACLE] Registro Táctico — Noche {prev_night_num}**\n"
-                f"Se detectaron firmas energéticas de los siguientes agentes:\n"
-                f"`{list_str}`"
-            )
-
-        for oracle_uid in oracles:
-            await send_to_player(guild, oracle_uid, msg)
-
-
-# ==============================================================================
-#  RESOURCE COUNTERS (Status System)
-# ==============================================================================
-
-@register_status("BulletAmmo")
-class BulletAmmo(Status):
-    name = "Bullet Ammo"
-    type = "counter"       
-    visibility = "hidden"  
-    stack_policy = "add"
-    default_duration = 999
-    decrement_on = "always"
-
-    def on_apply(self, game, uid, entry):
-        return f"🔫 **Ammo Loaded:** You have {entry['stacks']} bullets."
-
-@register_status("RoseCounter")
-class RoseCounter(Status):
-    name = "Roses"
-    type = "counter"
-    visibility = "hidden"
-    stack_policy = "add"
-    default_duration = 999
-    decrement_on = "always"
-
-    def on_apply(self, game, uid, entry):
-        count = entry['stacks']
-        msg = f"🌹 **Rose Obtained!** Total: {count}."
-        if count >= 3:
-            msg += "\n✨ **Tránsito Carmesí:** You can now enter the Graveyard."
-        return msg
-
-@register_status("RageCharge")
-class RageCharge(Status):
-    name = "Rage"
-    type = "counter"
-    visibility = "hidden"
-    stack_policy = "add"
-    default_duration = 999
-    decrement_on = "always"
-
-    def on_apply(self, game, uid, entry):
-        return f"💢 **Rage Building...** Stack: {entry['stacks']}."
-
-@register_status("AffinityCharge")
-class AffinityCharge(Status):
-    name = "Affinity"
-    type = "counter"
-    visibility = "hidden"
-    stack_policy = "add"
-    default_duration = 999
-    decrement_on = "always"
-
-    def on_apply(self, game, uid, entry):
-        return f"🤝 **Affinity Deepens.** Stack: {entry['stacks']}."
+    def _get_active_oracles(self, state: 'GameState', exclude_uid: Optional[int] = None) -> List[int]:
+        """Returns user IDs of alive players with the 'oracle' flag."""
+        oracles = []
+        for player in state.players.values():
+            if player.user_id == exclude_uid:
+                continue
+            if player.is_alive and player.role and player.role.flags.get("oracle", False):
+                oracles.append(player.user_id)
+        return oracles

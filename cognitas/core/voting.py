@@ -18,11 +18,34 @@ class VotingManager:
     def __init__(self):
         pass
 
-    def cast_vote(self, state: 'GameState', voter_id: int, target: Union[int, str], weight: int = 1) -> None:
-        """Records or updates a player's vote with a specific weight."""
+    def cast_vote(self, state: 'GameState', voter_id: int, target: Union[int, str], override_weight: Optional[int] = None) -> None:
+        """
+        Records or updates a player's vote. 
+        Calculates the weight dynamically based on role flags and active conditions unless overridden.
+        """
+        player = state.get_player(voter_id)
+        if not player:
+            logger.warning(f"Attempted to cast vote for non-existent player ID {voter_id}.")
+            return
+
+        if override_weight is not None:
+            final_weight = override_weight
+        else:
+            # 1. Base weight from role flags (defaults to 1)
+            base_weight = player.role.flags.get("vote_weight", 1.0) if player.role else 1.0
+            
+            # 2. Apply multipliers from active conditions (e.g., Sanctioned = 0.5)
+            multiplier = 1.0
+            for condition in player.statuses:
+                if hasattr(condition, "get_vote_multiplier"):
+                    multiplier *= condition.get_vote_multiplier()
+
+            # 3. Calculate final integer weight
+            final_weight = int(base_weight * multiplier)
+
         state.votes[voter_id] = target
-        state.vote_weights[voter_id] = weight
-        logger.debug(f"Voter {voter_id} cast vote for {target} (Weight: {weight}).")
+        state.vote_weights[voter_id] = final_weight
+        logger.debug(f"Voter {voter_id} cast vote for {target} (Final Weight: {final_weight}).")
 
     def unvote(self, state: 'GameState', voter_id: int) -> None:
         """Removes a player's vote if it exists."""

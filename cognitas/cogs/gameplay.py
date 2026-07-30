@@ -127,8 +127,8 @@ class VotingUI(discord.ui.View):
                 await interaction.response.send_message("❌ Objetivo inválido o muerto.", ephemeral=True)
                 return
 
-        # Cast the vote in the engine
-        self.bot.voting_manager.cast_vote(self.state, self.user_id, target_val, weight=vote_weight)
+        # Cast the vote in the engine (Delegating mathematical calculation to the core)
+        self.bot.voting_manager.cast_vote(self.state, self.user_id, target_val)
         
         # Evaluate Phase State Machine
         from cognitas.core.time import TimeManager
