@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, Dict, List,  TYPE_CHECKING
+from typing import Optional, Dict, List, Any, TYPE_CHECKING
 from cognitas.expansions.base import BaseExpansion
 from cognitas.core.time import Phase
 from cognitas.conditions.factory import register_condition

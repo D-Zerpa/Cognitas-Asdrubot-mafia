@@ -1,4 +1,4 @@
-# 🧠 **Cognitas** *(a.k.a. Asdrubot)* — Mafia Game Engine (v3.0)
+# 🧠 **Cognitas** *(a.k.a. Asdrubot)* — Mafia Game Engine (v4.0)
 
 ![Python](https://img.shields.io/badge/Python-3.11%2B-blue?logo=python)
 ![Discord](https://img.shields.io/badge/Discord.py-2.0%2B-5865F2?logo=discord&logoColor=white)
@@ -36,60 +36,59 @@ The code is organized to facilitate scalability and maintenance:
 ```
 cognitas/
  ├── bot.py                 # Entry point (Startup & Cogs loading)
- ├── config.py              # Global configuration (Intents, Paths)
+ ├── config.py              # Global configuration
+ │
+ ├── cogs/                  # INTERFACE (Slash Commands)
+ │    ├── gameplay.py       # Player actions and game flow commands
+ │    ├── host.py           # Game master and moderation utilities
+ │    ├── misc.py           # Miscellaneous and fun commands
+ │    ├── system.py         # Bot system operations and maintenance
+ │    └── timer.py          # Phase timer management
+ │
+ ├── conditions/            # STATUS ENGINE
+ │    ├── __init__.py       # Registry initialization
+ │    ├── builtin.py        # Standard effects registry
+ │    ├── engine.py         # Logic for application, ticking, and cleansing
+ │    └── factory.py        # Status object creation and validation
  │
  ├── core/                  # SYSTEM CORE
+ │    ├── __init__.py
  │    ├── actions.py        # Phase-aware action queue & validation
- │    ├── game.py           # Game orchestrator & role assignment
- │    ├── infra.py          # Discord API management (Channels/Roles)
- │    ├── johnbotjovi.py    # Image processing (Lynch posters)
- │    ├── logs.py           # Logging system
- │    ├── lunar.py          # Lunar cycle logic
- │    ├── phases.py         # Day/Night transition logic & Timers
- │    ├── players.py        # Entity management (Life, Death, Flags)
- │    ├── reminders.py      # Phase timeout reminders
- │    ├── roles.py          # Role data loading
+ │    ├── models.py         # Core data models and data structures
  │    ├── state.py          # Runtime game state definition
  │    ├── storage.py        # Atomic JSON persistence
- │    └── votes.py          # Voting engine & tallying
+ │    ├── time.py           # Phase transition and timezone logic
+ │    └── voting.py         # Voting engine & tallying
  │
- ├── status/                # STATUS ENGINE
- │    ├── __init__.py       # Registry & Base Status class
- │    ├── builtin.py        # Standard effects (Paralyzed, Jailed, etc.)
- │    └── engine.py         # Logic for application, ticking, and cleansing
+ ├── data/                  # DATA MANAGEMENT
+ │    ├── __init__.py
+ │    ├── loaders.py        # JSON parsing and validation logic
+ │    └── json/             # Static role databases
+ │         ├── roles_default.json
+ │         ├── roles_expedition33.json
+ │         ├── roles_lovecraft.json
+ │         ├── roles_p3.json
+ │         └── roles_smt.json
  │
  ├── expansions/            # GAME CONTENT
  │    ├── __init__.py       # Expansion registry & hooks
- │    ├── myexp.py          # Template for new expansions
- │    ├── persona.py        # Persona 3 mechanics (Nyx, SEES, Fuuka)
- │    ├── philosophers.py   # Base mechanics
- │    └── smt.py            # SMT mechanics (Law/Chaos)
+ │    ├── base.py           # Classic/Default mechanics
+ │    ├── expedition33.py   # Expedition 33 mechanics
+ │    ├── lovecraft.py      # Lovecraftian mechanics
+ │    ├── lovecraft_commands.py # Custom slash commands for Lovecraft expansion
+ │    ├── persona3.py       # Persona 3 mechanics (Nyx, SEES, Arcanas)
+ │    └── smt.py            # SMT mechanics (Law/Chaos, Samurai)
  │
- ├── cogs/                  # INTERFACE (Slash Commands)
- │    ├── actions.py        # /act, /actions logs
- │    ├── bootstrap.py      # /setup, /wipe, /link_roles
- │    ├── fun.py            # /dice, /coin, /lynch
- │    ├── game.py           # /game_start, /game_reset
- │    ├── help.py           # /help
- │    ├── maintenance.py    # /sync_here, /clean_commands
- │    ├── moderation.py     # /set_channels, /bc
- │    ├── players.py        # /player register, /view, /set_flag
- │    ├── role_debug.py     # /debug_roles
- │    ├── status.py         # /effects apply, /effects list
- │    ├── timezones.py      # /tz add, /tz list
- │    └── voting.py         # /vote cast, /status, /votes
- │
- └── data/                  # DATA FILES (Roles configuration)
-      ├── roles_default.json
-      ├── roles_p3.json
-      └── roles_smt.json
+ └── utils/                 # UTILITIES
+      ├── __init__.py
+      └── discord_sync.py   # Discord API synchronization helpers
 ```
 
 
 ## 🎮 Included Expansions
 
-### 🏛️ Base (Philosopher's Game)
-The classic experience. Standard roles, majority voting, and a day/night cycle without external mechanics.
+### 🏛️ Base (Classic Game)
+The standard experience loaded via `base.py`. Standard roles, majority voting, and a regular day/night cycle without external mechanics
 
 ### ⚖️ Shin Megami Tensei (Law & Chaos)
 A conflict of cosmic proportions based on SMT IV. Turning a simple mafia game into a decently-tailored narrative piece.
@@ -105,6 +104,18 @@ A complex expansion based on the Atlus JRPG.
 - **Nyx Entropy:** Automatic global events (mass paralysis, confusion) as the clock advances.
 - **SEES System:** Group chat with "Radar" abilities (Fuuka) that detect hostile actions in real-time.
 - **Evolving Roles:** Each role has unique perks for following an specific game style, which makes the game an unique experience for each player.
+
+### 🐙 Lovecraft (Cosmic Horror)
+A custom expansion integrating sanity and cosmic horror mechanics. 
+- **Paranoia and Sanity:** The Paranoia makes Sanity levels go down, when levels get to 0, the mafia wins.
+- **Chaotic Town:** You can't trust the Townspeople, some of them are crazy and could make survival even harder.
+- **Misterious Forces are working:** Who's killing everyone? Every night the voices demand a soul.
+- **Dynamic Mafia:** No one is evil, but everyone could be. Trust no one, everyone could be the mafia. 
+
+### 🧭 Expedition 33 (Express Mafia)
+A thematic expansion. A bit more complex than the Base mafia, but without any secondary mechanic.
+
+
 
 ### 📚 Instructions
 
