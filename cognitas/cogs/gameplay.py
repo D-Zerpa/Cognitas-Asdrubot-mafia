@@ -318,7 +318,7 @@ class ActionNoteModal(discord.ui.Modal, title="Detalles de la Acción"):
             
             # Cerramos el panel original
             await interaction.response.edit_message(embed=embed, view=None)
-
+            self.button_instance.bot.storage.save_state(self.button_instance.state)
 
 class ActionButton(discord.ui.Button):
     def __init__(self, ability: Ability, bot: commands.Bot, state: GameState):
@@ -404,6 +404,7 @@ class ActionButton(discord.ui.Button):
             
             # Editamos el mensaje original quitando la vista (view=None)
             await interaction.response.edit_message(embed=embed, view=None)
+            self.bot.storage.save_state(self.state)
 
 class ActionUI(discord.ui.View):
     def __init__(self, state: GameState, guild: discord.Guild, valid_abilities: List[Ability], bot: commands.Bot):

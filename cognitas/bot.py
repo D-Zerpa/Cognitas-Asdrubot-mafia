@@ -88,18 +88,36 @@ class CognitasBot(commands.Bot):
                     
                 # 3. Restore Expansion Commands (Cog)
                 expected_cog_path = f"cognitas.expansions.{expansion_name}_commands"
+                
                 try:
                     await self.load_extension(expected_cog_path)
                     self.active_expansion_cog = expected_cog_path
                     logger.info(f"Restored expansion cog: {expected_cog_path}")
+                except commands.ExtensionNotFound:
+                    # It is perfectly normal for base/vanilla expansions to lack this file
+                    logger.info(f"No custom commands loaded for {expansion_name} (Not found).")
                 except Exception as e:
-                    logger.info(f"No custom commands loaded for {expansion_name} (this is normal if vanilla): {e}")
+                    # If the file exists but fails to load (SyntaxError, ImportError, etc.)
+                    logger.error(f"CRITICAL: Failed to load existing commands for {expansion_name}. Error: {e}")
         else:
             logger.info("No previous state found. Starting with a blank GameState.")
                 
         # Command Sync
         logger.info("Syncing slash commands...")
-        await self.tree.sync()
+        guild_id = os.getenv("GUILD_ID")
+        
+        if guild_id:
+            try:
+                target_guild = discord.Object(id=int(guild_id))
+                self.tree.copy_global_to(guild=target_guild)
+                await self.tree.sync(guild=target_guild)
+                logger.info(f"Slash commands synced instantly to Guild ID: {guild_id}.")
+            except ValueError:
+                logger.error("GUILD_ID in .env is not a valid integer. Defaulting to global sync.")
+                await self.tree.sync()
+        else:
+            logger.warning("No GUILD_ID found in .env. Global sync may take up to an hour to appear in Discord.")
+            await self.tree.sync()
         logger.info("Slash commands synced.")
 
     async def on_ready(self):

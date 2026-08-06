@@ -22,6 +22,7 @@ class VotingManager:
         """
         Records or updates a player's vote. 
         Calculates the weight dynamically based on role flags and active conditions unless overridden.
+        Ensures weights cannot be negative to prevent tally corruption.
         """
         player = state.get_player(voter_id)
         if not player:
@@ -29,19 +30,22 @@ class VotingManager:
             return
 
         if override_weight is not None:
-            final_weight = override_weight
+            final_weight = max(0, override_weight)
         else:
-            # 1. Base weight from role flags (defaults to 1)
-            base_weight = player.role.flags.get("vote_weight", 1.0) if player.role else 1.0
+            # 1. Base weight from role flags (defaults to 1.0)
+            base_weight = float(player.role.flags.get("vote_weight", 1.0)) if player.role else 1.0
             
-            # 2. Apply multipliers from active conditions (e.g., Sanctioned = 0.5)
+            # 2. Apply multipliers from active conditions safely
             multiplier = 1.0
             for condition in player.statuses:
-                if hasattr(condition, "get_vote_multiplier"):
-                    multiplier *= condition.get_vote_multiplier()
+                if hasattr(condition, "get_vote_multiplier") and callable(condition.get_vote_multiplier):
+                    try:
+                        multiplier *= float(condition.get_vote_multiplier())
+                    except (TypeError, ValueError):
+                        logger.warning(f"Condition {condition} returned invalid vote multiplier.")
 
-            # 3. Calculate final integer weight
-            final_weight = int(base_weight * multiplier)
+            # 3. Calculate final integer weight, clamping to 0 minimum
+            final_weight = max(0, int(base_weight * multiplier))
 
         state.votes[voter_id] = target
         state.vote_weights[voter_id] = final_weight
@@ -84,8 +88,11 @@ class VotingManager:
             tally[target] = tally.get(target, 0) + weight
         return tally
 
-    def check_majority(self, state: 'GameState', alive_count: int, extra_thresholds: Dict[Union[int, str], int] = None) -> Optional[Union[int, str]]:
-        """Determines if any target has reached absolute majority."""
+    def check_majority(self, state: 'GameState', alive_count: int, extra_thresholds: Optional[Dict[Union[int, str], int]] = None) -> Optional[Union[int, str]]:
+        """
+        Determines if any target has reached absolute majority.
+        Handles edge cases where modified vote weights cause a mathematical tie above the threshold.
+        """
         if alive_count <= 0:
             return None
 
@@ -93,11 +100,25 @@ class VotingManager:
         extra_thresholds = extra_thresholds or {}
         
         tally = self.get_tally(state)
-
+        
+        # Collect all targets that meet or exceed their specific threshold
+        passed_targets = {}
         for target, total_weight in tally.items():
             target_threshold = base_threshold + extra_thresholds.get(target, 0)
             if total_weight >= target_threshold:
-                logger.info(f"Majority reached for target {target} with {total_weight} votes.")
-                return target
-                
-        return None
+                passed_targets[target] = total_weight
+
+        if not passed_targets:
+            return None
+
+        # Sort targets by total weight descending
+        sorted_passed = sorted(passed_targets.items(), key=lambda item: item[1], reverse=True)
+        
+        # Check for a tie at the highest weight crossing the threshold
+        if len(sorted_passed) > 1 and sorted_passed[0][1] == sorted_passed[1][1]:
+            logger.info("Majority reached by multiple targets with identical weights (Tie). Resolving as NO majority.")
+            return None
+            
+        winning_target = sorted_passed[0][0]
+        logger.info(f"Majority reached for target {winning_target} with {sorted_passed[0][1]} votes.")
+        return winning_target

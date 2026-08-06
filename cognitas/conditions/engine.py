@@ -102,20 +102,22 @@ class ConditionManager:
                 if condition.stacking_type == "refresh":
                     existing.duration = max(existing.duration, condition.duration)
                     logger.debug(f"Refreshed duration of '{condition.name}' on {target_id}.")
+                    return  # Exit, handled by refresh
                 elif condition.stacking_type == "sum":
                     existing.stacks += condition.stacks
                     existing.duration = max(existing.duration, condition.duration)
                     logger.debug(f"Stacked '{condition.name}' on {target_id}. Total stacks: {existing.stacks}")
                     existing.on_stack(player, self.state)
-                return
+                    return  # Exit, handled by sum
+                # If stacking_type is "none", it ignores the above and proceeds to append.
 
-        # If new condition, append and apply
+        # If new condition (or stacking_type == "none"), append and apply
         player.statuses.append(condition)
         condition.on_apply(player, self.state)
         logger.info(f"Applied '{condition.name}' to player {target_id}.")
 
     def process_phase_end(self) -> None:
-        """Ticks down all conditions and removes expired ones."""
+        """Ticks down all conditions and safely removes expired ones."""
         for player in self.state.get_alive_players():
             expired_conditions: List[Condition] = []
             
@@ -125,5 +127,8 @@ class ConditionManager:
 
             for expired in expired_conditions:
                 expired.on_expire(player, self.state)
-                player.statuses.remove(expired)
+                # Safely check if it still exists before removing
+                # (Prevents ValueError if a death hook cleared the statuses)
+                if expired in player.statuses:
+                    player.statuses.remove(expired)
                 logger.info(f"Condition '{expired.name}' expired on {player.user_id}.")

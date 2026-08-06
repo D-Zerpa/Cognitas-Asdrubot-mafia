@@ -29,7 +29,8 @@ class ParanoiaSelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         val = int(self.values[0])
-        current = self.parent_view.state.expansion_data.get("paranoia", 0)
+        expansion_data = self.parent_view.state.expansion_data
+        current = expansion_data.get("paranoia", 0) if isinstance(expansion_data, dict) else 0
         self.parent_view.state.expansion_data["paranoia"] = max(0, current + val)
         await self.parent_view.refresh_panel(interaction)
 
@@ -71,26 +72,32 @@ class EventSelect(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
         event_key = self.values[0]
         state = self.parent_view.state
+        bot = self.parent_view.bot
         
-        # Zero assumptions: verify the expansion method exists
-        if not hasattr(state.expansion, "get_ability_impact"):
+        # Retrieve the logic controller from the bot, not the state
+        active_gimmick = getattr(bot, "active_gimmick", None)
+        
+        # Zero assumptions: verify the expansion method exists safely
+        if not active_gimmick or not hasattr(active_gimmick, "get_ability_impact"):
             await interaction.response.send_message("❌ Expansion method not found.", ephemeral=True)
             return
 
-        impact = state.expansion.get_ability_impact(event_key)
+        impact = active_gimmick.get_ability_impact(event_key)
         if not impact:
             await interaction.response.send_message(f"❌ Event '{event_key}' not found.", ephemeral=True)
             return
 
-        current = state.expansion_data.get("paranoia", 0)
-        shift = impact["paranoia"]
+        # Safely manipulate the state expansion data
+        expansion_data = state.expansion_data if isinstance(state.expansion_data, dict) else {}
+        current = expansion_data.get("paranoia", 0)
+        shift = impact.get("paranoia", 0)
         state.expansion_data["paranoia"] = max(0, current + shift)
         
         await self.parent_view.refresh_panel(interaction)
         
         sign = "+" if shift > 0 else ""
         await interaction.followup.send(
-            f"✅ **Event Applied:** {impact['desc']} ({sign}{shift} Paranoia)", 
+            f"✅ **Event Applied:** {impact.get('desc', 'Unknown')} ({sign}{shift} Paranoia)", 
             ephemeral=True
         )
 
@@ -116,10 +123,11 @@ class ExpansionUI(discord.ui.View):
         self.add_item(EventSelect(self))
 
     def build_embed(self) -> discord.Embed:
-        """Constructs the visual dashboard for the GM."""
-        sanity = self.state.expansion_data["sanity"]
-        paranoia = self.state.expansion_data["paranoia"]
-        shields = self.state.expansion_data["ancestral_shields"]
+        """Constructs the visual dashboard for the GM safely."""
+        exp_data = self.state.expansion_data if isinstance(self.state.expansion_data, dict) else {}
+        sanity = exp_data.get("sanity", 10)
+        paranoia = exp_data.get("paranoia", 0)
+        shields = exp_data.get("ancestral_shields", 0)
         
         embed = discord.Embed(title="🐙 Tablero del Director (Lovecraft)", color=discord.Color.dark_teal())
         embed.add_field(name="🧠 Cordura Global", value=f"**{sanity} / 10**", inline=True)

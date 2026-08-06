@@ -7,26 +7,52 @@ class Role:
     def __init__(self, name: str, alignment: str, flags: Dict[str, Any] = None):
         self.name = name
         self.alignment = alignment
-        self.abilities: List['Ability'] = []
+        self.abilities = []
         self.flags: Dict[str, Any] = flags if flags is not None else {}
 
     def to_dict(self) -> Dict[str, Any]:
-        """Serializes the role for JSON storage."""
+        """Serializes the role and its abilities for JSON storage."""
         return {
             "name": self.name,
             "alignment": self.alignment,
-            "flags": self.flags # Save flags
+            "flags": self.flags,
+            "abilities": [
+                {
+                    "identifier": ab.identifier,
+                    "name": ab.name,
+                    "tag": ab.tag.value,
+                    "priority": ab.priority,
+                    "accuracy": ab.accuracy,
+                    "target_type": ab.target_type.value,
+                    "resolution": ab.resolution.value,
+                    "requires_note": ab.requires_note
+                } for ab in self.abilities
+            ]
         }
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Role':
-        """Rebuilds a Role instance from a dictionary."""
-        
+        """Rebuilds a Role instance and its abilities from a dictionary."""
         role = cls(
             name=data.get("name", "Unknown"),
             alignment=data.get("alignment", "Unknown"),
             flags=data.get("flags", {})
         )
+        
+        from cognitas.core.actions import Ability, ActionTag, TargetType, ResolutionTime
+        
+        for ab_data in data.get("abilities", []):
+            role.abilities.append(Ability(
+                identifier=ab_data.get("identifier", "unknown"),
+                name=ab_data.get("name", "Unknown Ability"),
+                tag=ActionTag(ab_data.get("tag", "night_act")),
+                priority=ab_data.get("priority", 50),
+                accuracy=ab_data.get("accuracy", 100),
+                target_type=TargetType(ab_data.get("target_type", "single")),
+                resolution=ResolutionTime(ab_data.get("resolution", "queued")),
+                requires_note=ab_data.get("requires_note", False)
+            ))
+            
         return role
 
 
@@ -39,7 +65,7 @@ class Player:
         self.user_id = user_id
         self.role: Optional[Role] = None
         self.is_alive: bool = True
-        self.statuses: List['Condition'] = [] # We'll upgrade this to actual Status objects later
+        self.statuses = [] # We'll upgrade this to actual Status objects later
         self.private_channel_id: Optional[int] = None
 
     def kill(self) -> None:

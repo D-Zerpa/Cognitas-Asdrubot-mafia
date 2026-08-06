@@ -103,32 +103,6 @@ class CurseCondition(Condition):
 
     def __init__(self, duration: int = 2, stacks: int = 1):
         super().__init__(duration, stacks)
-
-    def on_action_submitted(self, state: 'GameState', source_id: int, target_id: Optional[int], ability_tag: str) -> Dict[str, str]:
-        """
-        Intercepts the action submission to evaluate gimmick conditions like Curses.
-        Returns a dictionary of secret notifications for the UI.
-        """
-        notifications = {}
-        player = state.get_player(source_id)
-        
-        if not player:
-            return notifications
-            
-        # Check if the player is cursed
-        has_curse = any(cond.id_name == "curse" for cond in player.statuses)
-        
-        if has_curse:
-            # 50% chance to trigger self-harm
-            if random.random() <= 0.5:
-                cm = ConditionManager(state)
-                cm.apply_condition(source_id, WoundedCondition())
-                notifications["curse_effect"] = "🩸 [MALDICIÓN] Tu acción ha resonado con la oscuridad. Te has infligido una herida."
-                logger.info(f"Curse triggered WoundedCondition on player {source_id}.")
-            else:
-                notifications["curse_effect"] = "✨ [MALDICIÓN] Has logrado forzar tu acción sin que la maldición te consuma... esta vez."
-                
-        return notifications
     
 class HallucinationCondition(Condition):
     id_name = "hallucination"
@@ -185,8 +159,8 @@ class ExpansionGimmick(BaseExpansion):
         """Automatically adjusts paranoia based on alignment and phase."""
         current_paranoia = state.expansion_data.get("paranoia", 0)
         
-        # Zero assumptions: safely get alignment
-        alignment = getattr(player.role, "alignment", "Pueblo").lower()
+        # Zero assumptions: safely check if role exists before checking alignment
+        alignment = getattr(player.role, "alignment", "Pueblo").lower() if getattr(player, "role", None) else "pueblo"
         
         if alignment == "mafia":
             shift = -10
@@ -204,6 +178,32 @@ class ExpansionGimmick(BaseExpansion):
         new_paranoia = max(0, current_paranoia + shift)
         state.expansion_data["paranoia"] = new_paranoia
         logger.info(f"Player {player.user_id} died. Paranoia shifted by {shift} ({reason}). New total: {new_paranoia}")
+
+    def on_action_submitted(self, state: 'GameState', source_id: int, target_id: Optional[int], ability_tag: str) -> Dict[str, str]:
+        """
+        Intercepts the action submission to evaluate gimmick conditions like Curses.
+        Returns a dictionary of secret notifications for the UI.
+        """
+        notifications = {}
+        player = state.get_player(source_id)
+        
+        if not player:
+            return notifications
+            
+        # Check if the player is cursed
+        has_curse = any(cond.id_name == "curse" for cond in player.statuses)
+        
+        if has_curse:
+            # 50% chance to trigger self-harm
+            if random.random() <= 0.5:
+                cm = ConditionManager(state)
+                cm.apply_condition(source_id, WoundedCondition())
+                notifications["curse_effect"] = "🩸 [MALDICIÓN] Tu acción ha resonado con la oscuridad. Te has infligido una herida."
+                logger.info(f"Curse triggered WoundedCondition on player {source_id}.")
+            else:
+                notifications["curse_effect"] = "✨ [MALDICIÓN] Has logrado forzar tu acción sin que la maldición te consuma... esta vez."
+                
+        return notifications
 
     def on_phase_change(self, state: 'GameState') -> Optional[str]:
         """Evaluates Sanity mechanics and provides GM reminders at Dawn."""

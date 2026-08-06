@@ -18,24 +18,37 @@ class RoleLoader:
 
     def _parse_ability(self, ab_data: dict) -> Ability:
         """Helper method to safely parse a dictionary into an Ability object."""
-        tag_str = ab_data.get("tag", "night_act").upper()
+        tag_val = ab_data.get("tag")
+        tag_str = str(tag_val).upper() if isinstance(tag_val, str) else "NIGHT_ACT"
         tag = ActionTag[tag_str] if tag_str in ActionTag.__members__ else ActionTag.NIGHT_ACT
         
-        tt_str = ab_data.get("target_type", "single").upper()
+        tt_val = ab_data.get("target_type")
+        tt_str = str(tt_val).upper() if isinstance(tt_val, str) else "SINGLE"
         target_type = TargetType[tt_str] if tt_str in TargetType.__members__ else TargetType.SINGLE
         
-        res_str = ab_data.get("resolution", "queued").upper()
+        res_val = ab_data.get("resolution")
+        res_str = str(res_val).upper() if isinstance(res_val, str) else "QUEUED"
         resolution = ResolutionTime[res_str] if res_str in ResolutionTime.__members__ else ResolutionTime.QUEUED
 
+        try:
+            priority = int(ab_data.get("priority", 50))
+        except (ValueError, TypeError):
+            priority = 50
+
+        try:
+            accuracy = int(ab_data.get("accuracy", 100))
+        except (ValueError, TypeError):
+            accuracy = 100
+
         return Ability(
-            identifier=ab_data.get("identifier", "unknown"),
-            name=ab_data.get("name", "Unknown Ability"),
+            identifier=str(ab_data.get("identifier", "unknown")),
+            name=str(ab_data.get("name", "Unknown Ability")),
             tag=tag,
-            priority=ab_data.get("priority", 50),
-            accuracy=ab_data.get("accuracy", 100),
+            priority=priority,
+            accuracy=accuracy,
             target_type=target_type,
             resolution=resolution,
-            requires_note=ab_data.get("requires_note", False)
+            requires_note=bool(ab_data.get("requires_note", False))
         )
 
     def load_expansion_data(self, filename: str) -> Dict[str, Any]:
@@ -98,16 +111,26 @@ class RoleLoader:
             roles_dict[role_key] = role
 
         # 2. Parse Temporary Abilities (Items/Flags)
-        temp_abs_dict: Dict[str, Any] = {} # Cambiamos Ability por Any para soportar listas
+        temp_abs_dict: Dict[str, Any] = {}
         raw_temps = data.get("temporary_abilities", {})
+        
+        if not isinstance(raw_temps, dict):
+            logger.error(f"Invalid 'temporary_abilities' structure in {filename}: Expected a dictionary.")
+            raw_temps = {}
         
         for flag_key, ab_data_or_list in raw_temps.items():
             if isinstance(ab_data_or_list, list):
-                # Flag giving multiple abilities
-                temp_abs_dict[flag_key] = [self._parse_ability(ab) for ab in ab_data_or_list]
-            else:
-                # Flag gives only one hability
+                # Safely parse only elements that are actually dictionaries
+                valid_abs = [self._parse_ability(ab) for ab in ab_data_or_list if isinstance(ab, dict)]
+                if valid_abs:
+                    temp_abs_dict[flag_key] = valid_abs
+                else:
+                    logger.warning(f"Skipping malformed temporary ability list for flag '{flag_key}'.")
+            elif isinstance(ab_data_or_list, dict):
+                # Flag gives only one ability safely
                 temp_abs_dict[flag_key] = self._parse_ability(ab_data_or_list)
+            else:
+                logger.warning(f"Skipping malformed temporary ability for flag '{flag_key}': Expected dict or list.")
 
         recommended_flags = data.get("recommended_flags", {})
 

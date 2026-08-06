@@ -49,17 +49,17 @@ class ActionRecord:
         # RNG lock-in
         self.roll = roll if roll is not None else random.randint(1, 100)
         
-        # Certainty verification
+       # Certainty verification (Safely checking for id_name to prevent AttributeError)
         has_certainty = False
         if state:
             player = state.get_player(source_id)
             if player:
-                has_certainty = any(cond.id_name == "certainty" for cond in player.statuses)
+                has_certainty = any(getattr(cond, "id_name", None) == "certainty" for cond in player.statuses)
                 
         # Success or failure
         self.is_success = True if has_certainty else (self.roll <= self.ability.accuracy)
         self.used_certainty = has_certainty and (self.ability.accuracy < 100)
-
+        
 class ActionManager:
     """
     Handles the validation, queueing, and sorting of player abilities.
@@ -76,6 +76,17 @@ class ActionManager:
         Evaluates conditions (Blocks and Redirects), triggers Gimmick hooks, 
         and queues the action into the GameState.
         """
+        # 0. Validate target integrity strictly against the Ability's TargetType
+        if ability.target_type == TargetType.SINGLE and target_id is None:
+            logger.warning(f"Player {source_player.user_id} attempted single-target ability {ability.identifier} without a target.")
+            return {
+                "status": "error", 
+                "ui_text": "This ability requires a valid target."
+            }
+            
+        if ability.target_type in (TargetType.NONE, TargetType.SELF):
+            target_id = None  # Force None to prevent injection of invalid targets
+
         alive_player_ids = [p.user_id for p in state.get_alive_players()]
 
         # 1. Check for absolute blocks
@@ -85,19 +96,20 @@ class ActionManager:
                 return {
                     "status": "blocked",
                     "reason": condition.name,
-                    "ui_text": getattr(condition, "ui_on_block", "No puedes usar habilidades en este momento.")
+                    "ui_text": getattr(condition, "ui_on_block", "You cannot use abilities right now.")
                 }
 
-        # 2. Check for redirections
+        # 2. Check for redirections (ONLY if the ability is targetable)
         final_target = target_id
         redirect_condition = None
         
-        for condition in source_player.statuses:
-            new_target = condition.get_redirection(final_target, alive_player_ids)
-            if new_target is not None:
-                final_target = new_target
-                redirect_condition = condition
-                break 
+        if ability.target_type in (TargetType.SINGLE, TargetType.ALL):
+            for condition in source_player.statuses:
+                new_target = condition.get_redirection(final_target, alive_player_ids)
+                if new_target is not None:
+                    final_target = new_target
+                    redirect_condition = condition
+                    break
 
         # 3. Clean up previous action from the same player (changing minds)
         state.action_queue = [
@@ -130,17 +142,18 @@ class ActionManager:
         # 6. Build the result payload
         base_response = {
             "status": "success",
-            "ui_text": "Acción registrada con éxito.",
+            "ui_text": "Action registered successfully.",
             "secret_notifications": secret_notifications
         }
 
-        if redirect_condition and redirect_condition.id_name == "confusion":
+        # Safely check for condition identifier
+        if redirect_condition and getattr(redirect_condition, "id_name", None) == "confusion":
             base_response.update({
                 "status": "redirected",
                 "condition": "confusion",
                 "new_target": final_target,
-                "ui_try": getattr(redirect_condition, "ui_on_try_act", "Intentas actuar..."),
-                "ui_result": getattr(redirect_condition, "ui_on_tails", "Redirigido a {new_target}.")
+                "ui_try": getattr(redirect_condition, "ui_on_try_act", "You try to act..."),
+                "ui_result": getattr(redirect_condition, "ui_on_tails", "Redirected to {new_target}.")
             })
         elif redirect_condition:
             base_response.update({
@@ -151,12 +164,13 @@ class ActionManager:
             
         return base_response
 
-    def get_resolution_report(self, state: 'GameState') -> List[ActionRecord]:
+    def get_resolution_report(self, state: 'GameState', temp_registry: Optional[Dict[str, Any]] = None) -> List[ActionRecord]:
         """
         Reconstructs the queued actions from the GameState, sorted by strict priority.
-        NOTE: You must now pass 'state' to this function when calling it from time.py!
+        Now safely searches through temporary abilities (flags) if they are provided.
         """
         reconstructed_queue = []
+        temp_registry = temp_registry or {}
         
         for action_dict in state.action_queue:
             source_player = state.get_player(action_dict["source_id"])
@@ -164,7 +178,19 @@ class ActionManager:
                 continue
                 
             ability_id = action_dict["ability_id"]
+            
+            # 1. Search in base role abilities
             ability = next((ab for ab in source_player.role.abilities if ab.identifier == ability_id), None)
+            
+            # 2. Search in temporary abilities (Flags) if not found in base role
+            if not ability:
+                for temp_data in temp_registry.values():
+                    # Support both single abilities and lists of abilities per flag
+                    temp_list = temp_data if isinstance(temp_data, list) else [temp_data]
+                    found = next((ab for ab in temp_list if ab.identifier == ability_id), None)
+                    if found:
+                        ability = found
+                        break
             
             if ability:
                 record = ActionRecord(

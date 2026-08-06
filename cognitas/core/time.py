@@ -46,13 +46,39 @@ class PhaseState(abc.ABC):
 
     async def on_end(self, bot: commands.Bot, guild: discord.Guild):
         """Handles end of phase condition processing and cleanup."""
-        # Safe inner imports to prevent circular dependencies
         from cognitas.conditions.engine import ConditionManager
         from cognitas.utils.discord_sync import process_player_death
 
-        # 1. Process conditions
+        # 0. Collect expiration UI notifications before they are ticked down
+        private_notifs = []
+        public_notifs = []
+        game_channel_id = self.state.discord_setup.get("game_channel_id")
+        game_channel = guild.get_channel(game_channel_id) if game_channel_id else None
+
+        for player in self.state.get_alive_players():
+            for cond in player.statuses:
+                if cond.duration == 1:
+                    ui_priv = getattr(cond, "ui_on_expire", None)
+                    if ui_priv and player.private_channel_id:
+                        private_notifs.append((player.private_channel_id, ui_priv, player.user_id))
+                    
+                    ui_pub = getattr(cond, "ui_on_expire_public", None)
+                    if ui_pub:
+                        public_notifs.append((ui_pub, player.user_id))
+
+        # 1. Process conditions (ticks and auto-kills like Wounds)
         cond_manager = ConditionManager(self.state)
         cond_manager.process_phase_end()
+
+        # 1.5 Send collected expiration notifications
+        for ch_id, text, u_id in private_notifs:
+            priv_ch = guild.get_channel(ch_id)
+            if priv_ch:
+                await priv_ch.send(text.format(mention=f"<@{u_id}>"))
+        
+        if game_channel:
+            for text, u_id in public_notifs:
+                await game_channel.send(text.format(mention=f"<@{u_id}>"))
 
         # 2. Process deaths safely
         alive_role_id = self.state.discord_setup.get("alive_role_id")
@@ -61,7 +87,10 @@ class PhaseState(abc.ABC):
                 member = guild.get_member(player.user_id)
                 
                 if member and alive_role_id and any(r.id == alive_role_id for r in member.roles):
-                    
+                    # Publicly announce the death caused by conditions (Poison, Wounds, etc.)
+                    if game_channel:
+                        await game_channel.send(f"💀 **{member.display_name}** ha colapsado repentinamente debido a sus heridas o aflicciones.")
+                        
                     active_gimmick = getattr(bot, "active_gimmick", None)
                     if active_gimmick and hasattr(active_gimmick, "on_player_death"):
                         active_gimmick.on_player_death(self.state, player)

@@ -179,10 +179,13 @@ class ManagePlayerUI(discord.ui.View):
         return embed
 
     async def refresh_interface(self, interaction: discord.Interaction):
-        """Actualiza el embed y habilita/deshabilita los botones según el estado del jugador."""
+        """Updates the embed and enables/disables buttons based on player state."""
         embed = self.build_embed()
         
-        self.children = [c for c in self.children if isinstance(c, ManagePlayerDropdown)]
+        # Safely remove all items except the ManagePlayerDropdown
+        for item in self.children[:]:
+            if not isinstance(item, ManagePlayerDropdown):
+                self.remove_item(item)
         
         if self.target_id:
             player = self.state.get_player(self.target_id)
@@ -724,6 +727,7 @@ class HostCog(commands.Cog):
 
         if hasattr(self.bot, "game_state"):
             self.bot.game_state.discord_setup["expansion"] = perfil
+            self.bot.storage.save_state(self.bot.game_state)
 
         # 3. Dynamic Commands (Cog) Loading
         expected_cog_path = f"cognitas.expansions.{perfil}_commands"
@@ -878,7 +882,10 @@ class HostCog(commands.Cog):
             if p.role and any(ab.tag == expected_tag for ab in p.role.abilities):
                 expected_actors.append(p.user_id)
 
-        submitted_records = manager.get_resolution_report(self.bot.game_state)
+        submitted_records = manager.get_resolution_report(
+            self.bot.game_state, 
+            getattr(self.bot, "temp_registry", {})
+        )
         submitted_ids = [record.source_id for record in submitted_records]
         missing_ids = [u_id for u_id in expected_actors if u_id not in submitted_ids]
 
@@ -919,6 +926,30 @@ class HostCog(commands.Cog):
         except (ImportError, AttributeError):
             from cognitas.expansions.base import BaseExpansion
             self.bot.active_gimmick = BaseExpansion()
+            
+        # 2.5 Load Expansion Commands (Cog)
+        expected_cog_path = f"cognitas.expansions.{expansion}_commands"
+        
+        # Unload previous to prevent conflicts
+        if self.bot.active_expansion_cog and self.bot.active_expansion_cog in self.bot.extensions:
+            try:
+                await self.bot.unload_extension(self.bot.active_expansion_cog)
+            except Exception:
+                pass
+                
+        try:
+            await self.bot.load_extension(expected_cog_path)
+            self.bot.active_expansion_cog = expected_cog_path
+            logger.info(f"Loaded expansion cog during terraform: {expected_cog_path}")
+        except commands.ExtensionNotFound:
+            self.bot.active_expansion_cog = None
+            logger.info(f"No custom commands found for {expansion} (Vanilla behavior).")
+        except Exception as e:
+            self.bot.active_expansion_cog = None
+            logger.error(f"Error loading {expected_cog_path} during terraform: {e}")
+            
+        # Sync tree so the GM can see the commands immediately
+        await self.bot.tree.sync()
 
         # 3. Create Discord Roles
         try:
@@ -1055,21 +1086,25 @@ class HostCog(commands.Cog):
     @app_commands.command(name="force_revive", description="GM: Revive a un jugador y le devuelve los permisos de Vivo.")
     @app_commands.default_permissions(administrator=True)
     async def force_revive(self, interaction: discord.Interaction, target: discord.Member):
+        # Defer immediately to prevent 3-second interaction timeout
+        await interaction.response.defer(ephemeral=True)
+        
         state = getattr(self.bot, "game_state", None)
-        if not state: return
+        if not state: 
+            await interaction.followup.send("❌ El motor no está inicializado.")
+            return
 
         player = state.get_player(target.id)
         if not player:
-            await interaction.response.send_message("❌ Jugador no encontrado en la partida.", ephemeral=True)
+            await interaction.followup.send("❌ Jugador no encontrado en la partida.")
             return
 
         if player.is_alive:
-            await interaction.response.send_message("⚠️ El jugador ya está vivo.", ephemeral=True)
+            await interaction.followup.send("⚠️ El jugador ya está vivo.")
             return
 
         # 1. Logical revive
         player.is_alive = True
-        
         player.statuses.clear()
         
         # 2. Discord Role Swap (Remove Dead, Add Alive)
@@ -1091,7 +1126,8 @@ class HostCog(commands.Cog):
         except discord.Forbidden:
             logger.error("Missing permissions to revive player roles.")
 
-        await interaction.response.send_message(f"✨ **{target.display_name}** ha sido revivido por el Mod.", ephemeral=True)
+        # Use followup.send since the interaction was deferred
+        await interaction.followup.send(f"✨ **{target.display_name}** ha sido revivido por el Mod.")
         
         # Notify Logs
         log_channel_id = setup.get("log_channel_id")
