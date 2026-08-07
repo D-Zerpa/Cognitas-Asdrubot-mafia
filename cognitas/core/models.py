@@ -65,8 +65,9 @@ class Player:
         self.user_id = user_id
         self.role: Optional[Role] = None
         self.is_alive: bool = True
-        self.statuses = [] # We'll upgrade this to actual Status objects later
+        self.statuses = [] 
         self.private_channel_id: Optional[int] = None
+        self.inventory: Dict[str, int] = {}
 
     def kill(self) -> None:
         """Safely marks the player as dead."""
@@ -79,7 +80,8 @@ class Player:
             "role": self.role.to_dict() if self.role else None,
             "is_alive": self.is_alive,
             "private_channel_id": self.private_channel_id,
-            "statuses": [cond.to_dict() for cond in self.statuses]
+            "statuses": [cond.to_dict() for cond in self.statuses],
+            "inventory": self.inventory
         }
 
     @classmethod
@@ -92,6 +94,7 @@ class Player:
             
         player.is_alive = data.get("is_alive", True)
         player.private_channel_id = data.get("private_channel_id")
+        player.inventory = data.get("inventory", {})
         
         from cognitas.conditions.factory import load_condition_from_dict
         

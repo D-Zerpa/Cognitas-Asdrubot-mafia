@@ -140,9 +140,16 @@ class ActionManager:
             )
 
         # 6. Build the result payload
+        success_messages = ["Action registered successfully."]
+        
+        for condition in source_player.statuses:
+            if getattr(condition, "ui_on_success_temp", None):
+                success_messages.append(condition.ui_on_success_temp)
+                condition.ui_on_success_temp = None  # Reset to prevent repeating on next actions
+
         base_response = {
             "status": "success",
-            "ui_text": "Action registered successfully.",
+            "ui_text": "\n\n".join(success_messages),
             "secret_notifications": secret_notifications
         }
 

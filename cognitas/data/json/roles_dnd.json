@@ -1,0 +1,902 @@
+{
+  "roles": {
+    "fighter": {
+      "name": "Fighter",
+      "alignment": "Pueblo",
+      "flags": {
+        "hp": 35,
+        "max_hp": 35,
+        "level": 1
+      },
+      "abilities": [
+        {
+          "identifier": "fighter_second_wind",
+          "name": "Second Wind (Cura 8 HP o Est. Alterado)",
+          "tag": "day_act",
+          "priority": 10,
+          "accuracy": 100,
+          "target_type": "self",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "fighter_defence",
+          "name": "Fighting Style: Defence (Guardia)",
+          "tag": "night_act",
+          "priority": 30,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
+    },
+    "sorcerer": {
+      "name": "Sorcerer",
+      "alignment": "Pueblo",
+      "flags": {
+        "hp": 20,
+        "max_hp": 20,
+        "level": 1
+      },
+      "abilities": [
+        {
+          "identifier": "sorcerer_fire_bolt",
+          "name": "Fire Bolt (75%, 20 DMG)",
+          "tag": "night_act",
+          "priority": 50,
+          "accuracy": 75,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "sorcerer_mage_armour",
+          "name": "Passive: Mage Armour (-5 DMG)",
+          "tag": "night_act",
+          "priority": 90,
+          "accuracy": 100,
+          "target_type": "self",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
+    },
+    "paladin": {
+      "name": "Paladin",
+      "alignment": "Pueblo",
+      "flags": {
+        "hp": 40,
+        "max_hp": 40,
+        "level": 1
+      },
+      "abilities": [
+        {
+          "identifier": "paladin_divine_sense",
+          "name": "Passive: Divine Sense (50%, -5 DMG)",
+          "tag": "night_act",
+          "priority": 90,
+          "accuracy": 50,
+          "target_type": "self",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
+    },
+    "wizard": {
+      "name": "Wizard",
+      "alignment": "Pueblo",
+      "flags": {
+        "hp": 20,
+        "max_hp": 20,
+        "level": 1
+      },
+      "abilities": [
+        {
+          "identifier": "wizard_transcribing",
+          "name": "Transcribing Scrolls (Analisis/Robo)",
+          "tag": "night_act",
+          "priority": 50,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "wizard_mage_armour",
+          "name": "Passive: Mage Armour (-5 DMG)",
+          "tag": "night_act",
+          "priority": 90,
+          "accuracy": 100,
+          "target_type": "self",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
+    },
+    "barbarian": {
+      "name": "Barbarian",
+      "alignment": "Pueblo",
+      "flags": {
+        "hp": 40,
+        "max_hp": 40,
+        "level": 1
+      },
+      "abilities": [
+        {
+          "identifier": "barbarian_reckless",
+          "name": "Reckless Attack (10 DMG)",
+          "tag": "night_act",
+          "priority": 50,
+          "accuracy": 75,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "barbarian_rage",
+          "name": "Passive: Rage (+5 DMG p/c 10 HP)",
+          "tag": "night_act",
+          "priority": 90,
+          "accuracy": 100,
+          "target_type": "self",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
+    },
+    "bard": {
+      "name": "Bard",
+      "alignment": "Pueblo",
+      "flags": {
+        "hp": 25,
+        "max_hp": 25,
+        "level": 1
+      },
+      "abilities": [
+        {
+          "identifier": "bard_inspiration",
+          "name": "Bardic Inspiration (75%, Detector)",
+          "tag": "day_act",
+          "priority": 50,
+          "accuracy": 75,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": true
+        }
+      ]
+    },
+    "cleric": {
+      "name": "Cleric",
+      "alignment": "Pueblo",
+      "flags": {
+        "hp": 30,
+        "max_hp": 30,
+        "level": 1
+      },
+      "abilities": [
+        {
+          "identifier": "cleric_sanctuary",
+          "name": "Sanctuary (Protección)",
+          "tag": "night_act",
+          "priority": 30,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "cleric_cure_wounds",
+          "name": "Cure Wounds (Cura 10 HP)",
+          "tag": "day_act",
+          "priority": 50,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
+    },
+    "warlock": {
+      "name": "Warlock",
+      "alignment": "Pueblo",
+      "flags": {
+        "hp": 25,
+        "max_hp": 25,
+        "level": 1
+      },
+      "abilities": [
+        {
+          "identifier": "warlock_eldritch_blast",
+          "name": "Eldritch Blast (75%, 10 DMG)",
+          "tag": "night_act",
+          "priority": 50,
+          "accuracy": 75,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "warlock_hellish_rebuke",
+          "name": "Passive: Hellish Rebuke (Reflejo*)",
+          "tag": "night_act",
+          "priority": 90,
+          "accuracy": 100,
+          "target_type": "self",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
+    },
+    "rogue": {
+      "name": "Rogue",
+      "alignment": "Pueblo",
+      "flags": {
+        "hp": 25,
+        "max_hp": 25,
+        "level": 1
+      },
+      "abilities": [
+        {
+          "identifier": "rogue_cunning_hide",
+          "name": "Cunning Action: Hide (Rastreo)",
+          "tag": "night_act",
+          "priority": 50,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "rogue_uncanny_dodge",
+          "name": "Passive: Uncanny Dodge (25% Esquivar)",
+          "tag": "night_act",
+          "priority": 90,
+          "accuracy": 25,
+          "target_type": "self",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
+    },
+    "ranger": {
+      "name": "Ranger",
+      "alignment": "Pueblo",
+      "flags": {
+        "hp": 25,
+        "max_hp": 25,
+        "level": 1
+      },
+      "abilities": [
+        {
+          "identifier": "ranger_hunters_mark",
+          "name": "Hunter's Mark (Marca, Duplica DMG)",
+          "tag": "day_act",
+          "priority": 50,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "ranger_ensnaring_strike",
+          "name": "Ensnaring Strike (Enraizar)",
+          "tag": "night_act",
+          "priority": 40,
+          "accuracy": 75,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
+    },
+    "monk": {
+      "name": "Monk",
+      "alignment": "Pueblo",
+      "flags": {
+        "hp": 35,
+        "max_hp": 35,
+        "level": 1
+      },
+      "abilities": [
+        {
+          "identifier": "monk_deflect_missiles",
+          "name": "Passive: Deflect Missiles (50% Reflejo)",
+          "tag": "night_act",
+          "priority": 90,
+          "accuracy": 50,
+          "target_type": "self",
+          "resolution": "queued",
+          "requires_note": false
+        },
+        {
+          "identifier": "monk_patient_defence",
+          "name": "Passive: Patient Defence (50% Revealación/Identificación)",
+          "tag": "night_act",
+          "priority": 90,
+          "accuracy": 50,
+          "target_type": "self",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
+    },
+    "druid": {
+      "name": "Druid",
+      "alignment": "Pueblo",
+      "flags": {
+        "hp": 35,
+        "max_hp": 35,
+        "level": 1
+      },
+      "abilities": [
+        {
+          "identifier": "druid_wild_shape",
+          "name": "Wild Shape (Tejón o Araña)",
+          "tag": "night_act",
+          "priority": 45,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": true
+        }
+      ]
+    },
+    "shapeshifter": {
+      "name": "Shapeshifter",
+      "alignment": "Independiente",
+      "flags": {
+        "hp": 35,
+        "max_hp": 35,
+        "level": 1
+      },
+      "abilities": [
+        {
+          "identifier": "shape_corpse_stealer",
+          "name": "Passive: Corpse Stealer (Usa habilidad robada)",
+          "tag": "night_act",
+          "priority": 90,
+          "accuracy": 100,
+          "target_type": "self",
+          "resolution": "queued",
+          "requires_note": true
+        },
+        {
+          "identifier": "shape_venom_claws",
+          "name": "Venom Claws (10 DMG + Veneno)",
+          "tag": "night_act",
+          "priority": 50,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
+    },
+    "mind_slayer": {
+      "name": "Mind Slayer",
+      "alignment": "Mafia",
+      "flags": {
+        "hp": 45,
+        "max_hp": 45,
+        "level": 1
+      },
+      "abilities": [
+        {
+          "identifier": "mind_hivemind",
+          "name": "Passive: Hivemind (Elige aliado)",
+          "tag": "night_act",
+          "priority": 95,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": true
+        },
+        {
+          "identifier": "mind_overlord",
+          "name": "Passive: Overlord (Redireccion)",
+          "tag": "night_act",
+          "priority": 85,
+          "accuracy": 100,
+          "target_type": "self",
+          "resolution": "queued",
+          "requires_note": true
+        },
+        {
+          "identifier": "mind_grand_design",
+          "name": "Passive: The Grand Design (Robo)",
+          "tag": "night_act",
+          "priority": 90,
+          "accuracy": 100,
+          "target_type": "self",
+          "resolution": "queued",
+          "requires_note": true
+        },
+        {
+          "identifier": "mind_ceromorphosis",
+          "name": "Ceromorphosis (Resurreccion y Reclutamiento)",
+          "tag": "night_act",
+          "priority": 20,
+          "accuracy": 100,
+          "target_type": "single",
+          "resolution": "queued",
+          "requires_note": false
+        }
+      ]
+    }
+  },
+  "temporary_abilities": {
+    "subclass_battlemaster": [
+      {
+        "identifier": "sub_battlemaster_riposte",
+        "name": "Passive: Riposte & Disarm",
+        "tag": "night_act",
+        "priority": 90,
+        "accuracy": 100,
+        "target_type": "self",
+        "resolution": "queued",
+        "requires_note": false
+      }
+    ],
+    "subclass_champion": [
+      {
+        "identifier": "sub_champion_great_weapon",
+        "name": "Great Weapon Fighting (85%, 15 DMG)",
+        "tag": "night_act",
+        "priority": 50,
+        "accuracy": 85,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": false
+      },
+      {
+        "identifier": "sub_champion_crit",
+        "name": "Passive: Improved Critical (90+)",
+        "tag": "night_act",
+        "priority": 90,
+        "accuracy": 100,
+        "target_type": "self",
+        "resolution": "queued",
+        "requires_note": false
+      }
+    ],
+    "subclass_draconic": [
+      {
+        "identifier": "sub_draconic_heightened",
+        "name": "Passive: Heightened Spell (Reroll)",
+        "tag": "night_act",
+        "priority": 90,
+        "accuracy": 100,
+        "target_type": "self",
+        "resolution": "queued",
+        "requires_note": true
+      },
+      {
+        "identifier": "sub_draconic_fireball",
+        "name": "Fireball (60 DMG - 1d3)",
+        "tag": "night_act",
+        "priority": 50,
+        "accuracy": 85,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": true
+      }
+    ],
+    "subclass_wild_magic": [
+      {
+        "identifier": "sub_wild_quickened",
+        "name": "Passive: Quickened Spell (Doble cast, 2 usos p/p)",
+        "tag": "night_act",
+        "priority": 90,
+        "accuracy": 100,
+        "target_type": "self",
+        "resolution": "queued",
+        "requires_note": true
+      },
+      {
+        "identifier": "sub_wild_surge",
+        "name": "Passive: Wild Magic Surge (25% Efecto Random)",
+        "tag": "night_act",
+        "priority": 90,
+        "accuracy": 100,
+        "target_type": "self",
+        "resolution": "queued",
+        "requires_note": false
+      },
+      {
+        "identifier": "sub_wild_controlled_chaos",
+        "name": "Controlled Chaos (Alteración)",
+        "tag": "night_act",
+        "priority": 80,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": false
+      },
+      {
+        "identifier": "sub_wild_tides",
+        "name": "Tides of Chaos (Redirección. 1 Uso p/p)",
+        "tag": "night_act",
+        "priority": 85,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": false
+      }
+    ],
+    "subclass_devotion_1": [
+      {
+        "identifier": "sub_devotion1_holy_rebuke",
+        "name": "Passive: Holy Rebuke (Riposte)",
+        "tag": "night_act",
+        "priority": 90,
+        "accuracy": 100,
+        "target_type": "self",
+        "resolution": "queued",
+        "requires_note": false
+      }
+    ],
+    "subclass_devotion_3": [
+      {
+        "identifier": "sub_devotion3_heroism",
+        "name": "Heroism (Protección, Duelo)",
+        "tag": "night_act",
+        "priority": 30,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": true
+      }
+    ],
+    "subclass_vengeance_1": [
+      {
+        "identifier": "sub_vengeance1_abjure",
+        "name": "Abjure Enemy (Redirecciona daño)",
+        "tag": "night_act",
+        "priority": 40,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": false
+      }
+    ],
+    "subclass_vengeance_3": [
+      {
+        "identifier": "sub_vengeance3_relentless",
+        "name": "Relentless Avenger (Duelo)",
+        "tag": "night_act",
+        "priority": 40,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": false
+      }
+    ],"subclass_transmutation": [
+      {
+        "identifier": "sub_transmutation_alchemy",
+        "name": "Experimental Alchemy (Selecciona Poción)",
+        "tag": "night_act",
+        "priority": 50,
+        "accuracy": 100,
+        "target_type": "self",
+        "resolution": "queued",
+        "requires_note": true
+      },
+      {
+        "identifier": "sub_transmutation_stone",
+        "name": "Transmuter Stone (Crafteo o Uso)",
+        "tag": "night_act",
+        "priority": 50,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": true
+      },
+      {
+        "identifier": "sub_transmutation_stone",
+        "name": "Transmuter Stone (Crafteo o Uso)",
+        "tag": "day_act",
+        "priority": 50,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": true
+      }
+    ],
+    "subclass_illusion": [
+      {
+        "identifier": "sub_illusion_self",
+        "name": "Passive: Illusory Self (Feedback falso)",
+        "tag": "night_act",
+        "priority": 90,
+        "accuracy": 100,
+        "target_type": "self",
+        "resolution": "queued",
+        "requires_note": true
+      },
+      {
+        "identifier": "sub_illusion_mind_games",
+        "name": "Mind Games (Redirección/Feedback falso)",
+        "tag": "night_act",
+        "priority": 50,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": false
+      }
+    ],
+    "subclass_berserker": [
+      {
+        "identifier": "sub_berserker_frenzied",
+        "name": "Frenzied Strike (75% - Ejecución/Recoil DMG)",
+        "tag": "night_act",
+        "priority": 50,
+        "accuracy": 75,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": false
+      }
+    ],
+    "subclass_giant": [
+      {
+        "identifier": "sub_giant_impel",
+        "name": "Passive: Mighty Impel (Bloqueo)",
+        "tag": "night_act",
+        "priority": 90,
+        "accuracy": 100,
+        "target_type": "self",
+        "resolution": "queued",
+        "requires_note": false
+      },
+      {
+        "identifier": "sub_giant_rage",
+        "name": "Passive: Giant's Rage (-10% DMG)",
+        "tag": "night_act",
+        "priority": 90,
+        "accuracy": 100,
+        "target_type": "self",
+        "resolution": "queued",
+        "requires_note": false
+      }
+    ],
+    "subclass_lore": [
+      {
+        "identifier": "sub_lore_cutting_words",
+        "name": "Cutting Words (Bloqueo o Redirección)",
+        "tag": "night_act",
+        "priority": 80,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": true
+      },
+      {
+        "identifier": "sub_lore_persuasion",
+        "name": "Persuasion Profiecy (Comunicación/Redirección)",
+        "tag": "night_act",
+        "priority": 80,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": true
+      }
+    ],
+    "subclass_swords": [
+      {
+        "identifier": "sub_swords_flourish",
+        "name": "Blade Flourish: Mobile (90%, 5 DMG)",
+        "tag": "day_act",
+        "priority": 50,
+        "accuracy": 90,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": false
+      },
+      {
+        "identifier": "sub_swords_dueling",
+        "name": "Passive: Fighting Style Dueling (Ventaja)",
+        "tag": "day_act",
+        "priority": 90,
+        "accuracy": 100,
+        "target_type": "self",
+        "resolution": "queued",
+        "requires_note": false
+      }
+    ],
+    "subclass_life": [
+      {
+        "identifier": "sub_life_mass_healing",
+        "name": "Mass Healing Word (Cura 1d3 x 10 HP, 2-4 objetivos)",
+        "tag": "day_act",
+        "priority": 50,
+        "accuracy": 100,
+        "target_type": "self",
+        "resolution": "queued",
+        "requires_note": true
+      }
+    ],
+    "subclass_light": [
+      {
+        "identifier": "sub_light_guardian",
+        "name": "Guardian of Faith (Protege/Riposte)",
+        "tag": "night_act",
+        "priority": 25,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": false
+      }
+    ],
+    "subclass_archfey": [
+      {
+        "identifier": "sub_archfey_presence",
+        "name": "Passive: Fey Presence (50% Esquivar Investigacion)",
+        "tag": "night_act",
+        "priority": 90,
+        "accuracy": 50,
+        "target_type": "self",
+        "resolution": "queued",
+        "requires_note": false
+      },
+      {
+        "identifier": "sub_archfey_repelling",
+        "name": "Passive: Repelling Blast (Eldritch Blocks)",
+        "tag": "night_act",
+        "priority": 90,
+        "accuracy": 100,
+        "target_type": "self",
+        "resolution": "queued",
+        "requires_note": false
+      }
+    ],
+    "subclass_fiend": [
+      {
+        "identifier": "sub_fiend_blessing",
+        "name": "Passive: Dark One's Blessing (+5HP p/kill)",
+        "tag": "night_act",
+        "priority": 90,
+        "accuracy": 100,
+        "target_type": "self",
+        "resolution": "queued",
+        "requires_note": false
+      },
+      {
+        "identifier": "sub_fiend_agonising",
+        "name": "Passive: Agonising Blast (Elige segundo objetivo)",
+        "tag": "night_act",
+        "priority": 90,
+        "accuracy": 100,
+        "target_type": "self",
+        "resolution": "queued",
+        "requires_note": false
+      }
+    ],
+    "subclass_thief": [
+      {
+        "identifier": "sub_thief_fast_hands",
+        "name": "Passive: Fast Hands (Revela/Roba)",
+        "tag": "night_act",
+        "priority": 90,
+        "accuracy": 100,
+        "target_type": "self",
+        "resolution": "queued",
+        "requires_note": false
+      }
+    ],
+    "subclass_assassin": [
+      {
+        "identifier": "sub_assassin_ambush",
+        "name": "Assassinate: Ambush (Veneno/Ejecuta <30%)",
+        "tag": "night_act",
+        "priority": 50,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": false
+      }
+    ],
+    "subclass_beastmaster": [
+      {
+        "identifier": "sub_beastmaster_tamer",
+        "name": "Beast Tamer (Selecciona Animal)",
+        "tag": "night_act",
+        "priority": 40,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": true
+      }
+    ],
+    "subclass_hunter": [
+      {
+        "identifier": "sub_hunter_trap_master",
+        "name": "Trap Master (Escribe en el chat tu mensaje)",
+        "tag": "night_act",
+        "priority": 20,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": false
+      }
+    ],
+    "subclass_open_hand": [
+      {
+        "identifier": "sub_open_hand_flurry",
+        "name": "Flurry of Blows (4x 2DMG)",
+        "tag": "night_act",
+        "priority": 50,
+        "accuracy": 95,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": false
+      }
+    ],
+    "subclass_drunken_master": [
+      {
+        "identifier": "sub_drunken_performance",
+        "name": "Drunken Performance (Duelo Publico)",
+        "tag": "day_act",
+        "priority": 50,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": false
+      }
+    ],
+    "subclass_moon": [
+      {
+        "identifier": "sub_moon_lunar_mend",
+        "name": "Lunar Mend (Cura 7HP)",
+        "tag": "night_act",
+        "priority": 50,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": true
+      }
+    ],
+    "subclass_spores": [
+      {
+        "identifier": "sub_spores_symbiotic",
+        "name": "Passive: Symbiotic Entity (Trampa de Esporas)",
+        "tag": "night_act",
+        "priority": 90,
+        "accuracy": 100,
+        "target_type": "self",
+        "resolution": "queued",
+        "requires_note": false
+      }
+    ]
+  },
+  "recommended_flags": {
+    "hp": "Current HP",
+    "max_hp": "Maximum HP",
+    "level": "Player Level",
+    "subclass_battlemaster": "Fighter Subclass",
+    "subclass_champion": "Fighter Subclass",
+    "subclass_draconic": "Sorcerer Subclass",
+    "subclass_wild_magic": "Sorcerer Subclass",
+    "subclass_devotion_1": "Paladin Level 1",
+    "subclass_devotion_3": "Paladin Level 3",
+    "subclass_vengeance_1": "Paladin Level 1",
+    "subclass_vengeance_3": "Paladin Level 3",
+    "subclass_transmutation": "Wizard Subclass",
+    "subclass_illusion": "Wizard Subclass",
+    "subclass_berserker": "Barbarian Subclass",
+    "subclass_giant": "Barbarian Subclass",
+    "subclass_lore": "Bard Subclass",
+    "subclass_swords": "Bard Subclass",
+    "subclass_life": "Cleric Subclass",
+    "subclass_light": "Cleric Subclass",
+    "subclass_archfey": "Warlock Subclass",
+    "subclass_fiend": "Warlock Subclass",
+    "subclass_thief": "Rogue Subclass",
+    "subclass_assassin": "Rogue Subclass",
+    "subclass_beastmaster": "Ranger Subclass",
+    "subclass_hunter": "Ranger Subclass",
+    "subclass_open_hand": "Monk Subclass",
+    "subclass_drunken_master": "Monk Subclass",
+    "subclass_moon": "Druid Subclass",
+    "subclass_spores": "Druid Subclass"
+  }
+}

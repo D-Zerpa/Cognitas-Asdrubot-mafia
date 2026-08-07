@@ -1,0 +1,109 @@
+ {
+  "items": {   
+
+    "potion_healing": {
+      "name": "Poción de Curación",
+      "description": "Restaura 15 HP al consumidor."
+    },
+    "potion_giant_strength": {
+      "name": "Poción de Fuerza de Gigante",
+      "description": "Añade +10 de Daño al próximo ataque físico del consumidor."
+    },
+    "potion_wild_magic": {
+      "name": "Poción de Magia Salvaje",
+      "description": "Al usarla, lanzas un dado de 19 caras, tras lo cual se activará un efecto mágico aleatorio."
+    },
+    "potion_invisibility": {
+      "name": "Poción de Invisibilidad",
+      "description": "El consumidor evade todos los ataques dirigidos e investigaciones durante una noche."
+    },
+    "potion_vitality": {
+      "name": "Poción de Vitalidad",
+      "description": "Cura instantáneamente cualquier estado alterado negativo."
+    },
+    "potion_resistance": {
+      "name": "Poción de Resistencia",
+      "description": "El consumidor recibe exactamente la mitad del daño (redondeado hacia abajo) de todas las fuentes durante una noche."
+    },
+    "potion_haste": {
+      "name": "Poción de Rapidez",
+      "description": "Otorga al consumidor prioridad máxima (actúa antes que cualquier otra habilidad) durante una noche."
+    },
+    "potion_love": {
+      "name": "Filtro de Amor",
+      "description": "El objetivo queda infatuado. Se pondrá enfrente de la primera persona que intente usar una habilidad en el lanzador de la poción."
+    },
+    "potion_poison": {
+      "name": "Veneno Básico",
+      "description": "Aplica el estado alterado 'Veneno' al objetivo."
+    },
+    "potion_slumber": {
+      "name": "Esencia de Letargo",
+      "description": "El objetivo no podrá usar habilidades nocturnas. Si tiene habilidades pasivas protectoras tampoco funcionarán."
+    },
+    "potion_mind_reading": {
+      "name": "Elixir de Lectura Mental",
+      "description": "El lanzador podrá ver en quién actuó su objetivo la noche anterior."
+    },
+    "potion_clairvoyance": {
+      "name": "Poción de Clarividencia",
+      "description": "Revela la Clase y Subclase exacta del objetivo al consumidor."
+    },
+    "potion_polymorph": {
+      "name": "Brebaje de Polimorfia",
+      "description": "El objetivo se convierte en un cerdo. No podrá hablar ni reaccionar a mensajes, solo decir \"oink oink\" y usar Gif de cerdos sin texto."
+    },
+    "potion_bottled_fog": {
+      "name": "Niebla Embotellada",
+      "description": "Llena de niebla la ubicación del objetivo. Cualquier acción dirigida hacia él tiene un 50% de probabilidad de fallar."
+    },
+    "alchemists_fire": {
+      "name": "Fuego de Alquimista",
+      "description": "El usuario puede lanzarla a un objetivo para hacer 10 HP de daño."
+    },
+    "potion_magical_renewal": {
+      "name": "Poción de Renovación Mágica",
+      "description": "Recupera una 'carga' de habilidades con usos limitados. Si el que la consume no tiene este tipo de habilidad, puede usar su habilidad nocturna dos veces."
+    },
+    "scroll_identify": {
+      "name": "Pergamino de Identificación",
+      "description": "El GM revela al consumidor los HP exactos, Nivel y Estados Alterados actuales del objetivo."
+    },
+    "scroll_revivify": {
+      "name": "Pergamino de Revivir",
+      "description": "Resucita a un jugador muerto con 5 HP."
+    },
+    "scroll_silence": {
+      "name": "Pergamino de Silencio",
+      "description": "Aplica el estado alterado 'Silenciado' al objetivo para el día siguiente."
+    },
+    "scroll_sending": {
+      "name": "Pergamino de Mensaje",
+      "description": "Permite enviar un mensaje de hasta 25 palabras a cualquier jugador. El GM lo entregará de forma totalmente anónima."
+    },
+    "scroll_dispel_magic": {
+      "name": "Pergamino de Disipar Magia",
+      "description": "Elimina todos los estados alterados (positivos y negativos) y HP temporal del objetivo."
+    },
+    "scroll_shield": {
+      "name": "Pergamino de Escudo",
+      "description": "Otorga inmunidad total contra el primer ataque (físico o mágico) que el consumidor reciba esta noche."
+    },
+    "scroll_zone_of_truth": {
+      "name": "Pergamino de Zona de la Verdad",
+      "description": "El consumidor hace una pregunta de Sí/No al GM sobre la partida. La pregunta no puede involucrar a más de un jugador."
+    },
+    "scroll_banishment": {
+      "name": "Pergamino de Destierro",
+      "description": "El objetivo pierde su derecho a voto y no puede ser linchado durante el día siguiente."
+    },
+    "scroll_scrying": {
+      "name": "Pergamino de Escudriñamiento",
+      "description": "El GM revela al consumidor los nombres de todos los jugadores que visitaron al objetivo esta noche."
+    },
+    "scroll_meteor_swarm": {
+      "name": "Pergamino de Enjambre de Meteoritos",
+      "description": "Inflige 30 HP de daño ineludible a un objetivo. El consumidor recibe 10 HP de daño por retroceso mágico."
+    }
+  }
+}

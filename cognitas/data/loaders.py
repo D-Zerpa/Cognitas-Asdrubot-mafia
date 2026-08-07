@@ -141,3 +141,40 @@ class RoleLoader:
             "temp_abilities": temp_abs_dict,
             "recommended_flags": recommended_flags
         }
+        
+class ItemLoader:
+    """
+    Handles parsing JSON data files specifically for expansion items/inventory.
+    """
+    def __init__(self):
+        self.data_dir = os.path.dirname(os.path.abspath(__file__))
+
+    def load_items(self, filename: str) -> Dict[str, Any]:
+        """
+        Loads the items JSON file and returns a validated dictionary.
+        Returns an empty dictionary if the file is missing or malformed.
+        """
+        filepath = os.path.join(self.data_dir, "json", filename)
+        
+        if not os.path.exists(filepath):
+            logger.error(f"Item data file not found: {filepath}")
+            return {}
+
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON syntax error in {filename}: {e}")
+            return {}
+
+        if not isinstance(data, dict):
+            logger.error(f"Invalid JSON structure in {filename}: Expected a root dictionary.")
+            return {}
+
+        items_dict = data.get("items", {})
+        if not isinstance(items_dict, dict):
+            logger.error(f"Invalid 'items' structure in {filename}: Expected a dictionary.")
+            return {}
+            
+        logger.info(f"Successfully loaded {len(items_dict)} items from {filename}.")
+        return items_dict

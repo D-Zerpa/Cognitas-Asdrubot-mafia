@@ -264,6 +264,37 @@ class TargetDropdown(discord.ui.Select):
         self.view.selected_target_id = int(self.values[0])
         # Defer the interaction silently to prevent Discord from showing an "interaction failed" error
         await interaction.response.defer()
+        
+class ItemDropdown(discord.ui.Select):
+    """Dropdown for players to optionally select an item from their inventory."""
+    def __init__(self, player):
+        self.player = player
+        options = []
+        
+        # Populate the dropdown with items the player actually owns (> 0)
+        count = 0
+        if getattr(player, "inventory", None):
+            for item_id, qty in player.inventory.items():
+                if qty > 0 and count < 24:
+                    # Format string to look pretty: "Health Potion"
+                    display_name = item_id.replace("_", " ").title()
+                    options.append(discord.SelectOption(
+                        label=display_name, 
+                        value=item_id, 
+                        description=f"Available in inventory: {qty}", 
+                        emoji="🎒"
+                    ))
+                    count += 1
+                    
+        # Always provide an option to deselect items
+        options.append(discord.SelectOption(label="No usar objeto", value="NONE", emoji="❌"))
+        
+        super().__init__(placeholder="🎒 Selecciona un objeto (Opcional)...", min_values=1, max_values=1, options=options)
+
+    async def callback(self, interaction: discord.Interaction):
+        # Save the selected item to the parent view, or clear it if "NONE"
+        self.view.selected_item_id = self.values[0] if self.values[0] != "NONE" else None
+        await interaction.response.defer()
 
 class ActionNoteModal(discord.ui.Modal, title="Detalles de la Acción"):
     note_input = discord.ui.TextInput(
@@ -349,6 +380,11 @@ class ActionButton(discord.ui.Button):
             prefix = condition.get_action_prefix(roll)
             if prefix:
                 action_prefix += prefix
+                
+        # 3.5 INJECT SELECTED ITEM INTO PREFIX
+        if getattr(self.view, "selected_item_id", None):
+            action_prefix += f"[Objeto Usado: {self.view.selected_item_id}] "
+                
 
         # 4. CHECK IF MODAL IS REQUIRED (Data-driven logic)
         if self.ability.requires_note:
@@ -407,13 +443,18 @@ class ActionButton(discord.ui.Button):
             self.bot.storage.save_state(self.state)
 
 class ActionUI(discord.ui.View):
-    def __init__(self, state: GameState, guild: discord.Guild, valid_abilities: List[Ability], bot: commands.Bot):
+    def __init__(self, state: GameState, guild: discord.Guild, valid_abilities: List[Ability], bot: commands.Bot, player):
         super().__init__(timeout=None)
         self.selected_target_id: Optional[int] = None
+        self.selected_item_id: Optional[str] = None
         self.message: Optional[discord.Message] = None
 
         # Add the target selection dropdown
         self.add_item(TargetDropdown(state, guild))
+        
+        # Dynamically add the item selection dropdown if the player has an inventory
+        if getattr(player, "inventory", None) and len(player.inventory) > 0:
+            self.add_item(ItemDropdown(player))
 
         # Dynamically append a button for each valid ability the user has
         for ab in valid_abilities:
@@ -663,11 +704,44 @@ class GameplayCog(commands.Cog):
         )
         embed.set_footer(text="Puedes cambiar de opinión seleccionando otra acción. Se guardará la última.")
 
-        view = ActionUI(state, interaction.guild, valid_abilities, self.bot)
+        view = ActionUI(state, interaction.guild, valid_abilities, self.bot, player)
         
         # Send the UI and store the message reference in the view so we can update it later
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
         view.message = await interaction.original_response()
+        
+    @app_commands.command(name="inventory", description="Check your current items and loot.")
+    async def inventory(self, interaction: discord.Interaction):
+        state: GameState = getattr(self.bot, "game_state", None)
+        if not state:
+            await interaction.response.send_message("❌ La partida no ha comenzado.", ephemeral=True)
+            return
+
+        player = state.get_player(interaction.user.id)
+        if not player:
+            await interaction.response.send_message("❌ No estás registrado en la partida actual.", ephemeral=True)
+            return
+            
+        if not player.is_alive:
+            await interaction.response.send_message("💀 Los muertos no pueden cargar objetos.", ephemeral=True)
+            return
+
+        embed = discord.Embed(
+            title=f"🎒 Inventario: {interaction.user.display_name}", 
+            color=discord.Color.gold()
+        )
+        
+        # Check if the inventory dictionary exists and has items
+        if not getattr(player, "inventory", None):
+            embed.description = "*Tu mochila está vacía.*"
+        else:
+            item_list = ""
+            for item_id, qty in player.inventory.items():
+                item_list += f"• **{qty}x** `{item_id}`\n"
+            embed.add_field(name="Objetos Guardados", value=item_list, inline=False)
+            embed.set_footer(text="Usa /act y añade los detalles en las notas si deseas usar un objeto.")
+            
+        await interaction.response.send_message(embed=embed, ephemeral=True)       
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(GameplayCog(bot))
