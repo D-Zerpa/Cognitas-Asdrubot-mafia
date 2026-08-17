@@ -230,64 +230,6 @@ class DnDExpansionCog(commands.Cog):
         
         await interaction.followup.send(embed=embed)
         
-    async def item_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
-        """
-        Dynamically filters the item registry based on GM input for autocomplete.
-        Requires the item registry to be loaded into the bot instance.
-        """
-        # Fallback to empty dict if the registry hasn't been loaded yet
-        item_registry = getattr(self.bot, "item_registry", {})
-        
-        choices = []
-        for item_id, item_data in item_registry.items():
-            if current.lower() in item_id.lower() or current.lower() in item_data.get("name", "").lower():
-                # Discord limits autocomplete choices to 25
-                if len(choices) >= 25:
-                    break
-                
-                display_name = f"{item_data.get('name', item_id)} ({item_id})"
-                choices.append(app_commands.Choice(name=display_name, value=item_id))
-                
-        return choices
-
-    @dnd_group.command(name="manage_item", description="GM: Add or remove items from a player's inventory.")
-    @app_commands.describe(
-        item_id="The internal ID of the item", 
-        amount="Quantity to add (use a negative number to remove)"
-    )
-    @app_commands.autocomplete(item_id=item_autocomplete)
-    async def manage_item(self, interaction: discord.Interaction, target: discord.Member, item_id: str, amount: int):
-        state: GameState = getattr(self.bot, "game_state", None)
-        if not state:
-            await interaction.response.send_message("❌ Engine not initialized.", ephemeral=True)
-            return
-
-        player = state.get_player(target.id)
-        if not player:
-            await interaction.response.send_message("❌ Player not found in the current match.", ephemeral=True)
-            return
-
-        # Sanitize the input to prevent key mismatches
-        item_id = item_id.lower().strip()
-        
-        # Safely calculate new quantity
-        current_qty = player.inventory.get(item_id, 0)
-        new_qty = max(0, current_qty + amount)
-        
-        # Cleanup: if quantity reaches 0, remove the key entirely to keep the JSON light
-        if new_qty == 0:
-            player.inventory.pop(item_id, None)
-        else:
-            player.inventory[item_id] = new_qty
-            
-        # Atomic persistence
-        self.bot.storage.save_state(state)
-        
-        action_str = "added to" if amount > 0 else "removed from"
-        await interaction.response.send_message(
-            f"📦 **{abs(amount)}x `{item_id}`** has been {action_str} {target.display_name}'s inventory.\nTotal held: **{new_qty}**.", 
-            ephemeral=False
-        )
         
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(DnDExpansionCog(bot))

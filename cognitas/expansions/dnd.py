@@ -74,10 +74,10 @@ class ExpansionGimmick(BaseExpansion):
         register_condition(RootedCondition)
         
         self.random_events = [
-            "🎭 **Evento Aleatorio:** Una densa niebla cubre el campamento. (El GM debe ambientar con música de tensión).",
-            "🎉 **Evento Aleatorio:** ¡Es hora de la fiesta en la taberna! (El GM saca los parlantes y las bubuzelas).",
-            "🌧️ **Evento Aleatorio:** Lluvia torrencial. Las tiradas de ataques a distancia fallan automáticamente esta noche.",
-            "🐺 **Evento Aleatorio:** Aullidos a lo lejos. Nadie puede dormir bien."
+            "🎭 **Evento Aleatorio:** Una densa niebla cubre el campamento.",
+            "🎉 **Evento Aleatorio:** ¡Es hora de la fiesta! Por algún motivo acaba de aparecer un barril de cerveza en medio del campamento.",
+            "🌧️ **Evento Aleatorio:** Lluvia torrencial Todos a sus tiendas de campaña.",
+            "🐺 **Evento Aleatorio:** Aullidos a lo lejos. Algo se acerca."
         ]
         # The chance (in percentage) for a random event to trigger on phase change
         self.event_chance = 15

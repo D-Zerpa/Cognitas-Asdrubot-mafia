@@ -866,6 +866,28 @@
         "resolution": "queued",
         "requires_note": false
       }
+    ],
+    "subclass_spore_king": [
+      {
+        "identifier": "sub_spores_beast_swipe",
+        "name": "Fungal Beast Swipe (20 DMG + Esporas)",
+        "tag": "night_act",
+        "priority": 50,
+        "accuracy": 100,
+        "target_type": "single",
+        "resolution": "queued",
+        "requires_note": true
+      },
+      {
+        "identifier": "sub_spores_cloud",
+        "name": "Supermassive Spore Cloud (Bloquea 2 afectados)",
+        "tag": "night_act",
+        "priority": 40,
+        "accuracy": 100,
+        "target_type": "self",
+        "resolution": "queued",
+        "requires_note": true
+      }
     ]
   },
   "recommended_flags": {
@@ -897,6 +919,7 @@
     "subclass_open_hand": "Monk Subclass",
     "subclass_drunken_master": "Monk Subclass",
     "subclass_moon": "Druid Subclass",
-    "subclass_spores": "Druid Subclass"
+    "subclass_spores": "Druid Subclass",
+    "subclass_spore_king": "Spore Druid Final Boss"
   }
 }

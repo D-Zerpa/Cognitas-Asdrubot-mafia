@@ -44,6 +44,27 @@ async def condition_autocomplete(interaction: discord.Interaction, current: str)
         for name in CONDITION_MAP.keys() if current.lower() in name.lower()
     ][:25]
 
+async def item_autocomplete(interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+    """
+    Dynamically filters the item registry based on GM input for autocomplete.
+    """
+    # Safely fetch the registry, fallback to empty dict if not loaded
+    item_registry = getattr(interaction.client, "item_registry", {})
+    choices = []
+    
+    for item_id, item_data in item_registry.items():
+        name = item_data.get("name", "")
+        # Match by internal ID or public Name
+        if current.lower() in item_id.lower() or current.lower() in name.lower():
+            if len(choices) >= 25:
+                break
+                
+            display_name = f"{name} ({item_id})" if name else item_id
+            choices.append(app_commands.Choice(name=display_name, value=item_id))
+            
+    return choices
+
+
 class ActionReportPaginator(discord.ui.View):
     def __init__(self, state, missing_ids, submitted_records):
         super().__init__(timeout=600) 
@@ -1067,6 +1088,48 @@ class HostCog(commands.Cog):
     # ---------------------------------------------------------
     # ERROR CORRECTION & GOD TOOLS
     # ---------------------------------------------------------
+    
+    @app_commands.command(name="manage_item", description="GM: Añade o retira objetos del inventario de un jugador.")
+    @app_commands.describe(
+        item_id="El ID interno del objeto (ej. potion_healing)", 
+        amount="Cantidad a añadir (usa números negativos para retirar)"
+    )
+    @app_commands.autocomplete(item_id=item_autocomplete)
+    @app_commands.default_permissions(administrator=True)
+    async def manage_item(self, interaction: discord.Interaction, target: discord.Member, item_id: str, amount: int):
+        state: GameState = getattr(self.bot, "game_state", None)
+        if not state:
+            await interaction.response.send_message("❌ El motor no está inicializado.", ephemeral=True)
+            return
+
+        player = state.get_player(target.id)
+        if not player:
+            await interaction.response.send_message("❌ Jugador no encontrado en la partida actual.", ephemeral=True)
+            return
+
+        # Sanitize input
+        item_id = item_id.lower().strip()
+        
+        # Safely initialize inventory if it doesn't exist yet
+        if not hasattr(player, "inventory"):
+            player.inventory = {}
+            
+        current_qty = player.inventory.get(item_id, 0)
+        new_qty = max(0, current_qty + amount)
+        
+        # Cleanup: keep JSON light by completely removing keys with 0 quantity
+        if new_qty == 0:
+            player.inventory.pop(item_id, None)
+        else:
+            player.inventory[item_id] = new_qty
+            
+        self.bot.storage.save_state(state)
+        
+        action_str = "añadido a" if amount > 0 else "retirado de"
+        await interaction.response.send_message(
+            f"📦 **{abs(amount)}x `{item_id}`** ha sido {action_str} la mochila de {target.display_name}.\nTotal actual: **{new_qty}**.", 
+            ephemeral=True
+        )
 
     @app_commands.command(name="force_kill", description="GM: Mata a un jugador instantáneamente saltándose las reglas.")
     @app_commands.describe(reason="Razón que aparecerá en el cementerio y logs.")

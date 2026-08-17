@@ -186,19 +186,28 @@ class ActionManager:
                 
             ability_id = action_dict["ability_id"]
             
-            # 1. Search in base role abilities
+           # 1. Search in base role abilities
             ability = next((ab for ab in source_player.role.abilities if ab.identifier == ability_id), None)
             
             # 2. Search in temporary abilities (Flags) if not found in base role
             if not ability:
                 for temp_data in temp_registry.values():
-                    # Support both single abilities and lists of abilities per flag
                     temp_list = temp_data if isinstance(temp_data, list) else [temp_data]
                     found = next((ab for ab in temp_list if ab.identifier == ability_id), None)
                     if found:
                         ability = found
                         break
-            
+                        
+            # 3. Standalone Item Ability 
+            if not ability and ability_id == "use_item":
+                ability = Ability(
+                    identifier="use_item", 
+                    name="Usar Objeto", 
+                    tag=ActionTag.NIGHT_ACT, # It will be resolved dynamically, the tag here is a placeholder
+                    priority=10, 
+                    target_type=TargetType.SINGLE
+                )
+                
             if ability:
                 record = ActionRecord(
                     source_id=action_dict["source_id"],

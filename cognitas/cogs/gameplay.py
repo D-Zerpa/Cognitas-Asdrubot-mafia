@@ -267,17 +267,21 @@ class TargetDropdown(discord.ui.Select):
         
 class ItemDropdown(discord.ui.Select):
     """Dropdown for players to optionally select an item from their inventory."""
-    def __init__(self, player):
+    def __init__(self, player, bot: commands.Bot):
         self.player = player
         options = []
         
-        # Populate the dropdown with items the player actually owns (> 0)
+        # Safely fetch the item registry
+        item_registry = getattr(bot, "item_registry", {})
+        
         count = 0
         if getattr(player, "inventory", None):
             for item_id, qty in player.inventory.items():
                 if qty > 0 and count < 24:
-                    # Format string to look pretty: "Health Potion"
-                    display_name = item_id.replace("_", " ").title()
+                    # Fetch real name from registry, fallback to formatted ID
+                    item_data = item_registry.get(item_id, {})
+                    display_name = item_data.get("name", item_id.replace("_", " ").title())
+                    
                     options.append(discord.SelectOption(
                         label=display_name, 
                         value=item_id, 
@@ -286,9 +290,7 @@ class ItemDropdown(discord.ui.Select):
                     ))
                     count += 1
                     
-        # Always provide an option to deselect items
         options.append(discord.SelectOption(label="No usar objeto", value="NONE", emoji="❌"))
-        
         super().__init__(placeholder="🎒 Selecciona un objeto (Opcional)...", min_values=1, max_values=1, options=options)
 
     async def callback(self, interaction: discord.Interaction):
@@ -347,9 +349,15 @@ class ActionNoteModal(discord.ui.Modal, title="Detalles de la Acción"):
                 
             embed = discord.Embed(title="✅ Acción Registrada", description=msg, color=discord.Color.green())
             
-            # Cerramos el panel original
             await interaction.response.edit_message(embed=embed, view=None)
             self.button_instance.bot.storage.save_state(self.button_instance.state)
+            
+            # Retrieve the log channel ID from the game state setup
+            log_channel_id = self.button_instance.state.discord_setup.get("log_channel_id")
+            if log_channel_id:
+                log_channel = interaction.guild.get_channel(log_channel_id)
+                if log_channel:
+                    await log_channel.send(f"⚡ **{interaction.user.display_name}** ha registrado su acción en el sistema.")
 
 class ActionButton(discord.ui.Button):
     def __init__(self, ability: Ability, bot: commands.Bot, state: GameState):
@@ -359,6 +367,10 @@ class ActionButton(discord.ui.Button):
         self.state = state
 
     async def callback(self, interaction: discord.Interaction):
+        
+        if self.ability.identifier == "use_item" and not getattr(self.view, "selected_item_id", None):
+            await interaction.response.send_message("⚠️ Debes seleccionar un objeto del menú para usar esta acción independiente.", ephemeral=True)
+            return
         # 1. Retrieve the source player who clicked the button
         source_player = self.state.get_player(interaction.user.id)
         
@@ -438,9 +450,15 @@ class ActionButton(discord.ui.Button):
                 
             embed = discord.Embed(title="✅ Acción Registrada", description=msg, color=discord.Color.green())
             
-            # Editamos el mensaje original quitando la vista (view=None)
             await interaction.response.edit_message(embed=embed, view=None)
             self.bot.storage.save_state(self.state)
+            
+            log_channel_id = self.state.discord_setup.get("log_channel_id")
+            if log_channel_id:
+                log_channel = interaction.guild.get_channel(log_channel_id)
+                if log_channel:
+                    await log_channel.send(f"⚡ **{interaction.user.display_name}** ha registrado su acción en el sistema.")
+            
 
 class ActionUI(discord.ui.View):
     def __init__(self, state: GameState, guild: discord.Guild, valid_abilities: List[Ability], bot: commands.Bot, player):
@@ -454,11 +472,24 @@ class ActionUI(discord.ui.View):
         
         # Dynamically add the item selection dropdown if the player has an inventory
         if getattr(player, "inventory", None) and len(player.inventory) > 0:
-            self.add_item(ItemDropdown(player))
+            self.add_item(ItemDropdown(player, bot))
 
         # Dynamically append a button for each valid ability the user has
         for ab in valid_abilities:
             self.add_item(ActionButton(ab, bot, state))
+
+        #  Standalone Item Button 
+        if getattr(player, "inventory", None) and len(player.inventory) > 0:
+            current_tag = ActionTag.DAY_ACT if state.phase == Phase.DAY else ActionTag.NIGHT_ACT
+            use_item_ability = Ability(
+                identifier="use_item",
+                name="Usar Objeto",
+                tag=current_tag,
+                priority=10,
+                target_type=TargetType.SINGLE,
+                requires_note=False
+            )
+            self.add_item(ActionButton(use_item_ability, bot, state))
 
 
 # ---------------------------------------------------------
@@ -635,9 +666,14 @@ class GameplayCog(commands.Cog):
         alive_players = state.get_alive_players()
         dead_players = [p for p in state.players.values() if not p.is_alive]
 
-        # Format the lists using Discord mentions for easy tagging
-        alive_text = "\n".join([f"🟢 <@{p.user_id}>" for p in alive_players])
-        dead_text = "\n".join([f"💀 <@{p.user_id}>" for p in dead_players])
+       # Internal helper to safely fetch display names
+        def _get_name(user_id: int) -> str:
+            member = interaction.guild.get_member(user_id)
+            return member.display_name if member else f"ID: {user_id}"
+
+        # Format the lists using plain text names instead of Discord mentions
+        alive_text = "\n".join([f"🟢 **{_get_name(p.user_id)}**" for p in alive_players])
+        dead_text = "\n".join([f"💀 **{_get_name(p.user_id)}**" for p in dead_players])
 
         # Fallbacks in case the lists are empty
         if not alive_text: alive_text = "*Nadie ha sobrevivido...*"
@@ -707,10 +743,10 @@ class GameplayCog(commands.Cog):
         view = ActionUI(state, interaction.guild, valid_abilities, self.bot, player)
         
         # Send the UI and store the message reference in the view so we can update it later
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=False)
         view.message = await interaction.original_response()
         
-    @app_commands.command(name="inventory", description="Check your current items and loot.")
+    @app_commands.command(name="inventory", description="Muestra tus objetos actuales y su descripción públicamente.")
     async def inventory(self, interaction: discord.Interaction):
         state: GameState = getattr(self.bot, "game_state", None)
         if not state:
@@ -731,17 +767,27 @@ class GameplayCog(commands.Cog):
             color=discord.Color.gold()
         )
         
-        # Check if the inventory dictionary exists and has items
         if not getattr(player, "inventory", None):
             embed.description = "*Tu mochila está vacía.*"
         else:
+            # Fetch the global item registry from the bot's RAM
+            item_registry = getattr(self.bot, "item_registry", {})
             item_list = ""
+            
             for item_id, qty in player.inventory.items():
-                item_list += f"• **{qty}x** `{item_id}`\n"
+                # Retrieve visual data, fallback to raw ID if not found
+                item_data = item_registry.get(item_id, {})
+                item_name = item_data.get("name", item_id)
+                item_desc = item_data.get("description", "Sin descripción registrada.")
+                
+                # Format with Name in bold and Description slightly indented
+                item_list += f"• **{qty}x {item_name}**\n  ↳ *{item_desc}*\n\n"
+                
             embed.add_field(name="Objetos Guardados", value=item_list, inline=False)
             embed.set_footer(text="Usa /act y añade los detalles en las notas si deseas usar un objeto.")
             
-        await interaction.response.send_message(embed=embed, ephemeral=True)       
+        # ephemeral=True removed to make the inventory public
+        await interaction.response.send_message(embed=embed)       
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(GameplayCog(bot))
