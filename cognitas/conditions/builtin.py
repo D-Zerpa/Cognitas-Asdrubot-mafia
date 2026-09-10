@@ -157,7 +157,7 @@ class WoundedCondition(Condition):
     ui_on_apply_1 = "{mention} Estás Herido, no puedes votar. Mejor corre a buscar a alguien que te cure."
     ui_on_apply_2 = "{mention} ¡Tu herida empeoró, has muerto!"
     ui_on_block_vote = "¡{mention}, estás demasiado débil para votar!"
-    ui_on_expire = "{mention} ¡Estás sano de nuevo!" # Used on cleanse/heal
+    ui_on_expire = "{mention} ¡Estás sano de nuevo!" 
 
     def get_vote_multiplier(self) -> float:
         return 0.0

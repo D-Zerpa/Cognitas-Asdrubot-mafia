@@ -286,6 +286,7 @@
           "name": "Manos sanadoras (🩹 Curación)",
           "tag": "day_act",
           "priority": 50,
+          "accuracy": 50,
           "target_type": "single",
           "resolution": "instant",
           "requires_note": false
@@ -368,6 +369,7 @@
           "name": "Transfusión Etérea (🩹 Curación)",
           "tag": "day_act",
           "priority": 50,
+          "accuracy": 80,
           "target_type": "single",
           "resolution": "instant",
           "requires_note": false
@@ -377,6 +379,7 @@
           "name": "Círculo de Sal (🛡️ Protección)",
           "tag": "night_act",
           "priority": 85,
+          "accuracy": 60,
           "target_type": "single",
           "resolution": "queued",
           "requires_note": false
@@ -409,6 +412,7 @@
           "name": "Autopsia Forense (🧭 Análisis)",
           "tag": "night_act",
           "priority": 40,
+          "accuracy": 20,
           "target_type": "single",
           "resolution": "queued",
           "requires_note": false
@@ -425,6 +429,7 @@
           "name": "Ojo inexperto (🧭 Análisis)",
           "tag": "night_act",
           "priority": 30,
+          "accuracy": 75,
           "target_type": "single",
           "resolution": "queued",
           "requires_note": false
@@ -491,6 +496,7 @@
           "name": "Oferta Irrechazable (📻 Comunicación)",
           "tag": "night_act",
           "priority": 90,
+          "accuracy": 80,
           "target_type": "none",
           "resolution": "queued",
           "requires_note": false

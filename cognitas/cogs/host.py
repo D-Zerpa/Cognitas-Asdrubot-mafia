@@ -5,14 +5,13 @@ from discord.ext import commands
 from discord import app_commands
 import importlib
 import asyncio
-from typing import Optional, List, Dict, Union, Any
 
 # --- CORE IMPORTS ---
 from cognitas.data.loaders import RoleLoader
 from cognitas.core.state import GameState
-from cognitas.core.time import TimeManager, Phase
+from cognitas.core.time import Phase
 from cognitas.utils.discord_sync import process_player_death
-from cognitas.conditions.engine import ConditionManager
+
 
 
 logger = logging.getLogger("cognitas.cogs.host")
@@ -776,8 +775,15 @@ class HostCog(commands.Cog):
             cog_status_msg = f"⚠️ Error al cargar comandos: {e}"
             logger.error(f"Error loading {expected_cog_path}: {e}")
 
-        # 4. Sync the Discord Command Tree (Crucial for UI update)
-        await self.bot.tree.sync()
+        # 4. Sync the Discord Command Tree locally to prevent duplicates
+        import os
+        guild_id = os.getenv("GUILD_ID")
+        if guild_id:
+            target_guild = discord.Object(id=int(guild_id))
+            self.bot.tree.copy_global_to(guild=target_guild)
+            await self.bot.tree.sync(guild=target_guild)
+        else:
+            await self.bot.tree.sync()
 
         # 5. Final Report
         await interaction.followup.send(
@@ -969,8 +975,15 @@ class HostCog(commands.Cog):
             self.bot.active_expansion_cog = None
             logger.error(f"Error loading {expected_cog_path} during terraform: {e}")
             
-        # Sync tree so the GM can see the commands immediately
-        await self.bot.tree.sync()
+        # Sync tree locally so the GM can see the commands immediately without duplicates
+        import os
+        guild_id = os.getenv("GUILD_ID")
+        if guild_id:
+            target_guild = discord.Object(id=int(guild_id))
+            self.bot.tree.copy_global_to(guild=target_guild)
+            await self.bot.tree.sync(guild=target_guild)
+        else:
+            await self.bot.tree.sync()
 
         # 3. Create Discord Roles
         try:

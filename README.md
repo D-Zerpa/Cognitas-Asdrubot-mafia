@@ -77,7 +77,8 @@ cognitas/
  │    ├── lovecraft.py      # Lovecraftian mechanics
  │    ├── lovecraft_commands.py # Custom slash commands for Lovecraft expansion
  │    ├── persona3.py       # Persona 3 mechanics (Nyx, SEES, Arcanas)
- │    └── smt.py            # SMT mechanics (Law/Chaos, Samurai)
+ │    ├── smt.py            # SMT mechanics (Law/Chaos, Samurai)
+ │    └── dnd.py            # DND mechanics (HP management, Classes/Subclasses)
  │
  └── utils/                 # UTILITIES
       ├── __init__.py
@@ -114,7 +115,6 @@ A custom expansion integrating sanity and cosmic horror mechanics.
 
 ### 🧭 Expedition 33 (Express Mafia)
 A thematic expansion. A bit more complex than the Base mafia, but without any secondary mechanic.
-
 
 
 ### 📚 Instructions

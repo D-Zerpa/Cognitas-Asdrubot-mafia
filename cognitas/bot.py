@@ -109,9 +109,20 @@ class CognitasBot(commands.Bot):
         if guild_id:
             try:
                 target_guild = discord.Object(id=int(guild_id))
+                
+                # 1. Copy the loaded commands to the local guild FIRST while they are in memory
                 self.tree.copy_global_to(guild=target_guild)
+                
+                # 2. Clear the global commands from the internal tree
+                self.tree.clear_commands(guild=None)
+                
+                # 3. Sync the populated local guild to Discord (Instantly available)
                 await self.tree.sync(guild=target_guild)
-                logger.info(f"Slash commands synced instantly to Guild ID: {guild_id}.")
+                
+                # 4. Sync the empty global tree to Discord to wipe any ghost duplicates
+                await self.tree.sync(guild=None)
+                
+                logger.info(f"Slash commands synced instantly to Guild ID: {guild_id}. Globals purged.")
             except ValueError:
                 logger.error("GUILD_ID in .env is not a valid integer. Defaulting to global sync.")
                 await self.tree.sync()

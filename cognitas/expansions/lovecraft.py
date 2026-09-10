@@ -75,7 +75,7 @@ class VirusCondition(Condition):
     stacking_type = "refresh"
     category = "Physical"
 
-    ui_on_apply = "{mention} 🦠 Sientes que algo oscuro recorre tus venas... (Infectado)."
+    ui_on_apply = "{mention} 🦠 Sientes que algo oscuro recorre tus venas..."
     ui_on_expire = "{mention} 💀 Tu cuerpo no resistió. El virus te ha consumido por completo."
 
     def __init__(self, duration: int = 4, stacks: int = 1):
